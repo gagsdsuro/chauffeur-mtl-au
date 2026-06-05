@@ -1,0 +1,53 @@
+{
+  "ligne": "51",
+  "direction": "ouest",
+  "routes": [
+    {
+      "line_number": "51",
+      "direction": "Ouest",
+      "parcours": [
+        {
+          "id": 2,
+          "name": "Parcours principal",
+          "start": "Station Laurier Sud (Rivard / Gilford)",
+          "start_code": 54069,
+          "end": "Gare Montréal-Ouest (Elmhurst / Sherbrooke)",
+          "end_code": 50110,
+          "direction": [
+            "Via - Gilford",
+            "Droite - Rivard",
+            "Gauche - Saint-Joseph",
+            "Droite - Saint-Laurent",
+            "Gauche - Laurier",
+            "Droite - Côte-Sainte-Catherine",
+            "Gauche - Vincent-D'Indy",
+            "Droite - Édouard-Montpetit",
+            "Gauche - Decelles",
+            "Droite - Queen-Mary",
+            "Gauche - Ellerdale",
+            "Via - Fielding",
+            "Gauche - West Broadway",
+            "Droite - Sherbrooke",
+            "Gauche - Boucle Elmurst"
+          ]
+        },
+        {
+          "id": 3,
+          "name": "Parcours secondaire",
+          "start": "Station Snowdon (Queen-Mary / de Westbury)",
+          "start_code": 54074,
+          "end": "Gare Montréal-Ouest (Elmhurst / Sherbrooke)",
+          "end_code": 50110,
+          "direction": [
+            "Via - Queen-Mary",
+            "Gauche - Ellerdale",
+            "Via - Fielding",
+            "Gauche - West Broadway",
+            "Droite - Sherbrooke",
+            "Gauche - Boucle Elmurst"
+          ]
+        }
+      ]
+    }
+  ]
+}

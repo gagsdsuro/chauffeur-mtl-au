@@ -1,0 +1,46 @@
+{
+  "ligne": "85",
+  "direction": "ouest",
+  "routes": [
+    {
+      "line_number": "85",
+      "direction": "Ouest",
+      "parcours": [
+        {
+          "id": 2,
+          "name": "Parcours principal",
+          "start": "du Golf / Métropolitain",
+          "start_code": 62115,
+          "end": "du Havre / La Fontaine",
+          "end_code": 53075,
+          "direction": [
+            "Via - du Golf",
+            "Gauche - des Sciences",
+            "Via - Roi-René",
+            "Gauche - Ray-Lawson",
+            "Droite - Métropolitain",
+            "Via - vers Roi-René",
+            "Via - Roi-René",
+            "Gauche - de Châteauneuf",
+            "Droite - Rondeau",
+            "Via - De La Vérendrye",
+            "Gauche - Rhéaume",
+            "Via - Chaumont",
+            "Droite - Roi-René",
+            "Gauche - Wilfrid-Pelletier",
+            "Gauche - Goncourt",
+            "Droite - Yves-Prévost",
+            "Gauche - du Bois-de-Coulonge",
+            "Gauche - Chénier",
+            "Via - Chenier",
+            "Droite - Honoré-Beaugrand",
+            "Gauche - Terminus Honoré-Beaugrand Nord",
+            "Gauche - Honoré-Beaugrand",
+            "Droite - Hochelaga",
+            "Gauche - du Havre"
+          ]
+        }
+      ]
+    }
+  ]
+}

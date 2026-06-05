@@ -1,0 +1,35 @@
+{
+  "ligne": "37",
+  "direction": "est",
+  "routes": [
+    {
+      "line_number": "37",
+      "direction": "Est",
+      "parcours": [
+        {
+          "id": 1,
+          "name": "Parcours principal",
+          "start": "Station Angrignon",
+          "start_code": 54111,
+          "end": "Station LaSalle (Caisse / de Rushbrooke)",
+          "end_code": 61651,
+          "direction": [
+            "Via - Terminus Angrignon",
+            "Via - Irwin",
+            "Gauche - des Trinitaires",
+            "Via - Angrignon",
+            "Droite - Newman",
+            "Via - Jolicoeur",
+            "Droite - De La Vérendrye",
+            "Gauche - Woodland",
+            "Gauche - Wellington",
+            "Droite - Argyle",
+            "Gauche - LaSalle",
+            "Droite - de Rushbrooke",
+            "Gauche - Caisse"
+          ]
+        }
+      ]
+    }
+  ]
+}

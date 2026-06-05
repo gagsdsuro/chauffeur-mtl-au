@@ -1,0 +1,34 @@
+{
+  "ligne": "57",
+  "direction": "sud",
+  "routes": [
+    {
+      "line_number": "57",
+      "direction": "Sud",
+      "parcours": [
+        {
+          "id": 2,
+          "name": "Parcours principal",
+          "start": "Station Atwater (Sainte-Catherine / Atwater)",
+          "start_code": 52069,
+          "end": "De Condé / du Centre",
+          "end_code": 53869,
+          "direction": [
+            "Via - Sainte-Catherine",
+            "Droite - du Fort",
+            "Via - vers route 136 Est/ St-Antoine/ St-Jacques",
+            "Via - Georges-Vanier",
+            "Droite - Notre-Dame",
+            "Gauche - Charlevoix",
+            "Gauche - Wellington",
+            "Droite - Charon",
+            "Gauche - Le Ber",
+            "Gauche - de la Congrégation",
+            "Droite - Wellington",
+            "Gauche - De Condé"
+          ]
+        }
+      ]
+    }
+  ]
+}

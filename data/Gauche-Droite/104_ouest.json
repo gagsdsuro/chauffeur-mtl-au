@@ -1,0 +1,34 @@
+{
+  "ligne": "104",
+  "direction": "ouest",
+  "routes": [
+    {
+      "line_number": "104",
+      "direction": "Ouest",
+      "parcours": [
+        {
+          "id": 12,
+          "name": "Parcours principal",
+          "start": "Station Atwater (Tupper / Atwater)",
+          "start_code": 56306,
+          "end": "Caldwell / des Maimonides",
+          "end_code": 56421,
+          "direction": [
+            "Via - Tupper",
+            "Droite - Atwater",
+            "Gauche - Sherbrooke",
+            "Gauche - Claremont",
+            "Droite - De Maisonneuve",
+            "Via - Upper-Lachine",
+            "Via - Saint-Jacques",
+            "Droite - Cavendish",
+            "Gauche - Mackle",
+            "Gauche - Parkhaven",
+            "Gauche - Kildare",
+            "Gauche - Caldwell"
+          ]
+        }
+      ]
+    }
+  ]
+}

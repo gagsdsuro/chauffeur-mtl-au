@@ -1,0 +1,34 @@
+{
+  "ligne": "108",
+  "direction": "ouest",
+  "routes": [
+    {
+      "line_number": "108",
+      "direction": "Ouest",
+      "parcours": [
+        {
+          "id": 11,
+          "name": "Parcours principal",
+          "start": "Station Atwater (Tupper / Atwater)",
+          "start_code": 56308,
+          "end": "Parc Hadley (Bannantyne / Stephens)",
+          "end_code": 56703,
+          "direction": [
+            "Via - Tupper",
+            "Gauche - Atwater",
+            "Via - Henri-Duhamel",
+            "Droite - LaSalle",
+            "Gauche - de Rushbrooke",
+            "Gauche - Caisse",
+            "Gauche - Joseph",
+            "Droite - Dupuis",
+            "Gauche - Bannantyne",
+            "Gauche - Stephens",
+            "Droite - LaSalle",
+            "Droite - Bannantyne"
+          ]
+        }
+      ]
+    }
+  ]
+}

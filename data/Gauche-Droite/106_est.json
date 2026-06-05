@@ -1,0 +1,32 @@
+{
+  "ligne": "106",
+  "direction": "est",
+  "routes": [
+    {
+      "line_number": "106",
+      "direction": "Est",
+      "parcours": [
+        {
+          "id": 1,
+          "name": "Parcours principal",
+          "start": "Terminus Lafleur / Newman",
+          "start_code": 56759,
+          "end": "Station Angrignon",
+          "end_code": 54110,
+          "direction": [
+            "Via - Terminus Lafleur / Newman",
+            "Gauche - Newman",
+            "Gauche - Lafleur",
+            "Gauche - LaSalle",
+            "Gauche - 90e Avenue",
+            "Via - vers Newman dir. E",
+            "Via - Newman",
+            "Droite - Angrignon",
+            "Via - des Trinitaires",
+            "Droite - Terminus Angrignon"
+          ]
+        }
+      ]
+    }
+  ]
+}

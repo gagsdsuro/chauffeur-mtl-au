@@ -1,0 +1,33 @@
+{
+  "ligne": "37",
+  "direction": "ouest",
+  "routes": [
+    {
+      "line_number": "37",
+      "direction": "Ouest",
+      "parcours": [
+        {
+          "id": 1,
+          "name": "Parcours principal",
+          "start": "Station LaSalle",
+          "start_code": 56697,
+          "end": "Station Angrignon",
+          "end_code": 54111,
+          "direction": [
+            "Via - Caisse",
+            "Gauche - LaSalle",
+            "Droite - Woodland",
+            "Droite - De La Vérendrye",
+            "Gauche - De Sève",
+            "Droite - Drake",
+            "Gauche - Jolicoeur",
+            "Via - Newman",
+            "Gauche - Angrignon",
+            "Via - des Trinitaires",
+            "Droite - Terminus Angrignon"
+          ]
+        }
+      ]
+    }
+  ]
+}

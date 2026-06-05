@@ -1,0 +1,40 @@
+{
+  "ligne": "496",
+  "direction": "est",
+  "routes": [
+    {
+      "line_number": "496",
+      "direction": "Est",
+      "parcours": [
+        {
+          "id": 1,
+          "name": "Parcours principal",
+          "start": "Terminus Dorval",
+          "start_code": 57506,
+          "end": "Station Lionel-Groulx / Saint-Jacques",
+          "end_code": 61330,
+          "direction": [
+            "Via - Terminus Dorval",
+            "Droite - rond point Dorval",
+            "Via - vers aut. 20 Est",
+            "Via - Montréal-Toronto",
+            "Via - Bouchard",
+            "Via - Victoria",
+            "Via - 1re Avenue",
+            "Gauche - William-MacDonald",
+            "Via - Victoria",
+            "Gauche - Saint-Joseph",
+            "Droite - Montréal-Toronto",
+            "Via - vers aut. 20 Est",
+            "Via - Autoroute 20 Est",
+            "Via - voie réservée",
+            "Via - 136 Ville-Marie Est",
+            "Via - voie réservée",
+            "Via - Rose-de-Lima",
+            "Gauche - Saint-Jacques"
+          ]
+        }
+      ]
+    }
+  ]
+}

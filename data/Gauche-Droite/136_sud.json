@@ -1,0 +1,27 @@
+{
+  "ligne": "136",
+  "direction": "sud",
+  "routes": [
+    {
+      "line_number": "136",
+      "direction": "Sud",
+      "parcours": [
+        {
+          "id": 2,
+          "name": "Parcours principal",
+          "start": "des Grandes-Prairies / No 5940",
+          "start_code": 54776,
+          "end": "Station Viau",
+          "end_code": 50105,
+          "direction": [
+            "Via - des Grandes-Prairies",
+            "Droite - du Prado",
+            "Droite - Couture",
+            "Gauche - Viau",
+            "Droite - Pierre-De Coubertin"
+          ]
+        }
+      ]
+    }
+  ]
+}

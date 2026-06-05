@@ -1,0 +1,71 @@
+{
+  "ligne": "211",
+  "direction": "est",
+  "routes": [
+    {
+      "line_number": "211",
+      "direction": "Est",
+      "parcours": [
+        {
+          "id": 19,
+          "name": "Parcours principal",
+          "start": "Station Kirkland",
+          "start_code": 62605,
+          "end": "Station Lionel-Groulx",
+          "end_code": 61339,
+          "direction": [
+            "Via - Terminus REM Kirkland",
+            "Gauche - Famous Players",
+            "Droite - Sainte-Marie",
+            "Via - vers Ste-Marie",
+            "Droite - vers Sainte-Marie dir. E",
+            "Droite - Sainte-Marie",
+            "Via - vers Ch. Ste-Marie",
+            "Via - Transcanadienne",
+            "Droite - du Ruisseau",
+            "Gauche - Sainte-Marie",
+            "Droite - Montrose",
+            "Gauche - Sherbrooke",
+            "Droite - Saint-Charles",
+            "Gauche - Beaconsfield",
+            "Via - Lakeshore",
+            "Via - du Bord-du-Lac - Lakeshore",
+            "Gauche - de Lourdes",
+            "Droite - Lanthier",
+            "Gauche - Cartier",
+            "Droite - entrée aut. 20 Est",
+            "Via - Autoroute 20 Est",
+            "Via - sortie 50 - St-Jean",
+            "Gauche - Saint-Jean",
+            "Via - entrée aut. 20 Est",
+            "Via - Autoroute 20 Est",
+            "Via - gare Pointe-Claire",
+            "Via - Autoroute 20 Est",
+            "Via - sortie 54 - Pine Beach/ Fénelon",
+            "Via - Herron",
+            "Droite - Dumont",
+            "Droite - Fénelon",
+            "Gauche - Carson",
+            "Gauche - Dorval",
+            "Via - rond point Dorval",
+            "Via - Montréal-Toronto",
+            "Droite - Terminus Dorval",
+            "Droite - rond point Dorval",
+            "Via - vers aut. 20 Est",
+            "Via - Montréal-Toronto",
+            "Via - entrée aut. 20 Est",
+            "Via - Autoroute 20 Est",
+            "Via - voie réservée",
+            "Via - 136 Ville-Marie Est",
+            "Via - voie réservée",
+            "Via - Rose-de-Lima",
+            "Gauche - Saint-Jacques",
+            "Droite - Atwater",
+            "Droite - Delisle",
+            "Droite - Greene"
+          ]
+        }
+      ]
+    }
+  ]
+}

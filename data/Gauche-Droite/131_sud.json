@@ -1,0 +1,52 @@
+{
+  "ligne": "131",
+  "direction": "sud",
+  "routes": [
+    {
+      "line_number": "131",
+      "direction": "Sud",
+      "parcours": [
+        {
+          "id": 2,
+          "name": "Parcours principal",
+          "start": "des Angevins / de Lisieux",
+          "start_code": 54952,
+          "end": "Station Assomption (de l'Assomption / Chauveau)",
+          "end_code": 53083,
+          "direction": [
+            "Via - Des Angevins",
+            "Gauche - Lisieux",
+            "Gauche - Jean-Talon",
+            "Droite - de l'Assomption",
+            "Gauche - Chauveau",
+            "Droite - Dickson",
+            "Droite - de Marseille",
+            "Droite - de l'Assomption"
+          ]
+        },
+        {
+          "id": 3,
+          "name": "Parcours secondaire",
+          "start": "Antonio-Dagenais / Lespinay",
+          "start_code": 60604,
+          "end": "Station Assomption (de l'Assomption / Chauveau)",
+          "end_code": 53083,
+          "direction": [
+            "Via - Antonio-Dagenais",
+            "Gauche - Paimpol",
+            "Gauche - Lacordaire",
+            "Droite - Jean-Talon",
+            "Droite - Des Angevins",
+            "Gauche - Lisieux",
+            "Gauche - Jean-Talon",
+            "Droite - de l'Assomption",
+            "Gauche - Chauveau",
+            "Droite - Dickson",
+            "Droite - de Marseille",
+            "Droite - de l'Assomption"
+          ]
+        }
+      ]
+    }
+  ]
+}

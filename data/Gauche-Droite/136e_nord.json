@@ -1,0 +1,54 @@
+{
+  "ligne": "136e",
+  "direction": "nord",
+  "routes": [
+    {
+      "line_number": "136e",
+      "direction": "Nord",
+      "parcours": [
+        {
+          "id": 5,
+          "name": "Parcours secondaire",
+          "start": "Viau / Jean-Talon",
+          "start_code": 54945,
+          "end": "des Grandes-Prairies / No 5940",
+          "end_code": 54776,
+          "direction": [
+            "Via - Viau",
+            "Gauche - Couture",
+            "Droite - Lionel-Groulx",
+            "Droite - des Grandes-Prairies"
+          ]
+        },
+        {
+          "id": 7,
+          "name": "Parcours secondaire",
+          "start": "Viau / Burel",
+          "start_code": 54931,
+          "end": "des Grandes-Prairies / No 5940",
+          "end_code": 54776,
+          "direction": [
+            "Via - Viau",
+            "Gauche - Couture",
+            "Droite - Lionel-Groulx",
+            "Droite - des Grandes-Prairies"
+          ]
+        },
+        {
+          "id": 8,
+          "name": "Parcours secondaire",
+          "start": "Viau / Rosemont",
+          "start_code": 52571,
+          "end": "des Grandes-Prairies / No 5940",
+          "end_code": 54776,
+          "direction": [
+            "Via - Viau",
+            "Gauche - Couture",
+            "Droite - Lionel-Groulx",
+            "Droite - des Grandes-Prairies"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "ligne": "195",
+  "direction": "ouest",
+  "routes": [
+    {
+      "line_number": "195",
+      "direction": "Ouest",
+      "parcours": [
+        {
+          "id": 1,
+          "name": "Parcours principal",
+          "start": "Station Angrignon",
+          "start_code": 54112,
+          "end": "Terminus Dorval",
+          "end_code": 57365,
+          "direction": [
+            "Via - Terminus Angrignon",
+            "Via - Irwin",
+            "Gauche - des Trinitaires",
+            "Via - Angrignon",
+            "Gauche - Newman",
+            "Droite - Senkus",
+            "Gauche - Cordner",
+            "Via - Laplante",
+            "Droite - Clément",
+            "Gauche - Lafleur",
+            "Droite - Jean-Milot",
+            "Droite - Bergevin",
+            "Gauche - Clément",
+            "Via - Saint-Patrick",
+            "Droite - du Musée",
+            "Droite - 6e Avenue",
+            "Gauche - Saint-Louis",
+            "Droite - 15e Avenue",
+            "Gauche - Notre-Dame",
+            "Droite - 34e Avenue",
+            "Droite - Victoria",
+            "Gauche - 32e Avenue",
+            "Gauche - Provost",
+            "Droite - 40e Avenue",
+            "Gauche - Sherbrooke",
+            "Gauche - 55e Avenue",
+            "Via - Victoria",
+            "Via - Bouchard",
+            "Via - vers aut. 20 Ouest/ aut. 520 Est",
+            "Via - Montréal-Toronto",
+            "Via - rond point Dorval",
+            "Via - Montréal-Toronto",
+            "Droite - Terminus Dorval"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "ligne": "211",
+  "direction": "ouest",
+  "routes": [
+    {
+      "line_number": "211",
+      "direction": "Ouest",
+      "parcours": [
+        {
+          "id": 17,
+          "name": "Parcours principal",
+          "start": "Station Lionel-Groulx",
+          "start_code": 61338,
+          "end": "Station Kirkland",
+          "end_code": 62605,
+          "direction": [
+            "Via - Greene",
+            "Droite - Saint-Jacques",
+            "Gauche - Atwater",
+            "Droite - René-Lévesque",
+            "Droite - vers route 136 Ouest",
+            "Via - 136 Ville-Marie Ouest",
+            "Via - Autoroute 20 Ouest",
+            "Via - voie réservée",
+            "Via - Autoroute 20 Ouest",
+            "Via - sortie 56 - aut. 520/ Dorval",
+            "Via - Montréal-Toronto",
+            "Via - rond point Dorval",
+            "Via - Montréal-Toronto",
+            "Droite - Terminus Dorval",
+            "Droite - rond point Dorval",
+            "Via - Herron",
+            "Via - Dorval",
+            "Droite - Carson",
+            "Droite - Fénelon",
+            "Via - entrée aut. 20 Ouest",
+            "Via - Autoroute 20 Ouest",
+            "Via - Pine Beach",
+            "Via - Autoroute 20 Ouest",
+            "Via - gare Pointe-Claire",
+            "Via - Autoroute 20 Ouest",
+            "Via - sortie 50-N - St-Jean dir. N",
+            "Gauche - vers St-Jean dir. N",
+            "Via - vers aut. 20 Ouest",
+            "Via - entrée aut. 20 Ouest",
+            "Via - Autoroute 20 Ouest",
+            "Via - sortie 49 - Cartier",
+            "Gauche - Cartier",
+            "Droite - Lanthier",
+            "Gauche - de Lourdes",
+            "Droite - du Bord-du-Lac - Lakeshore",
+            "Via - Lakeshore",
+            "Via - Beaconsfield",
+            "Droite - Saint-Charles",
+            "Gauche - Sherbrooke",
+            "Droite - Montrose",
+            "Gauche - Sainte-Marie",
+            "Via - vers Sainte-Marie dir. O",
+            "Via - Sainte-Marie",
+            "Via - Famous Players",
+            "Droite - Terminus REM Kirkland"
+          ]
+        }
+      ]
+    }
+  ]
+}

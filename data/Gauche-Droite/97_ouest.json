@@ -1,0 +1,46 @@
+{
+  "ligne": "97",
+  "direction": "ouest",
+  "routes": [
+    {
+      "line_number": "97",
+      "direction": "Ouest",
+      "parcours": [
+        {
+          "id": 1,
+          "name": "Parcours principal",
+          "start": "Station Pie-IX (P.-De Coubertin/Pie-IX)",
+          "start_code": 62145,
+          "end": "Parc du Mont-Royal",
+          "end_code": 54010,
+          "direction": [
+            "Via - Pierre-De Coubertin",
+            "Droite - Pie-IX",
+            "Droite - Hochelaga",
+            "Droite - Bourbonnière",
+            "Gauche - du Mont-Royal",
+            "Gauche - Saint-Michel",
+            "Droite - Rachel",
+            "Droite - Frontenac",
+            "Gauche - du Mont-Royal",
+            "Gauche - du Parc",
+            "Droite - Boucle Mont-Royal"
+          ]
+        },
+        {
+          "id": 3,
+          "name": "Parcours secondaire",
+          "start": "du Mont-Royal / Frontenac",
+          "start_code": 52504,
+          "end": "Parc du Mont-Royal",
+          "end_code": 54010,
+          "direction": [
+            "Via - du Mont-Royal",
+            "Gauche - du Parc",
+            "Droite - Boucle Mont-Royal"
+          ]
+        }
+      ]
+    }
+  ]
+}

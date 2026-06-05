@@ -1,0 +1,37 @@
+{
+  "ligne": "107",
+  "direction": "est",
+  "routes": [
+    {
+      "line_number": "107",
+      "direction": "Est",
+      "parcours": [
+        {
+          "id": 2,
+          "name": "Parcours principal",
+          "start": "Gagné / Centre Lecavalier",
+          "start_code": 60981,
+          "end": "du Square-Victoria / Saint-Antoine",
+          "end_code": 52786,
+          "direction": [
+            "Via - Gagné",
+            "Droite - Champlain",
+            "Droite - Lacharité",
+            "Gauche - Ouimet",
+            "Droite - Crawford",
+            "Gauche - LaSalle",
+            "Gauche - Godin",
+            "Droite - de Verdun",
+            "Droite - Strathmore",
+            "Droite - LaSalle",
+            "Gauche - Wellington",
+            "Gauche - McGill",
+            "Via - du Square-Victoria",
+            "Gauche - Viger",
+            "Gauche - du Square-Victoria"
+          ]
+        }
+      ]
+    }
+  ]
+}

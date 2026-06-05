@@ -1,0 +1,41 @@
+{
+  "ligne": "24",
+  "direction": "ouest",
+  "routes": [
+    {
+      "line_number": "24",
+      "direction": "Ouest",
+      "parcours": [
+        {
+          "id": 2,
+          "name": "Parcours principal",
+          "start": "Montgomery / Sherbrooke",
+          "start_code": 52819,
+          "end": "Station Villa-Maria (Décarie / de Monkland)",
+          "end_code": 51243,
+          "direction": [
+            "Via - Montgomery",
+            "Droite - Sherbrooke",
+            "Via - Cherrier",
+            "Gauche - Berri (desserte)",
+            "Droite - Sherbrooke",
+            "Droite - Décarie"
+          ]
+        },
+        {
+          "id": 3,
+          "name": "Parcours secondaire",
+          "start": "Montgomery / Sherbrooke",
+          "start_code": 52819,
+          "end": "Station Sherbrooke (Édicule Est)",
+          "end_code": 52508,
+          "direction": [
+            "Via - Montgomery",
+            "Droite - Sherbrooke",
+            "Droite - Berri (desserte)"
+          ]
+        }
+      ]
+    }
+  ]
+}

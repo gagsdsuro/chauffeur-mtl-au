@@ -1,0 +1,27 @@
+{
+  "ligne": "777",
+  "direction": "est",
+  "routes": [
+    {
+      "line_number": "777",
+      "direction": "Est",
+      "parcours": [
+        {
+          "id": 1,
+          "name": "Parcours principal",
+          "start": "Casino de Montréal",
+          "start_code": 62153,
+          "end": "Station Jean-Drapeau",
+          "end_code": 54335,
+          "direction": [
+            "Via - du Casino",
+            "Via - carrefour giratoire",
+            "Via - Pierre-Dupuy",
+            "Gauche - McDonald (île-Sainte-Hélène)",
+            "Gauche - Terminus Jean-Drapeau"
+          ]
+        }
+      ]
+    }
+  ]
+}

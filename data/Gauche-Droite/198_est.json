@@ -1,0 +1,48 @@
+{
+  "ligne": "198",
+  "direction": "est",
+  "routes": [
+    {
+      "line_number": "198",
+      "direction": "Est",
+      "parcours": [
+        {
+          "id": 14,
+          "name": "Parcours principal",
+          "start": "Terminus Dorval",
+          "start_code": 57507,
+          "end": "Station Angrignon",
+          "end_code": 61263,
+          "direction": [
+            "Via - Terminus Dorval",
+            "Droite - rond point Dorval",
+            "Via - Herron",
+            "Via - Dorval",
+            "Gauche - du Bord-du-Lac - Lakeshore",
+            "Via - Saint-Joseph",
+            "Gauche - Broadway",
+            "Gauche - 34e Avenue",
+            "Droite - Victoria",
+            "Gauche - 32e Avenue",
+            "Droite - Provost",
+            "Droite - 1re Avenue",
+            "Gauche - William-MacDonald",
+            "Via - Victoria",
+            "Gauche - Saint-Joseph",
+            "Via - Saint-Jacques",
+            "Droite - Saint-Pierre",
+            "Via - Dollard",
+            "Gauche - Champlain",
+            "Gauche - Shevchenko",
+            "Droite - Bourdeau",
+            "Droite - Lapierre",
+            "Gauche - De La Vérendrye",
+            "Gauche - des Trinitaires",
+            "Gauche - Irwin",
+            "Via - Terminus Angrignon"
+          ]
+        }
+      ]
+    }
+  ]
+}
