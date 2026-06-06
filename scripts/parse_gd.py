@@ -12,10 +12,10 @@ class GDParser:
     """Parser pour donnees brutes Gauche-Droite"""
 
     VALID_DIRECTIONS = {"est", "ouest", "nord", "sud"}
-#    PROJECT_ROOT = Path(__file__).parent.parent.parent  # Up to Chauffeur STM/
-    PROJECT_ROOT = Path(__file__).resolve().parent
-#    GD_DIR = PROJECT_ROOT / "Données" / "Gauche-Droite"
-    GD_DIR = PROJECT_ROOT
+    # scripts/ -> racine du projet (~/chauffeur-stm)
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+    DATA_DIR = PROJECT_ROOT / "data"
+    GD_DIR = DATA_DIR / "Gauche-Droite"
 
     # Lignes a ignorer dans un bloc de parcours
     SKIP_PATTERNS = ("Imprimer", "Date de mise à jour", "Date de mise a jour")
