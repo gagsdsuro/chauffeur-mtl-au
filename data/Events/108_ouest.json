@@ -1,0 +1,23 @@
+{
+  "ligne": "108",
+  "direction": "ouest",
+  "detours": [
+    {
+      "evenement_id": "10701899",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2025-04-10T12:52:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": "VIA STEPHENS DÉBARQUEMENT DE LA CLIENTÈLE ET ZONE DE RÉGULATION STEPHENS /LASALLE #56552",
+      "commentaire": "INTERDICTION DE FAIRE ZONE DE RÉGULATION SUR LASALLE Arrêt(s) ajouté(s): 56552 - Stephens / LaSalle 56592 - de Verdun / de l'Église",
+      "arrets_annules": [
+        {
+          "id": "56703",
+          "nom": "Parc Hadley (Bannantyne / Stephens)"
+        }
+      ],
+      "arrets_ajoutes": []
+    }
+  ]
+}

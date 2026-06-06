@@ -1,0 +1,37 @@
+{
+  "ligne": "211",
+  "direction": "est",
+  "detours": [
+    {
+      "evenement_id": "10499579",
+      "titre": "Détour sans annulation",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2024-09-11T14:00:00",
+      "date_heure_fin": "2026-12-31T19:00:00",
+      "effectif": "Seulement entre 14:00 et 19:00 chaque jour",
+      "description_gd": "VIA ST-JACQUES D VINET D LIONEL GROULX G CHARLEVOIX D DELISLE VIA R.R.",
+      "commentaire": "DÉTOUR DE CONGESTION",
+      "arrets_annules": [],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11225661",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2026-05-19T04:00:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": "ARRÊT ELM / BEACONSFIELD (62723) ANNULÉ FAIRE ARRÊT AU BROWN OWL / ELM",
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "62723",
+          "nom": "Elm / Beaconsfield"
+        }
+      ],
+      "arrets_ajoutes": [
+        "Temp. - Brown Owl / Elm"
+      ]
+    }
+  ]
+}

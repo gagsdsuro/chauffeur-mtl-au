@@ -1,0 +1,94 @@
+{
+  "ligne": "195",
+  "direction": "ouest",
+  "detours": [
+    {
+      "evenement_id": "10497933",
+      "titre": "Arrêt déplacé",
+      "motif": "Travaux",
+      "date_heure_debut": "2024-09-10T14:54:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "57175",
+          "nom": "40e Avenue / Sherbrooke (10 mètres avant)"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11058838",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-03-04T12:01:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": "VIA ST-JOSEPH D/9E AVNEUE G/ST-LOUIS VIA R.R",
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "57350",
+          "nom": "Saint-Louis / 8e Avenue"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11174875",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-03-27T09:00:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "57351",
+          "nom": "Saint-Louis / 10e Avenue"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11195431",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-04-20T03:00:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": "VIA CLÉMENT D/ LAFLEUR VIA ELMSLIE G/ DOLLARD G/ ST-PATRICK D/ ST-PATRICK VIA R.R.",
+      "commentaire": "Arrêt(s) ajouté(s): Temp. - Clément / Lafleur Temp. - ST PATRICK / ST PATRICK",
+      "arrets_annules": [
+        {
+          "id": "56764",
+          "nom": "Jean-Milot / Louis-Fortier"
+        },
+        {
+          "id": "56784",
+          "nom": "Jean-Milot / Lafleur"
+        },
+        {
+          "id": "56789",
+          "nom": "Lafleur / Clément"
+        },
+        {
+          "id": "57066",
+          "nom": "Bergevin / No 411"
+        },
+        {
+          "id": "62284",
+          "nom": "Bergevin / Clément"
+        },
+        {
+          "id": "62346",
+          "nom": "Jean-Milot / Bergevin"
+        }
+      ],
+      "arrets_ajoutes": []
+    }
+  ]
+}

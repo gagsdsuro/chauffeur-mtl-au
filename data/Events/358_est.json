@@ -1,0 +1,64 @@
+{
+  "ligne": "358",
+  "direction": "est",
+  "detours": [
+    {
+      "evenement_id": "11175852",
+      "titre": "Arrêt déplacé",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-03-28T09:10:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "commentaire": "ARRÊT DEVANCÉ DE 60M",
+      "arrets_annules": [
+        {
+          "id": "53032",
+          "nom": "René-Lévesque / Panet"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11177221",
+      "titre": "Arrêt déplacé",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-03-30T06:55:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "commentaire": "AJOUT D'UN ARRÊT AU COIN SANGUINET POUR DESSERVIR LA CLIENTÈLE DU CHUM",
+      "arrets_annules": [
+        {
+          "id": "52882",
+          "nom": "René-Lévesque / Saint-Denis (CHUM)"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11189813",
+      "titre": "Détour sans annulation",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-04-13T01:25:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": "VIA RENÉ-LÉVESQUE G PAPPINEAU D STE-CATHERINE VIA RR",
+      "arrets_annules": [],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11203572",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-04-24T18:40:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "53065",
+          "nom": "Sainte-Catherine / De Lorimier"
+        }
+      ],
+      "arrets_ajoutes": []
+    }
+  ]
+}

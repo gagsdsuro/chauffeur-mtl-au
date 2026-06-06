@@ -1,0 +1,20 @@
+{
+  "ligne": "496",
+  "direction": "ouest",
+  "detours": [
+    {
+      "evenement_id": "10450596",
+      "titre": "Détour sans annulation",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2025-03-20T12:00:00",
+      "date_heure_fin": "2026-12-31T19:00:00",
+      "effectif": "Seulement entre 12:00 et 19:00 chaque jour",
+      "description_gd": "VIA 136 OUEST VIA SORTIE 1-SUD (ST-REMI) VIA ST-REMI G PULLMAN (DES TANERIES) VIA NOTRE-DAME OUEST VIA R.R.",
+      "commentaire": "DÉTOUR CONGESTION LUNDI AU VENDREDI 12H ET 19H",
+      "arrets_annules": [],
+      "arrets_ajoutes": [
+        "56472 - Notre-Dame / Saint-Pierre"
+      ]
+    }
+  ]
+}

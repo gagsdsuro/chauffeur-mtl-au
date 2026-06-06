@@ -1,0 +1,18 @@
+{
+  "ligne": "108",
+  "direction": "est",
+  "detours": [
+    {
+      "evenement_id": "10701899",
+      "titre": "Détour sans annulation",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2025-03-24T04:00:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": "VIA TT STEPHENS /LASALLE VIA STEPHENS D /LASALLE D /BANNANTYNE VIA RR",
+      "commentaire": "INTERDICTION DE FAIRE ZONE DE RÉGULATION SUR LASALLE. Arrêt(s) ajouté(s): 56552 - Stephens / LaSalle",
+      "arrets_annules": [],
+      "arrets_ajoutes": []
+    }
+  ]
+}

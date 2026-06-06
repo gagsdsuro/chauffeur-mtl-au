@@ -1,0 +1,23 @@
+{
+  "ligne": "198",
+  "direction": "est",
+  "detours": [
+    {
+      "evenement_id": "11187952",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-04-13T00:01:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "56475",
+          "nom": "Saint-Pierre / Notre-Dame"
+        }
+      ],
+      "arrets_ajoutes": []
+    }
+  ]
+}

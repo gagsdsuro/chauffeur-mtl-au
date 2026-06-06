@@ -1,0 +1,101 @@
+{
+  "ligne": "131",
+  "direction": "sud",
+  "detours": [
+    {
+      "evenement_id": "10571749",
+      "titre": "Annulation d'arrêts",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2025-02-04T12:47",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": "ARRÊT ANNULÉ EN TOUT TEMPS DURANT LES TRAVAUX DE LA LIGNE BLEU POUR ÉVITER DE DÉPLACER LA CLIENTÈLE SELON LES HEURES DE PASSAGE POINTE ET HORS POINTE. **NE PAS PASSER FAIRE D'ARRÊT SUR DES ANGEVINS/LISIEUX. L' ARRÊT EST SUR LISIEUX/JEAN-TALON (54960)** NE PAS MODIFIER SANS PARLER À REG TREMBLAY OU CO FRÉROT",
+      "arrets_annules": [
+        {
+          "id": "54952",
+          "nom": "des Angevins / de Lisieux"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "10571749",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2024-11-11T09:24",
+      "date_heure_fin": "2026-12-31T15:40",
+      "effectif": "Seulement entre 09:24 et 15:40 chaque jour",
+      "description_gd": "DE 09H00 – 15H33 VIA TERMINUS TEMPO LACORDAIRE ET MANS : DEVANT 7505 LACORDAIRE VIA LACORDAIRE G/ PAIMPOLE G/ LISIEUX VIA RR",
+      "commentaire": "TRAJET HORS POINTE SEULEMENT",
+      "arrets_annules": [
+        {
+          "id": "54952",
+          "nom": "des Angevins / de Lisieux"
+        },
+        {
+          "id": "54970",
+          "nom": "Lacordaire / Jean-Talon"
+        },
+        {
+          "id": "60604",
+          "nom": "Antonio-Dagenais / Lespinay"
+        }
+      ],
+      "arrets_ajoutes": [
+        "Temp. - Lacordaire / DEVANT 7505"
+      ]
+    },
+    {
+      "evenement_id": "10571749",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2026-01-29T05:00",
+      "date_heure_fin": "2026-12-31T09:20",
+      "effectif": "Seulement entre 05:00 et 09:20 chaque jour",
+      "description_gd": "VIA TERMINUS LISIEUX / JEAN-TALON G/ JEAN-TALON VIA R/R",
+      "commentaire": "PARCOURS EN POINTE",
+      "arrets_annules": [
+        {
+          "id": "54952",
+          "nom": "des Angevins / de Lisieux"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "10571749",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2026-01-29T15:41",
+      "date_heure_fin": "2026-12-31T02:00",
+      "effectif": "Seulement entre 15:41 et 02:00 chaque jour",
+      "description_gd": "VIA TERMINUS LISIEUX / JEAN-TALON G/ JEAN-TALON VIA R/R",
+      "commentaire": "PARCOURS EN POINTE",
+      "arrets_annules": [
+        {
+          "id": "54952",
+          "nom": "des Angevins / de Lisieux"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "10707141",
+      "titre": "Arrêt déplacé",
+      "motif": "Travaux",
+      "date_heure_debut": "2025-03-27T06:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": "ARRÊT DÉPLACÉ AU SUD DE JEAN-TALON",
+      "arrets_annules": [
+        {
+          "id": "54970",
+          "nom": "Lacordaire / Jean-Talon (200 mètres après)"
+        }
+      ],
+      "arrets_ajoutes": []
+    }
+  ]
+}

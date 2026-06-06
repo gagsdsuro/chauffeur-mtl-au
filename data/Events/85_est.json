@@ -1,0 +1,27 @@
+{
+  "ligne": "85",
+  "direction": "est",
+  "detours": [
+    {
+      "evenement_id": "11191656",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-04-29T17:01",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": "VIA HOCHELAGA D AYLWIN G DE ROUEN G BOURBONNIERE D HOCHELAGA VIA RR",
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "53037",
+          "nom": "Station Joliette (Hochelaga / Joliette)"
+        },
+        {
+          "id": "53054",
+          "nom": "Hochelaga / Nicolet"
+        }
+      ],
+      "arrets_ajoutes": []
+    }
+  ]
+}

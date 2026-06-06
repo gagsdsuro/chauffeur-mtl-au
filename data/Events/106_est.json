@@ -1,0 +1,40 @@
+{
+  "ligne": "106",
+  "direction": "est",
+  "detours": [
+    {
+      "evenement_id": "11207965",
+      "titre": "Arrêt déplacé",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-04-29T07:37:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "56774",
+          "nom": "LaSalle / Orchard (50 mètres avant)"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11210751",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-05-01T11:14:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": "VIA LASALLE G/ ORCHARD D/ CENTRALE D/ CENTRALE G/ 90E VIA RR ARRET TEMPORAIRE 90E ET CENTRALE",
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "56791",
+          "nom": "90e Avenue / Centrale"
+        }
+      ],
+      "arrets_ajoutes": []
+    }
+  ]
+}

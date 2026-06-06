@@ -1,0 +1,73 @@
+{
+  "ligne": "107",
+  "direction": "est",
+  "detours": [
+    {
+      "evenement_id": "11225538",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-06-01T00:00:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "52893",
+          "nom": "Wellington / Charon"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11244849",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-05-31T21:00:00",
+      "date_heure_fin": "2026-06-03T05:00:00",
+      "effectif": "Seulement entre 21:00 et 05:00 chaque jour",
+      "description_gd": "VIA WELLINGTON G. CHARLEVOIX D. CENTRE G. WELLINGTON VIA R..R.",
+      "commentaire": "TRAVAUX 21H00 À 5H00 Arrêt(s) ajouté(s): 54103 - du Centre / Wellington",
+      "arrets_annules": [
+        {
+          "id": "52871",
+          "nom": "Parc-Marguerite-Bourgeoys"
+        },
+        {
+          "id": "52887",
+          "nom": "Wellington / Fortune"
+        },
+        {
+          "id": "52893",
+          "nom": "Wellington / Charon"
+        },
+        {
+          "id": "52912",
+          "nom": "Wellington / de la Congrégation"
+        },
+        {
+          "id": "53898",
+          "nom": "Wellington / du Centre"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11244849",
+      "titre": "Arrêt déplacé",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-05-31T21:00:00",
+      "date_heure_fin": "2026-06-03T05:00:00",
+      "effectif": "Seulement entre 21:00 et 05:00 chaque jour",
+      "description_gd": null,
+      "commentaire": "TRAVAUX 21H00 À 5H00",
+      "arrets_annules": [
+        {
+          "id": "53900",
+          "nom": "Wellington / Charlevoix (10 mètres avant)"
+        }
+      ],
+      "arrets_ajoutes": []
+    }
+  ]
+}

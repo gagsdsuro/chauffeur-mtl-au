@@ -1,0 +1,40 @@
+{
+  "ligne": "106",
+  "direction": "ouest",
+  "detours": [
+    {
+      "evenement_id": "11224414",
+      "titre": "Arrêt déplacé",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-05-19T00:01:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "56918",
+          "nom": "Newman / Léger (50 mètres après)"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11233957",
+      "titre": "Arrêt déplacé",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-05-22T21:28:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "57046",
+          "nom": "Newman / No 7214 (30 mètres avant)"
+        }
+      ],
+      "arrets_ajoutes": []
+    }
+  ]
+}

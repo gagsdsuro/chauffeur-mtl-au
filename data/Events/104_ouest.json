@@ -1,0 +1,57 @@
+{
+  "ligne": "104",
+  "direction": "ouest",
+  "detours": [
+    {
+      "evenement_id": "11236887",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-05-25T22:11:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "51151",
+          "nom": "Saint-Jacques / Cavendish"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11240398",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-05-28T07:45:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "51990",
+          "nom": "Atwater / Lincoln"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11240722",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-05-28T09:43:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "56262",
+          "nom": "Sherbrooke / Lansdowne"
+        }
+      ],
+      "arrets_ajoutes": []
+    }
+  ]
+}

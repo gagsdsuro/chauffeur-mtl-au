@@ -1,0 +1,42 @@
+{
+  "ligne": "131",
+  "direction": "nord",
+  "detours": [
+    {
+      "evenement_id": "10571749",
+      "titre": "Annulation d'arrêts",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2025-02-04T12:47",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": "ARRÊT ANNULÉ EN TOUT TEMPS DURANT LES TRAVAUX DE LA LIGNE BLEU POUR ÉVITER DE DÉPLACER LA CLIENTÈLE SELON LES HEURES DE PASSAGE POINTE ET HORS POINTE. NE PAS MODIFIER SANS PARLER À REG TREMBLAY OU CO FRÉROT",
+      "arrets_annules": [
+        {
+          "id": "54952",
+          "nom": "des Angevins / de Lisieux"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "10571749",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2024-11-11T09:24",
+      "date_heure_fin": "2026-12-31T15:40",
+      "effectif": "Seulement entre 09:24 et 15:40 chaque jour",
+      "description_gd": "VIA LACORDAIRE TERMINUS TEMPO LACORDAIRE AU NORD DE MANS DEVANT 7505 LACORDAIRE",
+      "commentaire": "TRAJET HORS POINTE SEULEMENT",
+      "arrets_annules": [
+        {
+          "id": "60604",
+          "nom": "Antonio-Dagenais / Lespinay"
+        }
+      ],
+      "arrets_ajoutes": [
+        "Temp. - Lacordaire / DEVANT 7505"
+      ]
+    }
+  ]
+}

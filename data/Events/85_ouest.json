@@ -1,0 +1,96 @@
+{
+  "ligne": "85",
+  "direction": "ouest",
+  "detours": [
+    {
+      "evenement_id": "10001044",
+      "titre": "Arrêt déplacé",
+      "motif": "Travaux",
+      "date_heure_debut": "2022-03-10T13:24",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": "ARRÊT DÉPLACÉ SUR LE VIADUC RESTER DANS LA VOIE DE GAUCHE POUR TRAVERSER CETTE INTERSECTION.",
+      "arrets_annules": [
+        {
+          "id": "53355",
+          "nom": "Hochelaga / Curatteau (50 mètres après)"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11112931",
+      "titre": "Arrêt déplacé",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2026-01-27T10:26",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "53038",
+          "nom": "Station Joliette (Hochelaga / Aylwin) (10 mètres après)"
+        }
+      ],
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11182216",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2026-04-22T05:20",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "description_gd": "VIA HOCHELAGA G. D'IBERVILLE G. ONTARIO D. DU HAVRE VIA RR",
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "52864",
+          "nom": "du Havre / Hochelaga"
+        },
+        {
+          "id": "52946",
+          "nom": "du Havre / de Rouen"
+        }
+      ],
+      "arrets_ajoutes": [
+        "52878 - Hochelaga / du Havre 61889 - D'Iberville / de Rouen"
+      ]
+    },
+    {
+      "evenement_id": "11200132",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-05-13T07:00",
+      "date_heure_fin": "2026-05-22T23:59",
+      "effectif": "En tout temps",
+      "description_gd": "VIA HOCHELAGA G D'ORLÉANS D DE ROUEN D SAINT-GERMAIN G HOCHELAGA VIA RR",
+      "commentaire": null,
+      "arrets_annules": [
+        {
+          "id": "52999",
+          "nom": "Hochelaga / Saint-Germain"
+        },
+        {
+          "id": "53011",
+          "nom": "Hochelaga / Davidson"
+        },
+        {
+          "id": "53038",
+          "nom": "Station Joliette (Hochelaga / Aylwin)"
+        },
+        {
+          "id": "53052",
+          "nom": "Hochelaga / Nicolet"
+        },
+        {
+          "id": "53071",
+          "nom": "Hochelaga / d'Orléans"
+        }
+      ],
+      "arrets_ajoutes": []
+    }
+  ]
+}
