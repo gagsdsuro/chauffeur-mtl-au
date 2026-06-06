@@ -183,7 +183,7 @@ class GDParser:
             "routes": [
                 {
                     "line_number": self.ligne,
-                    "direction": self.direction,
+                    "direction": self.direction.capitalize(),
                     "parcours": self.parcours
                 }
             ]

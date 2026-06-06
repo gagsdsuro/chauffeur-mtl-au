@@ -1,5 +1,5 @@
 ```
-python3 parse_gd.py < route.txt
+python3 parse_gd.py < ~/chauffeur-stm/data/raw/new-gd.txt
 
 ============================================================
 RAPPORT: STM Importer Gauche-Droite
