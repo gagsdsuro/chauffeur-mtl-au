@@ -45,28 +45,37 @@ def log(message: str, level: str = "INFO") -> None:
         f.write(line + "\n")
 
 
-# ── Chargement de la clé API via SecretsManager ────────────────────────────────
+# ── Chargement de la clé API ───────────────────────────────────────────────────
+SECRETS_FILE = PROJECT_ROOT / "Installation" / "config" / "secrets.json"
+
 def get_api_key() -> str:
     """
-    Charge la clé API STM temps réel de manière sécurisée.
-    Priorité: secrets.json (stm_api_key_rt) → variable d'environnement STM_API_KEY_RT
+    Charge la clé API STM temps réel.
+    Priorité: Installation/config/secrets.json (stm_api_key_rt) → variable d'environnement STM_API_KEY_RT
     """
-    sys.path.insert(0, str(PROJECT_ROOT / "Skills"))
-    try:
-        from common.secrets_manager import SecretsManager
-        return SecretsManager.get_rt_api_key()
-    except ImportError:
-        # Fallback si le module n'est pas accessible
-        import os
-        key = os.environ.get("STM_API_KEY_RT", "").strip()
-        if not key:
-            raise ValueError(
-                "Clé API temps réel STM introuvable.\n"
-                "  Option 1 : remplir Installation/config/secrets.json  (clé: stm_api_key_rt)\n"
-                "  Option 2 : définir la variable d'environnement STM_API_KEY_RT"
-            )
-        log("API key RT chargée depuis variable d'environnement STM_API_KEY_RT")
+    import os
+    # 1. Fichier secrets.json
+    if SECRETS_FILE.exists():
+        try:
+            secrets = json.loads(SECRETS_FILE.read_text(encoding="utf-8"))
+            key = secrets.get("stm_api_key_rt", "").strip()
+            if key:
+                log(f"Clé API chargée depuis {SECRETS_FILE}")
+                return key
+        except Exception as e:
+            log(f"Erreur lecture {SECRETS_FILE}: {e}", "WARNING")
+
+    # 2. Variable d'environnement
+    key = os.environ.get("STM_API_KEY_RT", "").strip()
+    if key:
+        log("Clé API chargée depuis variable d'environnement STM_API_KEY_RT")
         return key
+
+    raise ValueError(
+        "Clé API temps réel STM introuvable.\n"
+        f"  Option 1 : remplir {SECRETS_FILE}  (clé: stm_api_key_rt)\n"
+        "  Option 2 : définir la variable d'environnement STM_API_KEY_RT"
+    )
 
 
 # ── Téléchargement d'un endpoint ───────────────────────────────────────────────

@@ -9,11 +9,13 @@ Installation/config/secrets.*.json
 *.key
 
 # 🗂️ DONNÉES SENSIBLES / VOLUMINEUSES
-data/rt/archives/
-data/rt/gtfs_stm.zip
-data/rt/gtfs_stm_*.zip
-data/Schedules/response*.pb
-data/Schedules/*.zip
+data/gtfs/archives
+data/gtfs/gtfs_stm.zip
+data/gtfs/gtfs_stm_*.zip
+data/gtfs/gtfs_stm/*.txt
+data/gtfs/*.zip
+data/gtfs_rt/response*.pb
+data/gtfs_rt/*.zip
 
 # 🐍 PYTHON
 __pycache__/
