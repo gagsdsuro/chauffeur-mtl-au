@@ -1,0 +1,111 @@
+Détour / 195 Est
+Évènement - 10853639 - Détour avec annulation d'arrêt
+Motif
+Travaux
+Date / heure début
+2025-11-03 08:39
+Date / heure de fin
+non définie
+Effectif
+En tout temps
+Arrêt(s)
+57263 - 6e Avenue / Saint-Joseph
+Description Gauche-Droite
+VIA 6E AVE
+D/ST-LOUIS
+G/7E AVENUE
+G/ST-JOSEPH
+VIA R.R.
+Évènement - 11195431 - Détour avec annulation d'arrêt
+Motif
+Travaux
+Date / heure début
+2026-04-20 03:00
+Date / heure de fin
+non définie
+Effectif
+En tout temps
+Arrêt(s)
+56758 - Bergevin / Clément
+56763 - Jean-Milot / des Oblats
+56788 - Clément / Lafleur
+57057 - Jean-Milot / Bergevin
+57068 - Bergevin / No 398
+Description Gauche-Droite
+VIA ST-PATRICK
+G/ ST-PATRICK
+D/ DOLLARD
+D/ ELMSLIE
+VIA LAFLEUR
+G/ CLÉMENT
+VIA R.R.
+Commentaire
+Arrêt(s) ajouté(s):
+Temp. - ST PATRICK / CLÉMENT
+Détour / 195 Ouest
+Évènement - 10497933 - Arrêt déplacé
+Motif
+Travaux
+Date / heure début
+2024-09-10 14:54
+Date / heure de fin
+non définie
+Effectif
+En tout temps
+Arrêt(s)
+57175 - 40e Avenue / Sherbrooke (10 mètres avant)
+Évènement - 11058838 - Détour avec annulation d'arrêt
+Motif
+Travaux
+Date / heure début
+2026-03-04 12:01
+Date / heure de fin
+non définie
+Effectif
+En tout temps
+Arrêt(s)
+57350 - Saint-Louis / 8e Avenue
+Description Gauche-Droite
+VIA ST-JOSEPH
+D/9E AVNEUE
+G/ST-LOUIS
+VIA R.R
+Évènement - 11174875 - Annulation d'arrêts
+Motif
+Travaux
+Date / heure début
+2026-03-27 09:00
+Date / heure de fin
+non définie
+Effectif
+En tout temps
+Arrêt(s)
+57351 - Saint-Louis / 10e Avenue
+Évènement - 11195431 - Détour avec annulation d'arrêt
+Motif
+Travaux
+Date / heure début
+2026-04-20 03:00
+Date / heure de fin
+non définie
+Effectif
+En tout temps
+Arrêt(s)
+56764 - Jean-Milot / Louis-Fortier
+56784 - Jean-Milot / Lafleur
+56789 - Lafleur / Clément
+57066 - Bergevin / No 411
+62284 - Bergevin / Clément
+62346 - Jean-Milot / Bergevin
+Description Gauche-Droite
+VIA CLÉMENT
+D/ LAFLEUR
+VIA ELMSLIE
+G/ DOLLARD
+G/ ST-PATRICK
+D/ ST-PATRICK
+VIA R.R.
+Commentaire
+Arrêt(s) ajouté(s):
+Temp. - Clément / Lafleur
+Temp. - ST PATRICK / ST PATRICK
