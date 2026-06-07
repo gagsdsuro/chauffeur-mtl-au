@@ -1,14 +1,28 @@
 #!/usr/bin/env python3
 """
-gen_rapport.py — Générateur de rapport journalier STM
-Usage: python gen_rapport.py --data rapport_data.json [--output /chemin/sortie.pdf]
+gen_rapport.py — Générateur de rapport journalier STM (autonome)
+
+Usage:
+  python gen_rapport.py                         # carte agent du jour
+  python gen_rapport.py --date 2026-06-05       # date spécifique
+  python gen_rapport.py --output /tmp/out.pdf   # chemin de sortie custom
+  python gen_rapport.py --data rapport.json     # JSON pré-assemblé (override)
 """
 
 import argparse
 import json
+import re
 import sys
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
+
+# ─── Chemins ────────────────────────────────────────────────────────────────
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR     = PROJECT_ROOT / "data"
+GD_DIR       = DATA_DIR / "Gauche-Droite"
+EVENTS_DIR   = DATA_DIR / "Events"
+DOCS_DIR     = PROJECT_ROOT / "Documentation"
+OUTPUT_DIR   = DATA_DIR / "rapports"
 
 try:
     from reportlab.lib import colors
@@ -216,10 +230,10 @@ def page2_detours(data):
     story.append(HRFlowable(width='100%', thickness=2, color=BLUE, spaceAfter=5))
 
     TYPE_SYMBOL = {
-        "annulation d'arrêts"            : '\u2717',
+        "annulation d'arrêts"            : '✗',
         "arrêt déplacé"                  : '!',
-        "détour avec annulation d'arrêt" : '\u26a0',
-        "détour"                         : '\u26a0',
+        "détour avec annulation d'arrêt" : '⚠',
+        "détour"                         : '⚠',
     }
 
     def _symbol(titre):
@@ -227,7 +241,7 @@ def page2_detours(data):
         for k, v in TYPE_SYMBOL.items():
             if k in tl:
                 return v
-        return '\u2022'
+        return '•'
 
     HDR_STYLE = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), BLUE),
@@ -247,7 +261,7 @@ def page2_detours(data):
 
     for ligne in data.get('lignes', []):
         num      = ligne.get('numero', '')
-        type_svc = ' (\u00e9cole)' if ligne.get('type') == 'Scolaire' else ''
+        type_svc = ' (école)' if ligne.get('type') == 'Scolaire' else ''
         all_app  = ligne.get('detours_applicables', [])
 
         dirs_avec = {}
@@ -266,12 +280,12 @@ def page2_detours(data):
             any_applicable = True
             label = f'Direction {sens}' if sens else 'Toutes directions'
             story.append(Paragraph(
-                f"LIGNE {num}{type_svc} \u2014 {label} \u2014 Arr\u00eats modifi\u00e9s (applicables aujourd'hui)",
+                f"LIGNE {num}{type_svc} — {label} — Arrêts modifiés (applicables aujourd'hui)",
                 S['section']
             ))
             story.append(Spacer(1, 3))
 
-            rows = [['\u00c9v\u00e8nement / Titre', 'Arr\u00eats', 'D\u00e9tour & Commentaires', 'Effectif']]
+            rows = [['Évènement / Titre', 'Arrêts', 'Détour & Commentaires', 'Effectif']]
             for ev in evs:
                 ev_id    = ev.get('evenement_id', '')
                 titre    = ev.get('titre', '')
@@ -287,13 +301,13 @@ def page2_detours(data):
                 arrets_txt = '<br/>'.join(
                     f'{sym} {a.get("id", "")} {a.get("nom", "")}'
                     for a in arrets
-                ) or '\u2014'
+                ) or '—'
                 parts = []
                 if gd:
                     parts.append(f'<b>G-D :</b> {gd}')
                 if comm:
                     parts.append(comm)
-                detail = '<br/>'.join(parts) if parts else '\u2014'
+                detail = '<br/>'.join(parts) if parts else '—'
 
                 rows.append([
                     Paragraph(ev_text,    S['body']),
@@ -309,7 +323,7 @@ def page2_detours(data):
 
     if not any_applicable:
         story.append(Paragraph(
-            "Aucun d\u00e9tour applicable pour les lignes travaill\u00e9es aujourd'hui.",
+            "Aucun détour applicable pour les lignes travaillées aujourd'hui.",
             _style('none', fontSize=8, textColor=colors.grey,
                    fontName='Helvetica-Oblique', spaceAfter=6)
         ))
@@ -331,7 +345,7 @@ def page2_detours(data):
 
     if non_app_rows:
         story.append(Paragraph("Non applicables aujourd'hui", S['subsec']))
-        na_hdr = [['Ligne', 'Dir.', 'Arr\u00eat(s)', "Raison d'exclusion"]]
+        na_hdr = [['Ligne', 'Dir.', 'Arrêt(s)', "Raison d'exclusion"]]
         na_t = Table(na_hdr + non_app_rows,
                      colWidths=[14*mm, 14*mm, 52*mm, doc_width - 80*mm])
         na_t.setStyle(TableStyle([
@@ -354,7 +368,6 @@ def page2_detours(data):
     story.append(HRFlowable(width='100%', thickness=0.5, color=LGREY, spaceAfter=3))
     story.append(Paragraph(
         'Généré le ' + datetime.now().strftime('%Y-%m-%d à %Hh%M') + ' — Source : employe.stm.info/listeBus',
-
         _style('footer', fontSize=6, textColor=colors.grey,
                fontName='Helvetica', alignment=1)
     ))
@@ -385,21 +398,326 @@ def generate(data: dict, output_path: str):
     return output_path
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Générateur de rapport journalier STM')
-    parser.add_argument('--data', required=True, help='Fichier JSON de données (rapport_data.json)')
-    parser.add_argument('--output', default=None, help='Chemin du PDF de sortie')
-    args = parser.parse_args()
+# ─── Lecture carte agent PDF ─────────────────────────────────────────────────
 
-    data_path = Path(args.data)
-    if not data_path.exists():
-        print(f'Erreur : fichier introuvable : {data_path}')
+JOURS_FR = {
+    0: 'Lundi', 1: 'Mardi', 2: 'Mercredi', 3: 'Jeudi',
+    4: 'Vendredi', 5: 'Samedi', 6: 'Dimanche',
+}
+
+
+def find_carte_agent(target_date: date) -> Path:
+    """Retourne la carte agent PDF pour la date donnée, ou la plus récente disponible."""
+    date_str = target_date.strftime('%Y-%m-%d')
+    exact = DOCS_DIR / f"carte-agent-{date_str}.pdf"
+    if exact.exists():
+        return exact
+    # Fallback : carte la plus récente (exclut les versions surlignées)
+    candidates = sorted(
+        (p for p in DOCS_DIR.glob("carte-agent-*.pdf") if 'surligné' not in p.name),
+        reverse=True
+    )
+    if candidates:
+        print(f"⚠️  Carte agent du {date_str} introuvable — utilisation de : {candidates[0].name}")
+        return candidates[0]
+    raise FileNotFoundError(
+        f"Aucune carte agent trouvée dans {DOCS_DIR}\n"
+        f"  Fichier attendu : carte-agent-{date_str}.pdf"
+    )
+
+
+def parse_carte_agent(pdf_path: Path) -> dict:
+    """Extrait les données structurées de la carte agent HASTUS (PDF)."""
+    try:
+        import pypdf
+    except ImportError:
+        print("pypdf non installé. Exécute: pip install pypdf --break-system-packages")
         sys.exit(1)
 
-    with open(data_path, encoding='utf-8') as f:
-        data = json.load(f)
+    reader = pypdf.PdfReader(str(pdf_path))
+    page1_text = reader.pages[0].extract_text() or ''
+    page2_text = reader.pages[1].extract_text() if len(reader.pages) > 1 else ''
 
-    out = generate(data, args.output)
+    result = {
+        'assignation': '',
+        'date': None,
+        'voiture': '',
+        'heure_debut': '',
+        'lieu_debut': '',
+        'heure_fin': '',
+        'garage': '',
+        'lignes': [],
+        'hlp': [],
+    }
+
+    # Assignation : premier nombre ≥ 3 chiffres en début de ligne
+    m = re.search(r'^(\d{3,4})\s', page1_text, re.MULTILINE)
+    if m:
+        result['assignation'] = m.group(1)
+
+    # Date : format dd/mm/yyyy
+    m = re.search(r'(\d{2})/(\d{2})/(\d{4})', page1_text)
+    if m:
+        result['date'] = date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+
+    # Ligne du tableau shift — pypdf mélange les colonnes, ex :
+    # "V036 5622:28 22:28 29:38 29:48 12 - 04"
+    # Voiture : dernier motif "NN - NN" de la ligne contenant les heures
+    shift_line_m = re.search(r'[A-Z]\w+\s+\d+\d{2}:\d{2}.+?(\d+\s*-\s*\d+)\s*$',
+                             page1_text, re.MULTILINE)
+    if shift_line_m:
+        result['voiture'] = shift_line_m.group(1).replace(' ', '')
+
+    # Lieu début : code alphanumérique avant les heures fusionnées (ex: V036)
+    lieu_m = re.search(r'([A-Z]\d+)\s+\d+\d{2}:\d{2}', page1_text)
+    if lieu_m:
+        result['lieu_debut'] = lieu_m.group(1)
+
+    # Heures : extraire les HH:MM non précédés d'un chiffre (évite "5622:28")
+    shift_line_text = shift_line_m.group(0) if shift_line_m else ''
+    times = re.findall(r'(?<!\d)(\d{2}:\d{2})', shift_line_text)
+    if len(times) >= 2:
+        result['heure_debut'] = times[0]
+        result['heure_fin']   = times[1]
+
+    # Lignes travaillées : "12 - P / - / Régulier" ou "a12 - P / ..." (note ref)
+    seen = []
+    for m in re.finditer(r'[a-z]?(\d+)\s+-\s+P\s+/', page1_text, re.MULTILINE):
+        num = m.group(1)
+        if num not in seen:
+            seen.append(num)
+    result['lignes'] = seen
+
+    # Garage : "GARAGE LASALLE" → "LaSalle"
+    m = re.search(r'GARAGE\s+(\S+)', page1_text, re.IGNORECASE)
+    if m:
+        result['garage'] = m.group(1).capitalize()
+
+    # HLP depuis page 2
+    # Format: "hlp1: 61564 - [V] de l'Église, ... - 54112"
+    # ou:     "hlp3: 60238 - [V] Tupper, ..."  (sans code de fin)
+    for m in re.finditer(
+        r'(hlp\d+):\s+\d+\s+-\s+(.+?)(?:\s+-\s+\d+)?$',
+        page2_text, re.MULTILINE | re.IGNORECASE
+    ):
+        raw = m.group(2).strip()
+        # Convertir [V]/[G]/[D] en abréviations lisibles
+        instructions = re.sub(r'\[V\]', 'Via', raw)
+        instructions = re.sub(r'\[G\]', 'Gauche', instructions)
+        instructions = re.sub(r'\[D\]', 'Droite', instructions)
+        result['hlp'].append({
+            'id': m.group(1),
+            'instructions': instructions,
+        })
+
+    return result
+
+
+# ─── Lecture des données G-D ─────────────────────────────────────────────────
+
+def load_gd_directions(numero: str) -> list:
+    """
+    Charge toutes les directions G-D disponibles pour une ligne.
+    Retourne une liste de directions au format attendu par page1_gd().
+    """
+    directions = []
+    for gd_file in sorted(GD_DIR.glob(f"gd{numero}_*.json")):
+        try:
+            data = json.loads(gd_file.read_text(encoding='utf-8'))
+        except Exception as e:
+            print(f"⚠️  Erreur lecture {gd_file.name}: {e}", file=sys.stderr)
+            continue
+
+        for route in data.get('routes', []):
+            sens = route.get('direction', '')
+            for parcours in route.get('parcours', []):
+                instructions = []
+
+                # Terminus de départ
+                instructions.append({
+                    'type': 'terminus',
+                    'texte': parcours.get('start', ''),
+                    'arret': str(parcours.get('start_code', '')),
+                })
+
+                # Instructions virage-par-virage
+                for instr in parcours.get('direction', []):
+                    m = re.match(r'^(Via|Gauche|Droite)\s+-\s+(.+)$', instr, re.IGNORECASE)
+                    if m:
+                        instructions.append({
+                            'type': m.group(1).lower(),
+                            'texte': m.group(2),
+                        })
+
+                # Terminus d'arrivée
+                instructions.append({
+                    'type': 'terminus',
+                    'texte': parcours.get('end', ''),
+                    'arret': str(parcours.get('end_code', '')),
+                })
+
+                directions.append({
+                    'sens': sens,
+                    'parcours_nom': parcours.get('name', ''),
+                    'instructions': instructions,
+                })
+
+    return directions
+
+
+# ─── Filtrage des événements ─────────────────────────────────────────────────
+
+# Mapping mots-clés effectif → jours de la semaine (0=lundi … 6=dimanche)
+EFFECTIF_JOURS = {
+    'lundi':          [0],
+    'mardi':          [1],
+    'mercredi':       [2],
+    'jeudi':          [3],
+    'vendredi':       [4],
+    'samedi':         [5],
+    'dimanche':       [6],
+    'en semaine':     [0, 1, 2, 3, 4],
+    'fin de semaine': [5, 6],
+}
+
+
+def is_event_applicable(event: dict, target_date: date):
+    """
+    Détermine si un événement est applicable à la date cible.
+    Retourne (True, '') ou (False, raison_exclusion).
+    """
+    debut_str = event.get('date_heure_debut')
+    fin_str   = event.get('date_heure_fin')
+
+    if debut_str:
+        debut = datetime.fromisoformat(debut_str).date()
+        if target_date < debut:
+            return False, f"Pas encore actif (début {debut})"
+
+    if fin_str:
+        fin = datetime.fromisoformat(fin_str).date()
+        if target_date > fin:
+            return False, f"Expiré (fin {fin})"
+
+    # Filtre jour de semaine selon effectif
+    effectif = (event.get('effectif') or '').lower().strip()
+    if effectif not in ('en tout temps', ''):
+        dow = target_date.weekday()
+        for key, jours in EFFECTIF_JOURS.items():
+            if key in effectif:
+                if dow not in jours:
+                    return False, f"Effectif : {event.get('effectif')}"
+                break
+
+    return True, ''
+
+
+def load_events_for_ligne(numero: str, target_date: date):
+    """
+    Charge et filtre les événements d'une ligne.
+    Retourne (applicables, non_applicables).
+    """
+    applicables     = []
+    non_applicables = []
+
+    for ev_file in sorted(EVENTS_DIR.glob(f"{numero}_*.json")):
+        try:
+            data = json.loads(ev_file.read_text(encoding='utf-8'))
+        except Exception as e:
+            print(f"⚠️  Erreur lecture {ev_file.name}: {e}", file=sys.stderr)
+            continue
+
+        direction = data.get('direction', '')
+        for event in data.get('detours', []):
+            ok, raison = is_event_applicable(event, target_date)
+            ev = dict(event)
+            ev['direction'] = direction
+            if ok:
+                applicables.append(ev)
+            else:
+                ev['raison_exclusion'] = raison
+                non_applicables.append(ev)
+
+    return applicables, non_applicables
+
+
+# ─── Assemblage des données ───────────────────────────────────────────────────
+
+def build_rapport_data(carte: dict, target_date: date) -> dict:
+    """Construit le dictionnaire de données complet à partir de la carte agent."""
+    jour_str = JOURS_FR.get(target_date.weekday(), '')
+
+    lignes = []
+    for numero in carte['lignes']:
+        directions = load_gd_directions(numero)
+        app, non_app = load_events_for_ligne(numero, target_date)
+        lignes.append({
+            'numero':                 numero,
+            'nom':                    '',
+            'type':                   'Régulier',
+            'directions':             directions,
+            'detours_applicables':    app,
+            'detours_non_applicables': non_app,
+        })
+
+    return {
+        'date_travail': target_date.isoformat(),
+        'jour_semaine': jour_str,
+        'agent': {
+            'assignation': carte['assignation'],
+            'nom':         '',
+            'garage':      carte['garage'],
+        },
+        'heure_prise': carte['heure_debut'],
+        'lieu_prise':  carte['lieu_debut'],
+        'heure_fin':   carte['heure_fin'],
+        'voiture':     carte['voiture'],
+        'lignes':      lignes,
+        'hlp':         carte['hlp'],
+    }
+
+
+# ─── Point d'entrée ───────────────────────────────────────────────────────────
+
+def main():
+    arg_parser = argparse.ArgumentParser(description='Générateur de rapport journalier STM')
+    arg_parser.add_argument('--date',   default=None,
+                            help='Date cible YYYY-MM-DD (défaut: aujourd\'hui)')
+    arg_parser.add_argument('--output', default=None,
+                            help='Chemin du PDF de sortie (défaut: data/rapports/rapport-DATE.pdf)')
+    arg_parser.add_argument('--data',   default=None,
+                            help='Override: fichier JSON pré-assemblé (bypass carte agent)')
+    args = arg_parser.parse_args()
+
+    target_date = date.fromisoformat(args.date) if args.date else date.today()
+
+    if args.data:
+        # Mode override : JSON fourni manuellement
+        data_path = Path(args.data)
+        if not data_path.exists():
+            print(f'Erreur : fichier introuvable : {data_path}')
+            sys.exit(1)
+        data = json.loads(data_path.read_text(encoding='utf-8'))
+    else:
+        # Mode autonome : lecture de la carte agent PDF
+        try:
+            pdf_path = find_carte_agent(target_date)
+            print(f'📄 Carte agent : {pdf_path.name}')
+            carte = parse_carte_agent(pdf_path)
+            if not carte['lignes']:
+                print('Erreur : aucune ligne trouvée dans la carte agent.')
+                sys.exit(1)
+            print(f'   Assignation : {carte["assignation"]} | Voiture : {carte["voiture"]}')
+            print(f'   Lignes : {", ".join(carte["lignes"])}')
+            data = build_rapport_data(carte, target_date)
+        except FileNotFoundError as e:
+            print(f'Erreur : {e}')
+            sys.exit(1)
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = args.output or str(OUTPUT_DIR / f"rapport-{target_date}.pdf")
+
+    out = generate(data, output_path)
     print(f'✅ Rapport généré : {out}')
 
 
