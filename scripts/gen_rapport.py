@@ -488,6 +488,9 @@ def parse_carte_agent(pdf_path: Path) -> dict:
             seen.append(num)
     result['lignes'] = seen
 
+    # Segments départ/arrivée par ligne (pour filtrage des parcours G-D)
+    result['segments'] = extract_segments_from_carte(page1_text)
+
     # Garage : "GARAGE LASALLE" → "LaSalle"
     m = re.search(r'GARAGE\s+(\S+)', page1_text, re.IGNORECASE)
     if m:
@@ -513,11 +516,83 @@ def parse_carte_agent(pdf_path: Path) -> dict:
     return result
 
 
+# ─── Extraction des segments de la carte agent ───────────────────────────────
+
+def extract_segments_from_carte(page1_text: str) -> dict:
+    """
+    Extrait les paires (départ, arrivée) par ligne depuis le texte de la carte agent.
+    Retourne: { '195': [('STATION ANGRIGNON', 'TERMINUS DORVAL'), ...], ... }
+
+    Format HASTUS :
+      - Premier arrêt du bloc : "HH:MMNom de l'arrêt"  (heure collée avant)
+      - Dernier arrêt du bloc : "Nom de l'arrêt HH:MM" (heure après)
+    """
+    segments: dict = {}
+    # Découpe en blocs à chaque nouvelle ligne de service, HLP ou GARAGE
+    blocks = re.split(r'\n(?=[a-z]?\d+\s+-\s+P\s+/|hlp\d|GARAGE)', page1_text)
+
+    for block in blocks:
+        m_ligne = re.match(r'[a-z]?(\d+)\s+-\s+P\s+/', block)
+        if not m_ligne:
+            continue
+        numero = m_ligne.group(1)
+
+        lines = [l.strip() for l in block.split('\n') if l.strip()]
+        stops = []
+        for line in lines[1:]:   # ignorer la ligne d'en-tête
+            # Départ : "23:46STATION ANGRIGNON (BOUCLE NORD)"
+            m = re.match(r'\d+:\d+(.+)', line)
+            if m:
+                stops.append(m.group(1).strip())
+                continue
+            # Arrivée avec espace : "TERMINUS DORVAL 24:32"
+            # Arrivée sans espace : "STATION ANGRIGNON (BOUCLE NORD)25:35"
+            m = re.match(r'(.+?)\s*\d{2}:\d{2}\s*$', line)
+            if m:
+                stops.append(m.group(1).strip())
+
+        if len(stops) >= 2:
+            segments.setdefault(numero, []).append((stops[0], stops[-1]))
+
+    return segments
+
+
+def normalize_stop(name: str) -> str:
+    """Normalise un nom d'arrêt pour comparaison (majuscules, abréviations, sans parenthèses)."""
+    n = name.upper().strip()
+    n = re.sub(r'\s*\([^)]*\)', '', n)   # supprime "(BOUCLE NORD)", "(54112)", etc.
+    # Expand abréviations courantes (avec/sans tiret ou espace)
+    n = re.sub(r'\bSTE\b', 'SAINTE', n)
+    n = re.sub(r'\bST\b',  'SAINT',  n)
+    n = re.sub(r'\s+', ' ', n)
+    return n.strip()
+
+
+def parcours_matches_segments(parcours: dict, segments: list) -> bool:
+    """
+    Vérifie si un parcours G-D correspond à au moins un segment de la carte agent.
+    Comparaison insensible à la casse et aux parenthèses.
+    """
+    gd_start = normalize_stop(parcours.get('start', ''))
+    gd_end   = normalize_stop(parcours.get('end', ''))
+
+    for (dep, arr) in segments:
+        c_dep = normalize_stop(dep)
+        c_arr = normalize_stop(arr)
+        # Correspondance si les noms se contiennent mutuellement
+        start_ok = (gd_start in c_dep) or (c_dep in gd_start)
+        end_ok   = (gd_end   in c_arr) or (c_arr in gd_end)
+        if start_ok and end_ok:
+            return True
+    return False
+
+
 # ─── Lecture des données G-D ─────────────────────────────────────────────────
 
-def load_gd_directions(numero: str) -> list:
+def load_gd_directions(numero: str, segments: list) -> list:
     """
-    Charge toutes les directions G-D disponibles pour une ligne.
+    Charge les directions G-D d'une ligne filtrées selon les segments de la carte agent.
+    segments : liste de (départ, arrivée) issus de extract_segments_from_carte().
     Retourne une liste de directions au format attendu par page1_gd().
     """
     directions = []
@@ -531,6 +606,10 @@ def load_gd_directions(numero: str) -> list:
         for route in data.get('routes', []):
             sens = route.get('direction', '')
             for parcours in route.get('parcours', []):
+                # Filtrer : ne garder que les parcours présents dans la carte agent
+                if segments and not parcours_matches_segments(parcours, segments):
+                    continue
+
                 instructions = []
 
                 # Terminus de départ
@@ -627,7 +706,7 @@ def load_events_for_ligne(numero: str, target_date: date):
             print(f"⚠️  Erreur lecture {ev_file.name}: {e}", file=sys.stderr)
             continue
 
-        direction = data.get('direction', '')
+        direction = data.get('direction', '').capitalize()  # 'est' → 'Est'
         for event in data.get('detours', []):
             ok, raison = is_event_applicable(event, target_date)
             ev = dict(event)
@@ -647,9 +726,11 @@ def build_rapport_data(carte: dict, target_date: date) -> dict:
     """Construit le dictionnaire de données complet à partir de la carte agent."""
     jour_str = JOURS_FR.get(target_date.weekday(), '')
 
+    all_segments = carte.get('segments', {})
     lignes = []
     for numero in carte['lignes']:
-        directions = load_gd_directions(numero)
+        segments = all_segments.get(numero, [])
+        directions = load_gd_directions(numero, segments)
         app, non_app = load_events_for_ligne(numero, target_date)
         lignes.append({
             'numero':                 numero,
