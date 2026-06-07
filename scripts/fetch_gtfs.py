@@ -15,8 +15,8 @@ class GTFSDownloader:
     """Gestionnaire de telechargement GTFS STM."""
 
     def __init__(self):
-        self.project_root = Path(__file__).parent.parent
-        self.data_dir = self.project_root / "Données" / "États"
+        self.project_root = Path(__file__).resolve().parent.parent
+        self.data_dir = self.project_root / "data" / "gtfs"
         self.archive_dir = self.data_dir / "archives"
         self.current_dir = self.data_dir / "gtfs_stm"
         self.manifest_file = self.data_dir / "gtfs_manifest.json"

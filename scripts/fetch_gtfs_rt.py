@@ -8,8 +8,8 @@ Endpoints:
 
 Fréquence: toutes les 2h de 12h à 20h (géré par le planificateur Windows)
 Rétention: aucune — les fichiers .pb sont écrasés à chaque exécution
-Sortie:    Données/Horaires/response_tripUpdates.pb
-           Données/Horaires/response_vehiclePositions.pb
+Sortie:    data/gtfs_rt/response_tripUpdates.pb
+           data/gtfs_rt/response_vehiclePositions.pb
 
 Sécurité: la clé API est chargée via SecretsManager (jamais en clair dans le code)
 """
@@ -22,8 +22,8 @@ from pathlib import Path
 import requests
 
 # ── Chemins ────────────────────────────────────────────────────────────────────
-PROJECT_ROOT = Path(__file__).parent.parent
-OUTPUT_DIR   = PROJECT_ROOT / "Données" / "Horaires"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_DIR   = PROJECT_ROOT / "data" / "gtfs_rt"
 LOG_FILE     = OUTPUT_DIR / "fetch_gtfs_rt.log"
 
 # ── Endpoints GTFS-RT STM ──────────────────────────────────────────────────────

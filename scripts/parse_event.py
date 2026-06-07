@@ -14,10 +14,13 @@ from typing import Dict, List, Tuple, Optional
 
 class STMEventParser:
 
-    def __init__(self, raw_text: str, project_path: str):
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+    DATA_DIR = PROJECT_ROOT / "data"
+    EVENTS_DIR = DATA_DIR / "Events"
+
+    def __init__(self, raw_text: str):
         self.raw_text = raw_text
-        self.project_path = Path(project_path)
-        self.events_dir = self.project_path / "Données" / "Évènements"
+        self.events_dir = self.EVENTS_DIR
         self.ligne = None
         self.direction = None
         self.events = []
@@ -244,31 +247,67 @@ class STMEventParser:
 
         filename = f"{self.ligne}_{self.direction}.json"
         if self.no_changes:
-            lines.append(f"\n📁 Inchangé: Données/Évènements/{filename}")
+            lines.append(f"\n📁 Inchangé: data/Events/{filename}")
         else:
-            lines.append(f"\n📁 Sauvegardé: Données/Évènements/{filename}")
+            lines.append(f"\n📁 Sauvegardé: data/Events/{filename}")
 
         return "\n".join(lines)
 
 
+def split_sections(raw_text: str) -> List[str]:
+    """Découpe l'entrée en sections, une par en-tête Détours/Évènements / <ligne> <direction>."""
+    pattern = re.compile(
+        r'(?:Détour|Évènement)s?\s*/\s*\d+\s+(?:Est|Ouest|Nord|Sud)',
+        re.IGNORECASE
+    )
+    matches = list(pattern.finditer(raw_text))
+    if not matches:
+        return []
+    sections = []
+    for i, match in enumerate(matches):
+        start = match.start()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(raw_text)
+        sections.append(raw_text[start:end])
+    return sections
+
+
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python parse_stm_events.py '<raw_text>' [project_path]")
-        sys.exit(1)
+    import argparse
+    arg_parser = argparse.ArgumentParser(
+        description="Importe des données brutes d'évènements STM depuis stdin "
+                    "vers des fichiers <ligne>_<direction>.json.")
+    arg_parser.add_argument("--json", action="store_true",
+                            help="Affiche aussi le JSON complet sur stdout "
+                                 "(par défaut: rapport seulement).")
+    args = arg_parser.parse_args()
 
-    raw_text = sys.argv[1]
-    project_path = sys.argv[2] if len(sys.argv) > 2 else "."
+    raw_text = sys.stdin.read()
 
-    parser = STMEventParser(raw_text, project_path)
-    success = parser.parse_all()
+    sections = split_sections(raw_text) or [raw_text]
+    results = []
+    failed = False
 
-    if success:
-        saved, _ = parser.save_json()
-        if not saved:
-            success = False
+    for section in sections:
+        parser = STMEventParser(section)
+        success = parser.parse_all()
 
-    print(parser.get_summary())
-    sys.exit(0 if success else 1)
+        if success:
+            saved, _ = parser.save_json()
+            if not saved:
+                success = False
+
+        print(parser.get_summary())
+
+        if success:
+            results.append({"ligne": parser.ligne, "direction": parser.direction, "detours": parser.events})
+        else:
+            failed = True
+
+    if results and args.json:
+        output = results if len(results) > 1 else results[0]
+        print(json.dumps(output, indent=2, ensure_ascii=False))
+
+    sys.exit(1 if failed or not results else 0)
 
 
 if __name__ == "__main__":
