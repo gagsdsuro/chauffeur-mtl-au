@@ -4,31 +4,56 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Vue d'ensemble
 
-`chauffeur-stm` est un dépôt de **données** d'itinéraires d'autobus de la STM (Montréal) destinées aux chauffeurs, accompagnées d'un script Python d'import. Le cœur du projet n'est pas du code applicatif mais un ensemble de fichiers JSON normalisés représentant les parcours « Gauche-Droite » (instructions de conduite virage-par-virage), un par ligne et par direction.
+`chauffeur-stm` est un dépôt de **données** d'itinéraires d'autobus de la STM (Montréal) destinées aux chauffeurs, accompagnées de scripts Python d'import et de génération de rapports. Le cœur du projet est un ensemble de fichiers JSON normalisés : parcours « Gauche-Droite » (instructions de conduite virage-par-virage) et événements affectant les arrêts.
 
 La langue de travail est le **français** (noms de champs, messages, documentation).
 
 ## Commandes
 
-Le script d'import lit les données brutes depuis **stdin** et écrit/met à jour les fichiers JSON correspondants dans `data/Gauche-Droite/` :
-
+**Import Gauche-Droite** — lit depuis stdin, écrit dans `data/Gauche-Droite/` :
 ```bash
 python3 scripts/parse_gd.py < data/raw/new-gd.txt          # importe et écrit les fichiers
 python3 scripts/parse_gd.py --json < data/raw/new-gd.txt   # idem + imprime le JSON complet sur stdout
 ```
 
-- Aucune dépendance externe (stdlib uniquement : `re`, `json`, `argparse`, `pathlib`). Pas de build, pas de lint configuré, pas de suite de tests.
-- Le script résout les chemins via `Path(__file__).parent.parent` ; il fonctionne donc peu importe le répertoire courant. La sortie va toujours dans `data/Gauche-Droite/` à la racine du dépôt.
-- Code de sortie : `0` si tout réussit, `1` si une section échoue (erreurs imprimées sur stderr).
+**Import Événements** — lit depuis stdin, écrit dans `data/Events/` :
+```bash
+python3 scripts/parse_event.py < data/raw/new-events.txt
+python3 scripts/parse_event.py --json < data/raw/new-events.txt
+```
+
+**Rapport journalier** — PDF recto-verso prêt à imprimer (G-D + détours filtrés) :
+```bash
+python3 scripts/gen_rapport.py                          # rapport du jour
+python3 scripts/gen_rapport.py --date 2026-06-05        # date spécifique
+python3 scripts/gen_rapport.py --output /tmp/out.pdf    # chemin de sortie
+```
+
+**Annotation carte agent** — annote le PDF de carte agent avec les horaires GTFS (requiert `PyMuPDF`) :
+```bash
+python3 scripts/carte_agent_stm.py --pdf data/ca/carte-agent-2026-06-04.pdf --out data/ca/annotée.pdf --gtfs data/gtfs/gtfs_stm/ --date 2026-06-04
+```
+
+**Téléchargement GTFS** — données statiques (hebdomadaire) et temps-réel (requiert `requests`) :
+```bash
+python3 scripts/fetch_gtfs.py
+python3 scripts/fetch_gtfs_rt.py
+```
+
+- `parse_gd.py` et `parse_event.py` n'ont aucune dépendance externe (stdlib uniquement). Les autres scripts requièrent `requests` et/ou `PyMuPDF (fitz)`.
+- Tous les scripts résolvent les chemins via `Path(__file__).parent.parent` ; ils fonctionnent peu importe le répertoire courant.
+- Code de sortie : `0` si tout réussit, `1` si une section échoue (erreurs sur stderr).
 
 ## Architecture
 
 ### Flux de données
 
 ```
-data/raw/*.txt  ──(parse_gd.py)──►  data/Gauche-Droite/gd<ligne>_<direction>.json
-   (collé depuis              (normalisé, indent=2, ensure_ascii=False)
-    l'interface STM)
+data/raw/*.txt  ──(parse_gd.py)────►  data/Gauche-Droite/gd<ligne>_<direction>.json
+                ──(parse_event.py)──►  data/Events/<ligne>_<direction>.json
+data/gtfs/      ──(fetch_gtfs.py)──►  data/gtfs/gtfs_stm/   (données statiques)
+data/ca/*.pdf   ──(carte_agent_stm.py + GTFS)──►  PDF annoté
+                ──(gen_rapport.py)──►  data/rapports/rapport-<date>.pdf
 ```
 
 1. **`split_sections()`** découpe l'entrée brute en sections, une par en-tête `Gauche-Droite / <ligne> <direction>`. Un seul collage peut donc contenir plusieurs lignes/directions.
@@ -42,14 +67,18 @@ data/raw/*.txt  ──(parse_gd.py)──►  data/Gauche-Droite/gd<ligne>_<dire
 
 Racine : `{ ligne, direction, routes: [ { line_number, direction, parcours: [...] } ] }`. La `direction` à la racine est en **minuscule** (`est`) ; celle dans `routes[]` est **capitalisée** (`Est`). Chaque parcours a `id, name, start, start_code, end, end_code, direction[]`, où `direction[]` est une séquence d'instructions GPS `"Via - <rue>"`, `"Gauche - <rue>"`, `"Droite - <rue>"`.
 
-### Documentation du format de données
+### Documentation des formats de données
 
-`data/Gauche-Droite/CLAUDE.md` est la **spécification détaillée** du format JSON (convention de nommage, sémantique des champs, règles de normalisation, FAQ, exemples). La consulter avant d'éditer manuellement un fichier de données. Note : elle documente le nom de fichier comme `{ligne}_{direction}.json` alors que le script et les fichiers réels utilisent le préfixe `gd` → `gd<ligne>_<direction>.json`.
-
-`data/Gauche-Droite/GABARIT_NOUVEAU_FICHIER.json` est le gabarit pour créer un fichier à la main.
+- `data/Gauche-Droite/CLAUDE.md` — spécification détaillée du format JSON G-D (nommage, sémantique, FAQ). Note : elle documente `{ligne}_{direction}.json` mais les fichiers réels utilisent le préfixe `gd` → `gd<ligne>_<direction>.json`.
+- `data/Gauche-Droite/GABARIT_NOUVEAU_FICHIER.json` — gabarit pour créer un fichier G-D manuellement.
+- `data/Events/CLAUDE.md` — spécification détaillée du format JSON des événements (champs `evenement_id`, `titre`, `motif`, `effectif`, `arrets_annules`, `arrets_ajoutes`, dates ISO 8601). Nommage : `{ligne}_{direction}.json` (sans préfixe, contrairement aux G-D).
+- `data/Events/GABARIT_NOUVEAU_FICHIER.json` — gabarit pour créer un fichier d'événements manuellement.
 
 ## Conventions
 
-- Noms de fichiers de données : `gd<ligne>_<direction>.json`, direction en minuscule (`est|ouest|nord|sud`), ligne avec `e` minuscule si applicable (`85e`). Un fichier par direction (jamais combiner deux directions).
+- **Gauche-Droite** : `gd<ligne>_<direction>.json` (avec préfixe `gd`), direction en minuscule (`est|ouest|nord|sud`), ligne avec `e` minuscule si applicable (`85e`). Un fichier par direction.
+- **Événements** : `<ligne>_<direction>.json` (sans préfixe), même convention de direction/ligne.
+- **Cartes agent** : `data/ca/carte-agent-YYYY-MM-DD.pdf` (PDF source), rapports annotés dans le même dossier.
+- **Rapports journaliers** : `data/rapports/rapport-YYYY-MM-DD.pdf`.
 - JSON écrit avec indentation 2 espaces et accents préservés (`ensure_ascii=False`).
-- Préférer l'import via `parse_gd.py` à l'édition manuelle, pour garantir la normalisation et le rapport de changements.
+- Préférer l'import via les scripts à l'édition manuelle, pour garantir la normalisation et le rapport de changements.

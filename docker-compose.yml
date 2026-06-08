@@ -1,0 +1,11 @@
+services:
+  chauffeur-stm:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      # Les données JSON, PDFs et GTFS restent sur l'hôte
+      - ./data:/app/data
+      # La config secrets (clé API GTFS-RT) reste sur l'hôte
+      - ./Installation:/app/Installation
+    restart: unless-stopped
