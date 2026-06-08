@@ -178,7 +178,9 @@ def annotate_events(rows, events):
         for a in e.get("arrets_annules", []):
             cancelled_ids.setdefault(a["id"], []).append(label)
         for a in e.get("arrets_ajoutes", []):
-            added.append({"name": a.get("nom", ""), "label": label})
+            # arrets_ajoutes peut être une liste de str ou de dict {"nom": ...}
+            name = a if isinstance(a, str) else a.get("nom", "")
+            added.append({"name": name, "label": label})
 
     for r in rows:
         sid = r.get("stop_id")
