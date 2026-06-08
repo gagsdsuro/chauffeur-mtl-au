@@ -285,7 +285,11 @@ def by1_safe(s) -> float:
 
 
 def process_line(page, spans, line_no, times_a, times_b, stop_a, stop_b) -> None:
-    """Surligne en bleu chaque segment 'XX - P' et annote en rouge le départ précédent."""
+    """
+    Surligne en bleu le numéro de ligne seulement (sans '- P') et annote en rouge
+    le départ précédent uniquement sur le premier segment (= première occurrence
+    de cette ligne, i.e. nouvelle ligne ou première ligne du quart).
+    """
     def norm(x):
         return x.lower().replace('-', ' ').replace('/', ' ')
 
@@ -297,10 +301,22 @@ def process_line(page, spans, line_no, times_a, times_b, stop_a, stop_b) -> None
         return
     log(f"  Ligne {line_no}: {len(hits)} segment(s)")
 
-    for rect in hits:
-        annot = page.add_highlight_annot(rect)
+    # Ratio de largeur : ne couvrir que le numéro, pas " - P"
+    num_str  = str(line_no)
+    full_str = f'{line_no} - P'
+    num_ratio = len(num_str) / len(full_str)
+
+    for hit_idx, rect in enumerate(hits):
+        # ── Surlignage bleu : numéro seulement ──────────────────────────────
+        num_rect = fitz.Rect(rect.x0, rect.y0,
+                             rect.x0 + rect.width * num_ratio, rect.y1)
+        annot = page.add_highlight_annot(num_rect)
         annot.set_colors(stroke=BLEU)
         annot.update()
+
+        # ── Annotation Prec : seulement sur le premier segment ───────────────
+        if hit_idx > 0:
+            continue
 
         rx0, _, _, ry1 = rect
         in_left = rx0 < PAGE_MID
@@ -338,7 +354,7 @@ def process_line(page, spans, line_no, times_a, times_b, stop_a, stop_b) -> None
             use_a = True
 
         prec = prev_dep(times_a if use_a else times_b, dep_time)
-        log(f"    dep={dep_time} -> Prec={prec}")
+        log(f"    dep={dep_time} -> Prec={prec} (premier segment uniquement)")
 
         if prec:
             page.insert_text(fitz.Point(dep_bbox[0], dep_bbox[1] - 1),
@@ -361,8 +377,11 @@ def annotate(src: str, dst: str, schedules: dict) -> dict:
             process_line(page, spans, ln, sc['a'], sc['b'], sc['stop_a'], sc['stop_b'])
         else:
             log(f"  Ligne {ln}: pas de données GTFS -- bleu seulement")
+            num_ratio = len(str(ln)) / len(f'{ln} - P')
             for rect in page.search_for(f'{ln} - P'):
-                annot = page.add_highlight_annot(rect)
+                num_rect = fitz.Rect(rect.x0, rect.y0,
+                                     rect.x0 + rect.width * num_ratio, rect.y1)
+                annot = page.add_highlight_annot(num_rect)
                 annot.set_colors(stroke=BLEU)
                 annot.update()
 
