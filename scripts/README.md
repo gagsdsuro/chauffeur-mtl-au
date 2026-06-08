@@ -1,4 +1,6 @@
-```
+# parse_gd.py exemple
+
+``` bash
 python3 parse_gd.py < ~/chauffeur-stm/data/raw/new-gd.txt
 
 ============================================================
@@ -30,4 +32,33 @@ RAPPORT: STM Importer Gauche-Droite
 
 [LOCALISATION] /home/gagsdsuro/chauffeur-stm/scripts
 ============================================================
+```
+
+# carte_agent_stm.py exemple
+
+```bash
+python3 carte_agent_stm.py --pdf ../data/ca/carte-agent-2026-06-04.pdf --out ../data/ca/toto2.pdf --gtfs ../data/gtfs/gtfs_stm/ --date 2026-06-04
+[INFO] Date retenue : 2026-06-04
+[INFO] Lignes détectées : ['496', '198', '211']
+[INFO] GTFS : ../data/gtfs/gtfs_stm
+[INFO] Services actifs pour 2026-06-04 (thursday) : 9
+[INFO] Chargement stops.txt...
+[INFO] Chargement trips.txt...
+[INFO] Trips pertinents : 371
+[INFO] Scan stop_times.txt (premier arrêt de chaque trip)...
+[INFO] Premiers arrêts trouvés : 371 trips
+[INFO]   Ligne 496: 73 dir0 (Terminus Dorval) | 72 dir1 (Station Lionel-Groulx / Saint-)
+[INFO]   Ligne 198: 47 dir0 (Terminus Dorval) | 44 dir1 (Station Angrignon (des Trinita)
+[INFO]   Ligne 211: 62 dir0 (Station Kirkland) | 73 dir1 (Station Lionel-Groulx)
+[INFO]   Ligne 496: 5 segment(s)
+[INFO]     dep=16:41 -> Prec=16:32 (premier segment uniquement)
+[INFO]   Ligne 198: 1 segment(s)
+[INFO]     dep=19:01 -> Prec=18:31 (premier segment uniquement)
+[INFO]   Ligne 211: 2 segment(s)
+[INFO]     dep=22:05 -> Prec=21:36 (premier segment uniquement)
+[INFO] OK — PDF annoté : ../data/ca/toto2.pdf
+
+Carte 528 — 16:39 -> 25:46
+Lignes : 496, 198, 211
+Sortie : ../data/ca/toto2.pdf
 ```
