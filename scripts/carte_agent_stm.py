@@ -358,7 +358,7 @@ def process_line(page, spans, line_no, times_a, times_b, stop_a, stop_b) -> None
 
         if prec:
             page.insert_text(fitz.Point(dep_bbox[0], dep_bbox[1] - 1),
-                             f'Prec: {prec}', fontsize=7, color=ROUGE, fontname='helv')
+                             f'p{prec}', fontsize=7, color=ROUGE, fontname='helv')
 
 
 def annotate(src: str, dst: str, schedules: dict) -> dict:
