@@ -50,6 +50,22 @@ class STMEventParser:
             self.errors.append(f"❌ Format de date invalide: '{date_str}'. Attendu: 'YYYY-MM-DD HH:MM'")
             return None
 
+    def _parse_arrets(self, arrets_text: str) -> List[Dict[str, str]]:
+        """Comme parse_arrets() mais accepte les lignes sans code d'arrêt (id vide)."""
+        if not arrets_text or not arrets_text.strip():
+            return []
+        arrets = []
+        for line in arrets_text.split('\n'):
+            line = re.sub(r'^\*\s*|^-\s*(?=\d)', '', line.strip())
+            if not line:
+                continue
+            m = re.match(r'(\d+)\s*-\s*(.+)', line)
+            if m:
+                arrets.append({"id": m.group(1), "nom": m.group(2).strip()})
+            else:
+                arrets.append({"id": "", "nom": line})
+        return arrets
+
     def parse_arrets(self, arrets_text: str) -> List[Dict[str, str]]:
         if not arrets_text or not arrets_text.strip():
             return []
@@ -127,13 +143,13 @@ class STMEventParser:
             ajoutes_split = re.split(r"Arrêt\(s\)\s+ajouté\(s\)\s*:", comment_full, flags=re.IGNORECASE)
             event['commentaire'] = ajoutes_split[0].strip() or None
             if len(ajoutes_split) > 1:
-                event['arrets_ajoutes'] = [l.strip().lstrip('*').strip() for l in ajoutes_split[1].strip().split('\n') if l.strip()]
+                event['arrets_ajoutes'] = self._parse_arrets(ajoutes_split[1])
             else:
                 event['arrets_ajoutes'] = []
         else:
             event['commentaire'] = None
             ajoutes_match = re.search(r"Arrêt\(s\)\s+ajouté\(s\)\s*:\s*(.+?)$", event_text, re.IGNORECASE | re.DOTALL)
-            event['arrets_ajoutes'] = [l.strip().lstrip('*').strip() for l in ajoutes_match.group(1).strip().split('\n') if l.strip()] if ajoutes_match else []
+            event['arrets_ajoutes'] = self._parse_arrets(ajoutes_match.group(1)) if ajoutes_match else []
 
         # Validation champs obligatoires
         for field, label in [('evenement_id', 'ID'), ('titre', 'titre'), ('motif', 'motif'), ('effectif', 'effectif')]:

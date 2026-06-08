@@ -7,6 +7,7 @@ Usage: python rapport_gd.py --ligne 195 --direction ouest --date 2026-06-07 [--f
 import argparse
 import csv
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -178,7 +179,6 @@ def annotate_events(rows, events):
         for a in e.get("arrets_annules", []):
             cancelled_ids.setdefault(a["id"], []).append(label)
         for a in e.get("arrets_ajoutes", []):
-            # arrets_ajoutes peut être une liste de str ou de dict {"nom": ...}
             name = a if isinstance(a, str) else a.get("nom", "")
             added.append({"name": name, "label": label})
 
@@ -189,6 +189,112 @@ def annotate_events(rows, events):
         else:
             r["cancelled"] = []
     return rows, added
+
+
+# ── Intégration G-D des détours ──────────────────────────────────────────────
+
+# Marqueur « retour au régulier »
+_RR_RE = re.compile(r'^R[.\s]?R\.?$', re.IGNORECASE)
+
+def parse_description_gd(desc: str):
+    """
+    Tente de parser une description_gd en liste d'instructions normalisées.
+    Retourne une liste ["Via - X", "Gauche - Y", ...] si le texte suit le
+    pattern VIA/G/D, sinon None (texte libre → garder en note).
+    """
+    if not desc:
+        return None
+    # Doit contenir au moins un marqueur directionnel suivi d'un mot
+    if not re.search(r'\b(VIA\s+\w|G[/.\s]\w|D[/.\s]\w)', desc, re.IGNORECASE):
+        return None
+
+    # Multi-ligne : chaque ligne est une instruction
+    if '\n' in desc:
+        raw = [l.strip() for l in desc.split('\n') if l.strip()]
+    else:
+        # Ligne unique : découper à chaque nouveau marqueur directionnel
+        raw = re.split(r'(?=\bVIA\b|\bG[/.\s]|\bD[/.\s])', desc.strip(), flags=re.IGNORECASE)
+        raw = [p.strip() for p in raw if p.strip()]
+
+    instructions = []
+    for part in raw:
+        part = part.strip().rstrip('.')
+        m = re.match(r'^VIA\s+(.+)$', part, re.IGNORECASE)
+        if m:
+            text = m.group(1).strip()
+            instructions.append("Via - R.R." if _RR_RE.match(text) else f"Via - {text}")
+            continue
+        m = re.match(r'^G[/.\s]\s*(.+)$', part, re.IGNORECASE)
+        if m:
+            instructions.append(f"Gauche - {m.group(1).strip()}")
+            continue
+        m = re.match(r'^D[/.\s]\s*(.+)$', part, re.IGNORECASE)
+        if m:
+            instructions.append(f"Droite - {m.group(1).strip()}")
+            continue
+        # Partie non reconnue : inclure comme Via
+        instructions.append(f"Via - {part}")
+
+    return instructions if instructions else None
+
+
+def apply_gd_detours(rows: list, events: list) -> list:
+    """
+    Pour chaque événement dont la description_gd est parseable :
+      • Insère les étapes du détour avant le premier arrêt annulé  (detour_added=True)
+      • Marque les instructions G-D régulières contournées          (detour_removed=True)
+    Les arrêts annulés sont déjà marqués par annotate_events().
+    """
+    for event in events:
+        desc = event.get("description_gd") or ""
+        instructions = parse_description_gd(desc)
+        if not instructions:
+            continue
+
+        cancelled_codes = {a["id"] for a in event.get("arrets_annules", [])}
+
+        # Positions des arrêts annulés dans rows (par stop_code)
+        cancelled_positions = [
+            i for i, r in enumerate(rows)
+            if r.get("stop_code") in cancelled_codes
+        ]
+
+        if cancelled_positions:
+            first_pos = cancelled_positions[0]
+            last_pos  = cancelled_positions[-1]
+        else:
+            first_pos = 0
+            last_pos  = -1
+
+        # Marquer les instructions G-D régulières contournées
+        # = lignes GD sans arrêt (ou avec un arrêt non annulé) entre first et last
+        if last_pos >= first_pos:
+            for i in range(first_pos, last_pos + 1):
+                r = rows[i]
+                if (r.get("gd")
+                        and not r.get("detour_added")
+                        and r.get("stop_code", "") not in cancelled_codes):
+                    r["detour_removed"] = True
+
+        # Construire les lignes de détour à insérer
+        label = event.get("titre", "")
+        detour_rows = [
+            {
+                "gd": instr,
+                "seq": None,
+                "stop_id": None,
+                "stop_code": "",
+                "stop_name": "",
+                "cancelled": [],
+                "detour_added": True,
+                "detour_label": label if i == 0 else "",
+            }
+            for i, instr in enumerate(instructions)
+        ]
+
+        rows = rows[:first_pos] + detour_rows + rows[first_pos:]
+
+    return rows
 
 
 # ── Output formatters ────────────────────────────────────────────────────────
@@ -219,6 +325,10 @@ def render_html(rows, added, args, parcours):
   .event-label {{ font-size: 10px; color: #c00; display: block; }}
   .added {{ background: #f0fff0; }}
   .added-section {{ margin-top: 16px; padding: 8px; background: #e8f5e9; border-left: 4px solid #4caf50; }}
+  .detour-added td {{ background: #e8f5e9; }}
+  .detour-added .gd {{ color: #2e7d32; }}
+  .detour-removed .gd {{ text-decoration: line-through; color: #e65100; opacity: 0.7; }}
+  .detour-badge {{ font-size: 9px; font-weight: bold; color: #2e7d32; display: block; }}
   @media print {{
     body {{ margin: 10px; font-size: 11px; }}
     h1 {{ font-size: 14px; }}
@@ -243,9 +353,30 @@ def render_html(rows, added, args, parcours):
 <tbody>"""]
 
     for r in rows:
-        cancelled = r.get("cancelled", [])
-        cls = ' class="cancelled"' if cancelled else ""
-        gd_cell = f'<span class="gd">{r["gd"]}</span>' if r["gd"] else ""
+        cancelled       = r.get("cancelled", [])
+        detour_added    = r.get("detour_added", False)
+        detour_removed  = r.get("detour_removed", False)
+        detour_label    = r.get("detour_label", "")
+
+        if detour_added:
+            cls = ' class="detour-added"'
+        elif detour_removed:
+            cls = ' class="detour-removed"'
+        elif cancelled:
+            cls = ' class="cancelled"'
+        else:
+            cls = ""
+
+        gd_text = r["gd"]
+        if detour_added:
+            gd_text = f'🔀 {gd_text}'
+        elif detour_removed:
+            gd_text = f'✂ {gd_text}'
+        gd_cell = f'<span class="gd">{gd_text}</span>' if gd_text else ""
+
+        if detour_added and detour_label:
+            gd_cell += f'<span class="detour-badge">Détour : {detour_label}</span>'
+
         seq_cell = str(r["seq"]) if r["seq"] else ""
 
         if r["stop_name"]:
@@ -289,13 +420,25 @@ def render_md(rows, added, args, parcours):
         "|---|---|---|---|",
     ]
     for r in rows:
-        cancelled = r.get("cancelled", [])
-        seq = str(r["seq"]) if r["seq"] else ""
-        gd = r["gd"]
+        cancelled      = r.get("cancelled", [])
+        detour_added   = r.get("detour_added", False)
+        detour_removed = r.get("detour_removed", False)
+
+        seq  = str(r["seq"]) if r["seq"] else ""
+        gd   = r["gd"]
         code = r["stop_code"]
         name = r["stop_name"]
+
+        if detour_added:
+            gd = f"🔀 {gd}"
+            if r.get("detour_label"):
+                gd += f" *(Détour : {r['detour_label']})*"
+        elif detour_removed:
+            gd = f"~~✂ {gd}~~"
+
         if cancelled:
             name = f"~~{name}~~ ❌ " + " / ".join(cancelled)
+
         lines.append(f"| {seq} | {gd} | {code} | {name} |")
 
     if added:
@@ -330,6 +473,7 @@ def main():
 
     rows = build_rows(gd_instructions, stops, stop_names)
     rows, added = annotate_events(rows, events)
+    rows = apply_gd_detours(rows, events)
 
     ext = args.format
     outfile = Path(__file__).resolve().parent / f"rapport_{args.ligne}_{args.direction}_{args.date}.{ext}"
