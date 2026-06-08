@@ -21,7 +21,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR     = PROJECT_ROOT / "data"
 GD_DIR       = DATA_DIR / "Gauche-Droite"
 EVENTS_DIR   = DATA_DIR / "Events"
-DOCS_DIR     = PROJECT_ROOT / "Documentation"
+DOCS_DIR     = DATA_DIR / "CA"
 OUTPUT_DIR   = DATA_DIR / "rapports"
 
 try:
