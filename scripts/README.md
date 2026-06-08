@@ -62,3 +62,13 @@ Carte 528 — 16:39 -> 25:46
 Lignes : 496, 198, 211
 Sortie : ../data/ca/toto2.pdf
 ```
+
+# rapport_gd.py exemple 
+
+```bash
+python3 rapport_gd.py --ligne 195 --direction ouest --date 2026-06-05 --base ~/chauffeur-stm
+→ Ligne 195 ouest — 2026-06-05
+  Base projet : /home/gagsdsuro/chauffeur-stm
+  58 arrêts GTFS, 33 instructions G-D, 4 événements actifs
+  ✅ Rapport écrit: /home/gagsdsuro/chauffeur-stm/scripts/rapport_195_ouest_2026-06-05.html
+```
