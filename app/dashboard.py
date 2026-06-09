@@ -1,0 +1,271 @@
+#!/usr/bin/env python3
+"""
+dashboard.py — Fonctions utilitaires pour l'onglet Tableau de bord.
+
+Extraction de la carte agent STM (PDF), info sur les fichiers de données,
+et parsing minimal du flux GTFS-RT vehiclePositions (protobuf).
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import struct
+from datetime import datetime
+from pathlib import Path
+
+CA_DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
+TIME_RE    = re.compile(r"^\d{1,2}:\d{2}$")
+LINE_RE    = re.compile(r"^(\d+)\s*-\s*P\b")
+
+
+# ── Carte Agent ──────────────────────────────────────────────────────────────────
+
+def get_available_ca_pdfs(ca_dir: Path) -> list[dict]:
+    """Retourne les cartes agent disponibles, triées du plus récent au plus ancien."""
+    pdfs = []
+    for p in ca_dir.glob("carte-agent-*.pdf"):
+        stem = p.stem.lower()
+        if "annot" in stem or "surligné" in stem or "annotee" in stem:
+            continue
+        m = CA_DATE_RE.search(p.name)
+        date_str = m.group(1) if m else "0000-00-00"
+        pdfs.append({"path": p, "date_str": date_str, "name": p.name})
+    pdfs.sort(key=lambda x: x["date_str"], reverse=True)
+    return pdfs
+
+
+def extract_pieces_from_pdf(pdf_path: Path) -> dict | None:
+    """
+    Extrait les pièces de travail d'une carte agent STM (PDF).
+    Retourne {carte, pieces: [{debut, fin}], lignes} ou None si fitz manquant.
+    """
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        return None
+
+    try:
+        doc   = fitz.open(str(pdf_path))
+        page  = doc[0]
+        spans = []
+        for block in page.get_text("dict")["blocks"]:
+            if block["type"] == 0:
+                for line in block["lines"]:
+                    for span in line["spans"]:
+                        t = span["text"].strip()
+                        if t:
+                            spans.append({"text": t, "bbox": span["bbox"]})
+        doc.close()
+    except Exception:
+        return None
+
+    # ── Colonnes Prise ────────────────────────────────────────────────────────
+    prise_cols: list[dict] = []
+    for s in spans:
+        if s["text"] == "Prise":
+            x0, _, x1, _ = s["bbox"]
+            prise_cols.append({
+                "x0": x0,
+                "range": (x0 - 6, x1 + 6),
+                "entries": [],
+            })
+    prise_cols.sort(key=lambda c: c["x0"])
+
+    if len(prise_cols) < 2:
+        return None
+
+    # Collecte des heures dans chaque colonne (Y élargi pour plusieurs pièces)
+    for col in prise_cols:
+        px0, px1 = col["range"]
+        for s in spans:
+            bx0, by0, bx1, _ = s["bbox"]
+            if px0 <= bx0 and bx1 <= px1 and 80 < by0 < 400 and TIME_RE.match(s["text"]):
+                col["entries"].append({"time": s["text"], "y": by0})
+        col["entries"].sort(key=lambda e: e["y"])
+
+    col0 = prise_cols[0]["entries"]   # colonne gauche = prise début
+    col1 = prise_cols[1]["entries"]   # colonne droite = prise fin
+
+    n = min(len(col0), len(col1))
+    pieces = [{"debut": col0[i]["time"], "fin": col1[i]["time"]} for i in range(n)]
+
+    # ── Numéros de ligne ──────────────────────────────────────────────────────
+    lignes: list[str] = []
+    for s in spans:
+        m = LINE_RE.match(s["text"])
+        if m and m.group(1) not in lignes:
+            lignes.append(m.group(1))
+
+    # ── Numéro de carte ───────────────────────────────────────────────────────
+    carte_num = "?"
+    for s in spans:
+        if s["bbox"][1] < 130 and re.match(r"^\d{3,6}$", s["text"]):
+            carte_num = s["text"]
+            break
+
+    return {"carte": carte_num, "pieces": pieces, "lignes": lignes}
+
+
+# ── Fichiers de données ──────────────────────────────────────────────────────────
+
+def fmt_mtime(path: Path) -> str:
+    """Retourne la date/heure de modification du fichier, ou '–' s'il n'existe pas."""
+    if not path.exists():
+        return "–"
+    mtime = datetime.fromtimestamp(path.stat().st_mtime)
+    return mtime.strftime("%Y-%m-%d %H:%M")
+
+
+def get_gd_files_for_ligne(ligne: str, data_dir: Path) -> list[dict]:
+    """Trouve tous les fichiers G-D d'une ligne (toutes directions)."""
+    gd_dir = data_dir / "Gauche-Droite"
+    results = []
+    for direction in ("est", "ouest", "nord", "sud"):
+        p = gd_dir / f"gd{ligne}_{direction}.json"
+        if p.exists():
+            results.append({"direction": direction, "path": p, "mtime": fmt_mtime(p)})
+    return results
+
+
+def get_event_file_mtime(ligne: str, direction: str, data_dir: Path) -> str:
+    return fmt_mtime(data_dir / "Events" / f"{ligne}_{direction}.json")
+
+
+def get_gtfs_info(data_dir: Path) -> dict:
+    """Retourne les métadonnées GTFS statique et RT."""
+    static_manifest = data_dir / "gtfs" / "gtfs_manifest.json"
+    rt_manifest     = data_dir / "gtfs_rt" / "gtfs_rt_manifest.json"
+    rt_pb_path      = data_dir / "gtfs_rt" / "response_vehiclePositions.pb"
+
+    static_ts = "–"
+    if static_manifest.exists():
+        try:
+            m = json.loads(static_manifest.read_text(encoding="utf-8"))
+            static_ts = m.get("last_update") or m.get("downloaded_at") or fmt_mtime(static_manifest)
+        except Exception:
+            static_ts = fmt_mtime(static_manifest)
+
+    rt_ts = "–"
+    if rt_manifest.exists():
+        try:
+            m = json.loads(rt_manifest.read_text(encoding="utf-8"))
+            rt_ts = m.get("last_update") or fmt_mtime(rt_manifest)
+        except Exception:
+            rt_ts = fmt_mtime(rt_manifest)
+
+    return {
+        "static_ts": static_ts,
+        "rt_ts":     rt_ts,
+        "rt_pb":     rt_pb_path,
+        "rt_avail":  rt_pb_path.exists(),
+    }
+
+
+# ── GTFS-RT — parser protobuf minimal ───────────────────────────────────────────
+
+def _read_varint(data: bytes, pos: int) -> tuple[int, int]:
+    result = shift = 0
+    while pos < len(data):
+        b = data[pos]; pos += 1
+        result |= (b & 0x7F) << shift
+        if not (b & 0x80):
+            return result, pos
+        shift += 7
+    return result, pos
+
+
+def _iter_fields(data: bytes):
+    """Itère sur les champs d'un message protobuf (wire-format minimal)."""
+    pos = 0
+    while pos < len(data):
+        try:
+            tag, pos = _read_varint(data, pos)
+        except Exception:
+            break
+        field_num = tag >> 3
+        wire_type = tag & 0x7
+        try:
+            if wire_type == 0:          # varint
+                val, pos = _read_varint(data, pos)
+            elif wire_type == 1:        # 64-bit fixé
+                val = data[pos:pos+8]; pos += 8
+            elif wire_type == 2:        # longueur + contenu
+                length, pos = _read_varint(data, pos)
+                val = data[pos:pos+length]; pos += length
+            elif wire_type == 5:        # 32-bit fixé (float)
+                val = data[pos:pos+4]; pos += 4
+            else:
+                break
+        except Exception:
+            break
+        yield field_num, wire_type, val
+
+
+def _str(b: bytes) -> str:
+    return b.decode("utf-8", errors="replace")
+
+
+def _parse_trip_desc(data: bytes) -> str | None:
+    for fnum, wtype, val in _iter_fields(data):
+        if fnum == 5 and wtype == 2:   # route_id
+            return _str(val)
+    return None
+
+
+def _parse_position(data: bytes) -> tuple[float | None, float | None]:
+    lat = lon = None
+    for fnum, wtype, val in _iter_fields(data):
+        if fnum == 1 and wtype == 5:
+            lat = struct.unpack("<f", val)[0]
+        elif fnum == 2 and wtype == 5:
+            lon = struct.unpack("<f", val)[0]
+    return lat, lon
+
+
+def _parse_vehicle_desc(data: bytes) -> tuple[str | None, str | None]:
+    v_id = v_label = None
+    for fnum, wtype, val in _iter_fields(data):
+        if fnum == 1 and wtype == 2:
+            v_id = _str(val)
+        elif fnum == 2 and wtype == 2:
+            v_label = _str(val)
+    return v_id, v_label
+
+
+def _parse_vp(data: bytes) -> dict | None:
+    route_id = None; lat = lon = None; v_id = v_label = None
+    for fnum, wtype, val in _iter_fields(data):
+        if fnum == 1 and wtype == 2:
+            route_id = _parse_trip_desc(val)
+        elif fnum == 3 and wtype == 2:
+            lat, lon = _parse_position(val)
+        elif fnum == 4 and wtype == 2:
+            v_id, v_label = _parse_vehicle_desc(val)
+    if lat is not None and lon is not None:
+        return {"v_id": v_id, "v_label": v_label, "lat": lat, "lon": lon, "route_id": route_id}
+    return None
+
+
+def parse_vehicle_positions(pb_data: bytes) -> list[dict]:
+    """Parse un flux GTFS-RT vehiclePositions (protobuf). Retourne la liste des véhicules."""
+    vehicles = []
+    for fnum, wtype, val in _iter_fields(pb_data):
+        if fnum == 2 and wtype == 2:   # FeedEntity
+            for f2, w2, v2 in _iter_fields(val):
+                if f2 == 4 and w2 == 2:   # VehiclePosition
+                    vp = _parse_vp(v2)
+                    if vp:
+                        vehicles.append(vp)
+    return vehicles
+
+
+def find_vehicle(bus_number: str, vehicles: list[dict]) -> dict | None:
+    """Trouve un véhicule par son numéro (label ou id). Normalise le format xx-xxx."""
+    bus_norm = re.sub(r"[-\s]", "", bus_number).lower()
+    for v in vehicles:
+        label = re.sub(r"[-\s]", "", v.get("v_label") or "").lower()
+        vid   = re.sub(r"[-\s]", "", v.get("v_id")    or "").lower()
+        if label == bus_norm or vid == bus_norm:
+            return v
+    return None

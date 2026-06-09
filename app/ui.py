@@ -19,9 +19,11 @@ SCRIPTS_DIR  = PROJECT_ROOT / "scripts"
 DATA_DIR     = PROJECT_ROOT / "data"
 CA_DIR       = DATA_DIR / "ca"
 RAPPORTS_DIR = DATA_DIR / "rapports"
+APP_DIR      = Path(__file__).resolve().parent
 
-# Rend les scripts importables directement
+# Rend les scripts et le répertoire app importables directement
 sys.path.insert(0, str(SCRIPTS_DIR))
+sys.path.insert(0, str(APP_DIR))
 
 # ── Config page ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -33,6 +35,7 @@ st.set_page_config(
 st.title("🚌 Chauffeur STM")
 
 tabs = st.tabs([
+    "🏠 Tableau de bord",
     "📋 Carte Agent",
     "↔️ Gauche-Droite",
     "⚠️ Évènements",
@@ -43,9 +46,207 @@ tabs = st.tabs([
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Tab 1 — Carte Agent
+# Tab 1 — Tableau de bord
 # ═══════════════════════════════════════════════════════════════════════════════
 with tabs[0]:
+    from dashboard import (
+        get_available_ca_pdfs, extract_pieces_from_pdf,
+        get_gd_files_for_ligne, get_event_file_mtime,
+        get_gtfs_info, parse_vehicle_positions, find_vehicle,
+    )
+
+    st.header("Tableau de bord")
+
+    ca_pdfs = get_available_ca_pdfs(CA_DIR)
+
+    if not ca_pdfs:
+        st.info("Aucune carte agent disponible. Chargez-en une dans l'onglet **Carte Agent**.")
+    else:
+        ca_labels  = [p["name"] for p in ca_pdfs]
+        sel_idx    = st.selectbox(
+            "Carte agent",
+            range(len(ca_labels)),
+            format_func=lambda i: ca_labels[i],
+            key="db_ca_select",
+        )
+        sel_ca     = ca_pdfs[sel_idx]
+        ca_date_str = sel_ca["date_str"]
+
+        ca_data = extract_pieces_from_pdf(sel_ca["path"])
+
+        if ca_data is None:
+            st.error("Impossible de lire la carte agent (PyMuPDF requis).")
+        else:
+            # ── Sommaire de la journée ─────────────────────────────────────────
+            st.subheader(f"Carte {ca_data['carte']} — {ca_date_str}")
+
+            pieces = ca_data["pieces"]
+
+            def _to_min(t: str) -> int:
+                h, m = map(int, t.split(":"))
+                return h * 60 + m
+
+            if pieces:
+                debut_global = min(pieces, key=lambda p: _to_min(p["debut"]))["debut"]
+                fin_global   = max(pieces, key=lambda p: _to_min(p["fin"]))["fin"]
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Heure de début", debut_global)
+                c2.metric("Heure de fin",   fin_global)
+                c3.metric("Nombre de pièces", len(pieces))
+
+            st.divider()
+
+            # ── Pièces de travail ──────────────────────────────────────────────
+            st.subheader("Pièces de travail")
+
+            gtfs_info = get_gtfs_info(DATA_DIR)
+
+            for i, piece in enumerate(pieces):
+                with st.expander(
+                    f"Pièce {i + 1} — Prise {piece['debut']} → {piece['fin']}",
+                    expanded=True,
+                ):
+                    col_t, col_bus, col_geo = st.columns([2, 3, 2])
+
+                    with col_t:
+                        st.markdown(f"**Début :** `{piece['debut']}`")
+                        st.markdown(f"**Fin :** `{piece['fin']}`")
+
+                    with col_bus:
+                        bus_num = st.text_input(
+                            "Numéro d'autobus",
+                            placeholder="12-345",
+                            key=f"db_bus_{i}",
+                        )
+
+                    with col_geo:
+                        st.write("")  # aligne verticalement le bouton
+                        geo_clicked = st.button(
+                            "📍 Géolocaliser",
+                            key=f"db_geo_btn_{i}",
+                            disabled=not gtfs_info["rt_avail"],
+                            help="Requiert un fichier vehiclePositions.pb (onglet GTFS)." if not gtfs_info["rt_avail"] else "",
+                        )
+
+                    geo_key = f"db_geo_result_{i}"
+                    if geo_clicked:
+                        if not bus_num.strip():
+                            st.warning("Entrez un numéro d'autobus avant de géolocaliser.")
+                        else:
+                            with st.spinner("Recherche du véhicule…"):
+                                try:
+                                    vehicles = parse_vehicle_positions(
+                                        gtfs_info["rt_pb"].read_bytes()
+                                    )
+                                    vehicle = find_vehicle(bus_num.strip(), vehicles)
+                                    st.session_state[geo_key] = vehicle
+                                except Exception as e:
+                                    st.error(f"Erreur parsing GTFS-RT : {e}")
+                                    st.session_state[geo_key] = None
+
+                    if geo_key in st.session_state:
+                        v = st.session_state[geo_key]
+                        if v:
+                            st.success(
+                                f"🚌 Bus `{v.get('v_label') or v.get('v_id')}` — "
+                                f"Lat {v['lat']:.5f}, Lon {v['lon']:.5f}"
+                                + (f" — Ligne {v['route_id']}" if v.get("route_id") else "")
+                            )
+                            try:
+                                import pandas as pd
+                                df_map = pd.DataFrame([{"lat": v["lat"], "lon": v["lon"]}])
+                                st.map(df_map, zoom=15)
+                            except Exception:
+                                maps_url = f"https://www.google.com/maps?q={v['lat']},{v['lon']}"
+                                st.markdown(f"[Voir sur Google Maps]({maps_url})")
+                        else:
+                            st.warning(f"Bus `{bus_num.strip()}` introuvable dans les données GTFS-RT.")
+
+            st.divider()
+
+            # ── Lignes du jour ─────────────────────────────────────────────────
+            st.subheader("Lignes du jour")
+
+            lignes = ca_data["lignes"]
+            if not lignes:
+                st.info("Aucun numéro de ligne détecté dans la carte agent.")
+            else:
+                for ligne in lignes:
+                    gd_files = get_gd_files_for_ligne(ligne, DATA_DIR)
+
+                    with st.expander(f"Ligne {ligne}", expanded=True):
+                        if not gd_files:
+                            st.caption(f"Aucun fichier G-D pour la ligne {ligne}.")
+                            continue
+
+                        for gd in gd_files:
+                            direction  = gd["direction"]
+                            evt_mtime  = get_event_file_mtime(ligne, direction, DATA_DIR)
+
+                            c1, c2, c3, c4 = st.columns([1, 3, 3, 2])
+                            c1.markdown(f"**{direction.capitalize()}**")
+                            c2.caption(f"G-D : {gd['mtime']}")
+                            c3.caption(f"Évènements : {evt_mtime}")
+
+                            with c4:
+                                if st.button(
+                                    "🗺️ Rapport G-D",
+                                    key=f"db_rpt_{ligne}_{direction}",
+                                ):
+                                    st.session_state[f"db_rpt_run_{ligne}_{direction}"] = True
+
+                            rpt_key = f"db_rpt_run_{ligne}_{direction}"
+                            if st.session_state.get(rpt_key):
+                                gtfs_path = DATA_DIR / "gtfs" / "gtfs_stm"
+                                if not gtfs_path.exists():
+                                    st.warning("Données GTFS introuvables.")
+                                else:
+                                    cmd = [
+                                        sys.executable, str(SCRIPTS_DIR / "rapport_gd.py"),
+                                        "--ligne", ligne,
+                                        "--direction", direction,
+                                        "--date", ca_date_str,
+                                        "--format", "html",
+                                        "--base", str(PROJECT_ROOT),
+                                    ]
+                                    with st.spinner(f"Génération du rapport {ligne} {direction}…"):
+                                        rpt_result = subprocess.run(
+                                            cmd, capture_output=True, text=True
+                                        )
+
+                                    out_path = SCRIPTS_DIR / f"rapport_{ligne}_{direction}_{ca_date_str}.html"
+                                    if rpt_result.returncode == 0 and out_path.exists():
+                                        rpt_html = out_path.read_bytes()
+                                        st.download_button(
+                                            f"⬇️ Rapport {ligne} {direction} (HTML)",
+                                            data=rpt_html,
+                                            file_name=out_path.name,
+                                            mime="text/html",
+                                            key=f"db_rpt_dl_{ligne}_{direction}",
+                                        )
+                                        with st.expander(f"Aperçu — {ligne} {direction}", expanded=True):
+                                            st.components.v1.html(
+                                                rpt_html.decode("utf-8"),
+                                                height=600,
+                                                scrolling=True,
+                                            )
+                                    else:
+                                        st.error("Erreur lors de la génération du rapport.")
+                                        st.code(rpt_result.stderr or rpt_result.stdout)
+
+            st.divider()
+
+            # ── Données GTFS ───────────────────────────────────────────────────
+            st.subheader("Données GTFS")
+            c1, c2 = st.columns(2)
+            c1.metric("GTFS statique (dernière mise à jour)", gtfs_info["static_ts"])
+            c2.metric("GTFS temps réel (dernière mise à jour)", gtfs_info["rt_ts"])
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Tab 2 — Carte Agent
+# ═══════════════════════════════════════════════════════════════════════════════
+with tabs[1]:
     st.header("Carte Agent")
     st.markdown("Déposez le PDF brut de votre carte agent. L'application le sauvegarde et génère une version annotée (horaires GTFS surlignés).")
 
@@ -98,9 +299,9 @@ with tabs[0]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Tab 2 — Gauche-Droite
+# Tab 3 — Gauche-Droite
 # ═══════════════════════════════════════════════════════════════════════════════
-with tabs[1]:
+with tabs[2]:
     st.header("Import Gauche-Droite")
     st.markdown("Collez le texte brut copié depuis l'interface STM. Le fichier `gd<ligne>_<direction>.json` sera créé ou mis à jour.")
 
@@ -142,9 +343,9 @@ with tabs[1]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Tab 3 — Évènements
+# Tab 4 — Évènements
 # ═══════════════════════════════════════════════════════════════════════════════
-with tabs[2]:
+with tabs[3]:
     st.header("Import Évènements")
     st.markdown("Collez le texte brut des évènements / détours STM. Le fichier `<ligne>_<direction>.json` sera créé ou mis à jour.")
 
@@ -183,9 +384,9 @@ with tabs[2]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Tab 4 — Rapport journalier
+# Tab 5 — Rapport journalier
 # ═══════════════════════════════════════════════════════════════════════════════
-with tabs[3]:
+with tabs[4]:
     st.header("Rapport journalier")
     st.markdown("Génère le PDF recto-verso (G-D + détours) à partir de la carte agent du jour.")
 
@@ -221,9 +422,9 @@ with tabs[3]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Tab 5 — Rapport G-D détaillé
+# Tab 6 — Rapport G-D détaillé
 # ═══════════════════════════════════════════════════════════════════════════════
-with tabs[4]:
+with tabs[5]:
     st.header("Rapport G-D détaillé")
     st.markdown("Croise les arrêts GTFS, les instructions G-D et les évènements actifs pour une ligne et une date.")
 
@@ -345,9 +546,9 @@ with tabs[4]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Tab 6 — GTFS
+# Tab 7 — GTFS
 # ═══════════════════════════════════════════════════════════════════════════════
-with tabs[5]:
+with tabs[6]:
     st.header("Données GTFS")
 
     gtfs_path = DATA_DIR / "gtfs" / "gtfs_stm"
