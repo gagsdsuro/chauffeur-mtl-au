@@ -524,12 +524,13 @@ def extract_segments_from_carte(page1_text: str) -> dict:
     Extrait les paires (départ, arrivée) par ligne depuis le texte de la carte agent.
     Retourne: { '195': [('STATION ANGRIGNON', 'TERMINUS DORVAL'), ...], ... }
 
-    Format HASTUS :
-      - Premier arrêt du bloc : "HH:MMNom de l'arrêt"  (heure collée avant)
-      - Dernier arrêt du bloc : "Nom de l'arrêt HH:MM" (heure après)
+    Format PyMuPDF (fitz) : chaque heure est sur sa propre ligne, sauf quand
+    le nom d'arrêt est trop long — l'heure est alors collée à la fin.
     """
+    _pure_time = re.compile(r'^\d{1,2}:\d{2}$')
+    _end_time  = re.compile(r'^(.+?)\s*(\d{2}:\d{2})$')
+
     segments: dict = {}
-    # Découpe en blocs à chaque nouvelle ligne de service, HLP ou GARAGE
     blocks = re.split(r'\n(?=[a-z]?\d+\s+-\s+P\s+/|hlp\d|GARAGE)', page1_text)
 
     for block in blocks:
@@ -539,21 +540,46 @@ def extract_segments_from_carte(page1_text: str) -> dict:
         numero = m_ligne.group(1)
 
         lines = [l.strip() for l in block.split('\n') if l.strip()]
-        stops = []
-        for line in lines[1:]:   # ignorer la ligne d'en-tête
-            # Départ : "23:46STATION ANGRIGNON (BOUCLE NORD)"
-            m = re.match(r'\d+:\d+(.+)', line)
-            if m:
-                stops.append(m.group(1).strip())
-                continue
-            # Arrivée avec espace : "TERMINUS DORVAL 24:32"
-            # Arrivée sans espace : "STATION ANGRIGNON (BOUCLE NORD)25:35"
-            m = re.match(r'(.+?)\s*\d{2}:\d{2}\s*$', line)
-            if m:
-                stops.append(m.group(1).strip())
 
-        if len(stops) >= 2:
-            segments.setdefault(numero, []).append((stops[0], stops[-1]))
+        # Classe chaque ligne en (time, stop, stop_time)
+        items: list[dict] = []
+        for line in lines[1:]:
+            if _pure_time.match(line):
+                items.append({'type': 'time', 'stop': None})
+            else:
+                m = _end_time.match(line)
+                if m:
+                    items.append({'type': 'stop_time', 'stop': m.group(1).strip()})
+                else:
+                    items.append({'type': 'stop', 'stop': line})
+
+        # Temps indexés dans l'ordre d'apparition
+        timed = [i for i, it in enumerate(items) if it['type'] in ('time', 'stop_time')]
+        if len(timed) < 2:
+            continue
+
+        # Stop de départ : premier item stop après le premier temps
+        debut_stop = None
+        for j in range(timed[0] + 1, len(items)):
+            if items[j]['stop'] and len(items[j]['stop']) > 2:
+                debut_stop = items[j]['stop']
+                break
+        if items[timed[0]]['type'] == 'stop_time':
+            debut_stop = items[timed[0]]['stop']
+
+        # Stop d'arrivée : dernier item stop avant/dans le dernier temps
+        fin_stop = None
+        last_i = timed[-1]
+        if items[last_i]['type'] == 'stop_time':
+            fin_stop = items[last_i]['stop']
+        else:
+            for j in range(last_i - 1, -1, -1):
+                if items[j]['stop'] and len(items[j]['stop']) > 2:
+                    fin_stop = items[j]['stop']
+                    break
+
+        if debut_stop and fin_stop:
+            segments.setdefault(numero, []).append((debut_stop, fin_stop))
 
     return segments
 
