@@ -461,7 +461,7 @@ def parse_carte_agent(pdf_path: Path) -> dict:
     if m:
         result['date'] = date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
 
-    # Ligne du tableau shift — pypdf mélange les colonnes, ex :
+    # Ligne du tableau shift — fitz mélange les colonnes, ex :
     # "V036 5622:28 22:28 29:38 29:48 12 - 04"
     # Voiture : dernier motif "NN - NN" de la ligne contenant les heures
     shift_line_m = re.search(r'[A-Z]\w+\s+\d+\d{2}:\d{2}.+?(\d+\s*-\s*\d+)\s*$',
