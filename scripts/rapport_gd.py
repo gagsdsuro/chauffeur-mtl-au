@@ -412,7 +412,7 @@ def annotate_events(rows, events):
 
         for a in e.get("arrets_annules", []):
             cancelled_ids.setdefault(a["id"], []).append(
-                {"label": label, "effectif": effectif}
+                {"label": label, "effectif": effectif, "nom_evt": a.get("nom", "")}
             )
         for a in e.get("arrets_ajoutes", []):
             name = a if isinstance(a, str) else a.get("nom", "")
@@ -576,6 +576,7 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, o
   .cancelled td {{ background: #fff0f0; }}
   .cancelled .stop-name {{ text-decoration: line-through; color: #c00; }}
   .event-label {{ font-size: 10px; color: #c00; display: block; }}
+  .event-precision {{ font-size: 11px; color: #b45309; font-weight: bold; display: block; }}
   .added {{ background: #f0fff0; }}
   .added-section {{ margin-top: 16px; padding: 8px; background: #e8f5e9; border-left: 4px solid #4caf50; }}
   .detour-added td {{ background: #e8f5e9; }}
@@ -664,6 +665,11 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, o
             for ev in cancelled:
                 label_str = ev["label"]
                 eff_str   = ev.get("effectif", "")
+                nom_evt   = ev.get("nom_evt", "")
+                # Précision de localisation issue du nom de l'événement
+                # Ex. "Sherbrooke / Gascon (50 mètres après)"
+                if nom_evt and nom_evt != r["stop_name"]:
+                    name_span += f'<span class="event-precision">📍 {nom_evt}</span>'
                 name_span += f'<span class="event-label">❌ {label_str}</span>'
                 if eff_str and eff_str not in seen_eff:
                     effectif_parts.append(eff_str)
@@ -747,12 +753,17 @@ def render_md(rows, added, args, parcours, shift_start=None, shift_end=None, orp
         if cancelled:
             seen_eff = set()
             ev_parts = []
+            precision_parts = []
             for ev in cancelled:
                 ev_parts.append(ev["label"])
                 eff = ev.get("effectif", "")
                 if eff and eff not in seen_eff:
                     seen_eff.add(eff)
-            name = f"~~{name}~~ ❌ " + " / ".join(ev_parts)
+                nom_evt = ev.get("nom_evt", "")
+                if nom_evt and nom_evt != name:
+                    precision_parts.append(f"📍 {nom_evt}")
+            precision = " ".join(precision_parts)
+            name = f"~~{name}~~ {precision} ❌ " + " / ".join(ev_parts)
             effectif_str = " / ".join(seen_eff)
 
         lines.append(f"| {seq} | {gd} | {code} | {name} | {effectif_str} |")
