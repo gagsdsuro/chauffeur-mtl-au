@@ -161,13 +161,14 @@ def get_route_id(ligne):
 
 
 def get_direction_id(route_id, direction):
-    label = direction.capitalize()
+    # Limite de mot (\b) : évite que "est" matche dans "ouest"
+    pattern = re.compile(r'\b' + re.escape(direction.lower()) + r'\b', re.IGNORECASE)
     seen = {}
     with open(GTFS / "trips.txt") as f:
         for r in csv.DictReader(f):
             if r["route_id"] == route_id:
                 seen[r["direction_id"]] = r["trip_headsign"]
-                if label.lower() in r["trip_headsign"].lower():
+                if pattern.search(r["trip_headsign"]):
                     return r["direction_id"]
     raise ValueError(f"Direction '{direction}' introuvable. Disponibles: {seen}")
 
