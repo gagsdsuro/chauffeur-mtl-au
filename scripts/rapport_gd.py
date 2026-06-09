@@ -503,6 +503,20 @@ def apply_gd_detours(rows: list, events: list) -> list:
             first_pos = 0
             last_pos  = -1
 
+        # Étendre last_pos pour inclure les instructions G-D sans arrêt GTFS
+        # qui suivent immédiatement le dernier arrêt annulé.
+        # Ex. : "Gauche - Clément" dont le stop a été consommé par une
+        # instruction précédente ("Droite - Clément") et qui se retrouve
+        # sans stop_code → tombe en dehors de la plage sans cette extension.
+        if last_pos >= 0:
+            i = last_pos + 1
+            while i < len(rows):
+                sc = rows[i].get("stop_code", "")
+                if sc and sc not in cancelled_codes:
+                    break  # premier arrêt régulier non annulé : fin de la zone
+                last_pos = i
+                i += 1
+
         # Toutes les instructions G-D dans la plage sont contournées,
         # y compris celles associées à un arrêt annulé.
         if last_pos >= first_pos:
