@@ -429,14 +429,15 @@ def find_carte_agent(target_date: date) -> Path:
 def parse_carte_agent(pdf_path: Path) -> dict:
     """Extrait les données structurées de la carte agent HASTUS (PDF)."""
     try:
-        import pypdf
+        import fitz  # PyMuPDF
     except ImportError:
-        print("pypdf non installé. Exécute: pip install pypdf --break-system-packages")
+        print("PyMuPDF non installé. Exécute: pip install pymupdf --break-system-packages")
         sys.exit(1)
 
-    reader = pypdf.PdfReader(str(pdf_path))
-    page1_text = reader.pages[0].extract_text() or ''
-    page2_text = reader.pages[1].extract_text() if len(reader.pages) > 1 else ''
+    doc = fitz.open(str(pdf_path))
+    page1_text = doc[0].get_text() if len(doc) > 0 else ''
+    page2_text = doc[1].get_text() if len(doc) > 1 else ''
+    doc.close()
 
     result = {
         'assignation': '',
