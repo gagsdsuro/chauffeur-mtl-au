@@ -2,25 +2,142 @@
 """
 Rapport détaillé G-D / Arrêts / Détours STM
 Usage: python rapport_gd.py --ligne 195 --direction ouest --date 2026-06-07 [--format html|md]
+                             [--heure-debut 22:00] [--heure-fin 28:30]
+
+Les heures de quart peuvent dépasser 24h (ex: 25:19 = 1h19 le lendemain).
+Si --heure-debut et --heure-fin sont omis, tous les événements actifs le jour J
+sont inclus (comportement précédent).
 """
 
 import argparse
 import csv
 import json
 import re
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
+
 
 def parse_args():
     p = argparse.ArgumentParser(description="Rapport G-D / Arrêts / Détours STM")
     p.add_argument("--ligne", required=True, help="Numéro de ligne (ex: 195)")
     p.add_argument("--direction", required=True, choices=["est", "ouest", "nord", "sud"])
-    p.add_argument("--date", required=True, help="Date YYYY-MM-DD")
+    p.add_argument("--date", required=True, help="Date de début du quart (YYYY-MM-DD)")
+    p.add_argument("--heure-debut", default=None,
+                   help="Heure de début du quart (HH:MM ou 25:30 pour 1h30 le lendemain)")
+    p.add_argument("--heure-fin", default=None,
+                   help="Heure de fin du quart (HH:MM ou 25:30 pour 1h30 le lendemain)")
     p.add_argument("--format", default="html", choices=["html", "md"])
     p.add_argument("--base", default=None,
                    help="Chemin racine du projet STM (défaut: dossier parent du script)")
     return p.parse_args()
 
+
+# ── Gestion des heures de quart ───────────────────────────────────────────────
+
+def parse_shift_time(time_str: str, base_date: date) -> datetime:
+    """
+    Convertit une heure de quart en datetime.
+    "22:00" → base_date à 22:00
+    "25:19" → base_date+1 à 01:19  (heure dépassant minuit du quart de nuit)
+    "30:00" → base_date+1 à 06:00
+    """
+    parts = time_str.strip().split(":")
+    total_hours = int(parts[0])
+    minutes = int(parts[1]) if len(parts) > 1 else 0
+    extra_days = total_hours // 24
+    hours = total_hours % 24
+    base_dt = datetime(base_date.year, base_date.month, base_date.day, hours, minutes)
+    return base_dt + timedelta(days=extra_days)
+
+
+def parse_effectif_times(effectif: str):
+    """
+    Extrait une plage horaire journalière depuis le champ effectif.
+    Retourne (h_debut, m_debut, h_fin, m_fin) ou None si non trouvé.
+
+    Exemples reconnus :
+      "Seulement entre 12:00 et 19:00 chaque jour"
+      "12H00 À 19H00"
+      "entre 7h30 et 23h00"
+    """
+    # Format "HH:MM à HH:MM" ou "HHhMM à HHhMM"
+    m = re.search(
+        r'(\d{1,2})[h:](\d{2})\s*[àa]\s*(\d{1,2})[h:](\d{2})',
+        effectif, re.IGNORECASE
+    )
+    if m:
+        return (int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4)))
+    # Format "entre HH:MM et HH:MM"
+    m = re.search(
+        r'entre\s+(\d{1,2})[h:](\d{2})\s+et\s+(\d{1,2})[h:](\d{2})',
+        effectif, re.IGNORECASE
+    )
+    if m:
+        return (int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4)))
+    return None
+
+
+def _day_range(start: datetime, end: datetime):
+    """Génère tous les objets date entre start et end (inclus)."""
+    d = start.date()
+    while d <= end.date():
+        yield d
+        d += timedelta(days=1)
+
+
+def event_applies_to_shift(event: dict, shift_start: datetime, shift_end: datetime) -> bool:
+    """
+    Détermine si un événement est actif pendant la plage de quart donnée.
+
+    Critères :
+    1. La plage de validité de l'événement (date_heure_debut / date_heure_fin)
+       doit chevaucher [shift_start, shift_end].
+    2. Le champ effectif peut restreindre :
+       - Les jours de la semaine (lundi-vendredi, fins de semaine…)
+       - Une plage horaire quotidienne (ex. "12:00 à 19:00")
+    """
+    debut_str = event.get("date_heure_debut")
+    fin_str   = event.get("date_heure_fin")
+
+    event_start = datetime.fromisoformat(debut_str) if debut_str else datetime.min
+    event_end   = datetime.fromisoformat(fin_str)   if fin_str   else datetime.max
+
+    # 1. Chevauchement de la plage de validité
+    if event_end < shift_start or event_start > shift_end:
+        return False
+
+    effectif = (event.get("effectif") or "").strip()
+
+    # 2. Filtre jour de la semaine
+    weekdays_in_shift = {d.weekday() for d in _day_range(shift_start, shift_end)}
+    if re.search(r'lundi.*vendredi|jour.*semaine|semaine(?!\s*de)', effectif, re.IGNORECASE):
+        if not any(w < 5 for w in weekdays_in_shift):
+            return False
+    elif re.search(r'fin.*semaine|samedi.*dimanche|week.?end', effectif, re.IGNORECASE):
+        if not any(w >= 5 for w in weekdays_in_shift):
+            return False
+
+    # 3. Filtre plage horaire quotidienne
+    tw = parse_effectif_times(effectif)
+    if tw:
+        h_s, m_s, h_e, m_e = tw
+        overlaps = False
+        for d in _day_range(shift_start, shift_end):
+            w_start = datetime(d.year, d.month, d.day, h_s, m_s)
+            w_end   = datetime(d.year, d.month, d.day, h_e, m_e)
+            # Si fin ≤ début → la fenêtre passe minuit
+            if w_end <= w_start:
+                w_end += timedelta(days=1)
+            if w_start < shift_end and w_end > shift_start:
+                overlaps = True
+                break
+        if not overlaps:
+            return False
+
+    return True
+
+
+# ── Chargement des données ────────────────────────────────────────────────────
 
 def get_route_id(ligne):
     with open(GTFS / "routes.txt") as f:
@@ -82,24 +199,43 @@ def load_gd(ligne, direction, base):
     return parcours.get("direction", []), parcours
 
 
-def load_events(ligne, direction, date_str, base):
+def load_events(ligne, direction, base,
+                shift_start: datetime | None = None,
+                shift_end: datetime | None = None,
+                date_str: str | None = None):
+    """
+    Charge les événements actifs pour la ligne/direction.
+
+    Si shift_start et shift_end sont fournis, utilise la logique de plage
+    horaire (chevauchement + effectif). Sinon, retombe sur le filtrage
+    par journée (date_str requis dans ce cas).
+    """
     path = base / f"data/Events/{ligne}_{direction}.json"
     if not path.exists():
         return []
     with open(path) as f:
         data = json.load(f)
-    target = datetime.strptime(date_str, "%Y-%m-%d").date()
+
     active = []
     for e in data.get("detours", []):
-        debut = e.get("date_heure_debut")
-        fin = e.get("date_heure_fin")
-        if debut and datetime.fromisoformat(debut).date() > target:
-            continue
-        if fin and datetime.fromisoformat(fin).date() < target:
-            continue
-        active.append(e)
+        if shift_start is not None and shift_end is not None:
+            if event_applies_to_shift(e, shift_start, shift_end):
+                active.append(e)
+        else:
+            # Comportement original : filtrage par date uniquement
+            target = datetime.strptime(date_str, "%Y-%m-%d").date()
+            debut = e.get("date_heure_debut")
+            fin   = e.get("date_heure_fin")
+            if debut and datetime.fromisoformat(debut).date() > target:
+                continue
+            if fin and datetime.fromisoformat(fin).date() < target:
+                continue
+            active.append(e)
+
     return active
 
+
+# ── Alignement G-D / arrêts ───────────────────────────────────────────────────
 
 def extract_street(instruction):
     """'Gauche - Lafleur' → 'lafleur'"""
@@ -109,19 +245,16 @@ def extract_street(instruction):
 
 def build_rows(gd_instructions, stops_ordered, stop_names):
     """
-    Align G-D instructions with GTFS stops by street name matching.
-    Returns list of dicts: {gd, seq, stop_id, stop_name, stop_code}
+    Aligne les instructions G-D avec les arrêts GTFS par correspondance de rue.
+    Retourne une liste de dicts : {gd, seq, stop_id, stop_name, stop_code}
     """
     rows = []
     stop_idx = 0
     n_stops = len(stops_ordered)
 
-    for i, instr in enumerate(gd_instructions):
+    for instr in gd_instructions:
         street = extract_street(instr)
-        # Via instructions often don't have stops — skip "via" with no match
-        is_via = instr.lower().startswith("via")
 
-        # Collect stops whose name contains this street
         matched = []
         tmp_idx = stop_idx
         while tmp_idx < n_stops:
@@ -131,7 +264,6 @@ def build_rows(gd_instructions, stops_ordered, stop_names):
                 matched.append((seq, sid))
                 tmp_idx += 1
             else:
-                # Peek ahead: if next G-D instruction matches this stop, stop
                 break
 
         if matched:
@@ -142,13 +274,13 @@ def build_rows(gd_instructions, stops_ordered, stop_names):
         else:
             rows.append({"gd": instr, "seq": None, "stop_id": None})
 
-    # Remaining unmatched stops
+    # Arrêts restants sans instruction G-D
     while stop_idx < n_stops:
         seq, sid = stops_ordered[stop_idx]
         rows.append({"gd": "", "seq": seq, "stop_id": sid})
         stop_idx += 1
 
-    # Enrich with names
+    # Enrichissement avec les noms
     for r in rows:
         if r["stop_id"]:
             s = stop_names.get(r["stop_id"], {})
@@ -161,14 +293,19 @@ def build_rows(gd_instructions, stops_ordered, stop_names):
 
 
 def annotate_events(rows, events):
-    """Add event annotations to rows."""
-    cancelled_ids = {}  # stop_id -> list of event descriptions
-    added = []          # list of added stops with descriptions
+    """
+    Ajoute les annotations d'événements aux lignes du tableau.
+    Chaque ligne annulée reçoit une liste d'objets :
+      {"label": str, "effectif": str}
+    """
+    cancelled_ids = {}   # stop_id -> list of {label, effectif}
+    added = []           # arrêts ajoutés avec descriptions
 
     for e in events:
-        titre = e.get("titre", "")
-        motif = e.get("motif", "")
-        desc = e.get("description_gd", "") or ""
+        titre      = e.get("titre", "")
+        motif      = e.get("motif", "")
+        effectif   = (e.get("effectif") or "").strip()
+        desc       = e.get("description_gd", "") or ""
         commentaire = e.get("commentaire", "") or ""
         label = f"{titre} ({motif})"
         if desc:
@@ -177,10 +314,12 @@ def annotate_events(rows, events):
             label += f" — {commentaire}"
 
         for a in e.get("arrets_annules", []):
-            cancelled_ids.setdefault(a["id"], []).append(label)
+            cancelled_ids.setdefault(a["id"], []).append(
+                {"label": label, "effectif": effectif}
+            )
         for a in e.get("arrets_ajoutes", []):
             name = a if isinstance(a, str) else a.get("nom", "")
-            added.append({"name": name, "label": label})
+            added.append({"name": name, "label": label, "effectif": effectif})
 
     for r in rows:
         sid = r.get("stop_id")
@@ -191,28 +330,24 @@ def annotate_events(rows, events):
     return rows, added
 
 
-# ── Intégration G-D des détours ──────────────────────────────────────────────
+# ── Intégration G-D des détours ───────────────────────────────────────────────
 
-# Marqueur « retour au régulier »
 _RR_RE = re.compile(r'^R[.\s]?R\.?$', re.IGNORECASE)
+
 
 def parse_description_gd(desc: str):
     """
     Tente de parser une description_gd en liste d'instructions normalisées.
-    Retourne une liste ["Via - X", "Gauche - Y", ...] si le texte suit le
-    pattern VIA/G/D, sinon None (texte libre → garder en note).
+    Retourne ["Via - X", "Gauche - Y", ...] ou None (texte libre).
     """
     if not desc:
         return None
-    # Doit contenir au moins un marqueur directionnel suivi d'un mot
     if not re.search(r'\b(VIA\s+\w|G[/.\s]\w|D[/.\s]\w)', desc, re.IGNORECASE):
         return None
 
-    # Multi-ligne : chaque ligne est une instruction
     if '\n' in desc:
         raw = [l.strip() for l in desc.split('\n') if l.strip()]
     else:
-        # Ligne unique : découper à chaque nouveau marqueur directionnel
         raw = re.split(r'(?=\bVIA\b|\bG[/.\s]|\bD[/.\s])', desc.strip(), flags=re.IGNORECASE)
         raw = [p.strip() for p in raw if p.strip()]
 
@@ -232,7 +367,6 @@ def parse_description_gd(desc: str):
         if m:
             instructions.append(f"Droite - {m.group(1).strip()}")
             continue
-        # Partie non reconnue : inclure comme Via
         instructions.append(f"Via - {part}")
 
     return instructions if instructions else None
@@ -240,10 +374,9 @@ def parse_description_gd(desc: str):
 
 def apply_gd_detours(rows: list, events: list) -> list:
     """
-    Pour chaque événement dont la description_gd est parseable :
-      • Insère les étapes du détour avant le premier arrêt annulé  (detour_added=True)
-      • Marque les instructions G-D régulières contournées          (detour_removed=True)
-    Les arrêts annulés sont déjà marqués par annotate_events().
+    Pour chaque événement avec une description_gd parseable :
+    - Insère les étapes du détour avant le premier arrêt annulé (detour_added=True)
+    - Marque les instructions G-D régulières contournées (detour_removed=True)
     """
     for event in events:
         desc = event.get("description_gd") or ""
@@ -253,7 +386,6 @@ def apply_gd_detours(rows: list, events: list) -> list:
 
         cancelled_codes = {a["id"] for a in event.get("arrets_annules", [])}
 
-        # Positions des arrêts annulés dans rows (par stop_code)
         cancelled_positions = [
             i for i, r in enumerate(rows)
             if r.get("stop_code") in cancelled_codes
@@ -266,8 +398,6 @@ def apply_gd_detours(rows: list, events: list) -> list:
             first_pos = 0
             last_pos  = -1
 
-        # Marquer les instructions G-D régulières contournées
-        # = lignes GD sans arrêt (ou avec un arrêt non annulé) entre first et last
         if last_pos >= first_pos:
             for i in range(first_pos, last_pos + 1):
                 r = rows[i]
@@ -276,7 +406,6 @@ def apply_gd_detours(rows: list, events: list) -> list:
                         and r.get("stop_code", "") not in cancelled_codes):
                     r["detour_removed"] = True
 
-        # Construire les lignes de détour à insérer
         label = event.get("titre", "")
         detour_rows = [
             {
@@ -297,12 +426,30 @@ def apply_gd_detours(rows: list, events: list) -> list:
     return rows
 
 
-# ── Output formatters ────────────────────────────────────────────────────────
+# ── Formatage de la plage de quart ────────────────────────────────────────────
 
-def render_html(rows, added, args, parcours):
+def fmt_shift_range(shift_start, shift_end, base_date):
+    """Retourne une chaîne lisible pour l'en-tête du rapport."""
+    if shift_start is None or shift_end is None:
+        return "Journée complète"
+
+    def fmt_dt(dt):
+        if dt.date() == base_date:
+            return dt.strftime("%H:%M")
+        else:
+            return dt.strftime("%H:%M (+1j)")
+
+    return f"{fmt_dt(shift_start)} — {fmt_dt(shift_end)}"
+
+
+# ── Rendus HTML et Markdown ───────────────────────────────────────────────────
+
+def render_html(rows, added, args, parcours, shift_start=None, shift_end=None):
+    base_date = datetime.strptime(args.date, "%Y-%m-%d").date()
     date_fmt = datetime.strptime(args.date, "%Y-%m-%d").strftime("%d %B %Y")
     start = parcours.get("start", "") if parcours else ""
-    end = parcours.get("end", "") if parcours else ""
+    end   = parcours.get("end", "")   if parcours else ""
+    quart = fmt_shift_range(shift_start, shift_end, base_date)
 
     lines = [f"""<!DOCTYPE html>
 <html lang="fr">
@@ -320,6 +467,7 @@ def render_html(rows, added, args, parcours):
   .gd {{ color: #1a4a7a; font-weight: bold; white-space: nowrap; }}
   .code {{ color: #888; font-size: 11px; white-space: nowrap; }}
   .seq {{ color: #aaa; font-size: 11px; text-align: right; padding-right: 4px; }}
+  .effectif {{ font-size: 10px; color: #666; font-style: italic; white-space: nowrap; }}
   .cancelled td {{ background: #fff0f0; }}
   .cancelled .stop-name {{ text-decoration: line-through; color: #c00; }}
   .event-label {{ font-size: 10px; color: #c00; display: block; }}
@@ -340,23 +488,24 @@ def render_html(rows, added, args, parcours):
 </head>
 <body>
 <h1>Ligne {args.ligne} — {args.direction.capitalize()} &nbsp;|&nbsp; {date_fmt}</h1>
-<div class="meta">{start} → {end}</div>
+<div class="meta">{start} → {end} &nbsp;·&nbsp; Quart : {quart}</div>
 <table>
 <thead>
   <tr>
-    <th style="width:5%">#</th>
-    <th style="width:30%">G-D (instruction)</th>
-    <th style="width:8%">Code</th>
+    <th style="width:4%">#</th>
+    <th style="width:28%">G-D (instruction)</th>
+    <th style="width:7%">Code</th>
     <th>Arrêt GTFS / Détour</th>
+    <th style="width:18%">Effectif</th>
   </tr>
 </thead>
 <tbody>"""]
 
     for r in rows:
-        cancelled       = r.get("cancelled", [])
-        detour_added    = r.get("detour_added", False)
-        detour_removed  = r.get("detour_removed", False)
-        detour_label    = r.get("detour_label", "")
+        cancelled      = r.get("cancelled", [])
+        detour_added   = r.get("detour_added", False)
+        detour_removed = r.get("detour_removed", False)
+        detour_label   = r.get("detour_label", "")
 
         if detour_added:
             cls = ' class="detour-added"'
@@ -381,11 +530,24 @@ def render_html(rows, added, args, parcours):
 
         if r["stop_name"]:
             name_span = f'<span class="stop-name">{r["stop_name"]}</span>'
-            if cancelled:
-                for ev in cancelled:
-                    name_span += f'<span class="event-label">❌ {ev}</span>'
         else:
             name_span = ""
+
+        # Colonne Effectif : agrège les valeurs uniques des événements de la ligne
+        effectif_parts = []
+        if cancelled:
+            seen_eff = set()
+            for ev in cancelled:
+                label_str = ev["label"]
+                eff_str   = ev.get("effectif", "")
+                name_span += f'<span class="event-label">❌ {label_str}</span>'
+                if eff_str and eff_str not in seen_eff:
+                    effectif_parts.append(eff_str)
+                    seen_eff.add(eff_str)
+        effectif_cell = (
+            f'<span class="effectif">{" / ".join(effectif_parts)}</span>'
+            if effectif_parts else ""
+        )
 
         lines.append(
             f'<tr{cls}>'
@@ -393,6 +555,7 @@ def render_html(rows, added, args, parcours):
             f'<td>{gd_cell}</td>'
             f'<td class="code">{r["stop_code"]}</td>'
             f'<td>{name_span}</td>'
+            f'<td>{effectif_cell}</td>'
             f'</tr>'
         )
 
@@ -401,23 +564,26 @@ def render_html(rows, added, args, parcours):
     if added:
         lines.append('<div class="added-section"><strong>Arrêts ajoutés (temporaires)</strong><ul>')
         for a in added:
-            lines.append(f'<li>➕ {a["name"]} — {a["label"]}</li>')
+            eff = f' <em>({a["effectif"]})</em>' if a.get("effectif") else ""
+            lines.append(f'<li>➕ {a["name"]} — {a["label"]}{eff}</li>')
         lines.append("</ul></div>")
 
     lines.append("</body></html>")
     return "\n".join(lines)
 
 
-def render_md(rows, added, args, parcours):
+def render_md(rows, added, args, parcours, shift_start=None, shift_end=None):
+    base_date = datetime.strptime(args.date, "%Y-%m-%d").date()
     date_fmt = datetime.strptime(args.date, "%Y-%m-%d").strftime("%d %B %Y")
     start = parcours.get("start", "") if parcours else ""
-    end = parcours.get("end", "") if parcours else ""
+    end   = parcours.get("end", "")   if parcours else ""
+    quart = fmt_shift_range(shift_start, shift_end, base_date)
 
     lines = [
         f"# Ligne {args.ligne} — {args.direction.capitalize()} | {date_fmt}",
-        f"**{start} → {end}**\n",
-        "| # | G-D (instruction) | Code | Arrêt GTFS / Détour |",
-        "|---|---|---|---|",
+        f"**{start} → {end}** · Quart : {quart}\n",
+        "| # | G-D (instruction) | Code | Arrêt GTFS / Détour | Effectif |",
+        "|---|---|---|---|---|",
     ]
     for r in rows:
         cancelled      = r.get("cancelled", [])
@@ -436,38 +602,73 @@ def render_md(rows, added, args, parcours):
         elif detour_removed:
             gd = f"~~✂ {gd}~~"
 
+        effectif_str = ""
         if cancelled:
-            name = f"~~{name}~~ ❌ " + " / ".join(cancelled)
+            seen_eff = set()
+            ev_parts = []
+            for ev in cancelled:
+                ev_parts.append(ev["label"])
+                eff = ev.get("effectif", "")
+                if eff and eff not in seen_eff:
+                    seen_eff.add(eff)
+            name = f"~~{name}~~ ❌ " + " / ".join(ev_parts)
+            effectif_str = " / ".join(seen_eff)
 
-        lines.append(f"| {seq} | {gd} | {code} | {name} |")
+        lines.append(f"| {seq} | {gd} | {code} | {name} | {effectif_str} |")
 
     if added:
         lines.append("\n## Arrêts ajoutés (temporaires)")
         for a in added:
-            lines.append(f"- ➕ **{a['name']}** — {a['label']}")
+            eff = f" *(Effectif : {a['effectif']})*" if a.get("effectif") else ""
+            lines.append(f"- ➕ **{a['name']}** — {a['label']}{eff}")
 
     return "\n".join(lines)
 
 
-# ── Main ─────────────────────────────────────────────────────────────────────
+# ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
     args = parse_args()
 
-    # Résolution du chemin de base
     base = Path(args.base) if args.base else Path(__file__).resolve().parent.parent
     global GTFS
     GTFS = base / "data" / "gtfs" / "gtfs_stm"
 
+    # Calcul de la plage de quart
+    base_date = datetime.strptime(args.date, "%Y-%m-%d").date()
+    shift_start = parse_shift_time(args.heure_debut, base_date) if args.heure_debut else None
+    shift_end   = parse_shift_time(args.heure_fin,   base_date) if args.heure_fin   else None
+
+    # Validation : si une seule heure est fournie, les deux sont requises
+    if (shift_start is None) != (shift_end is None):
+        import sys
+        print("Erreur : --heure-debut et --heure-fin doivent être fournis ensemble.", file=sys.stderr)
+        sys.exit(1)
+
+    if shift_start and shift_end and shift_end <= shift_start:
+        # Le quart passe minuit : shift_end est forcément le lendemain
+        # Normalement déjà géré par parse_shift_time (heures > 24),
+        # mais on corrige au cas où l'utilisateur donne ex. "22:00" / "06:00"
+        shift_end += timedelta(days=1)
+
     print(f"→ Ligne {args.ligne} {args.direction} — {args.date}")
     print(f"  Base projet : {base}")
+    if shift_start:
+        print(f"  Quart       : {shift_start.strftime('%Y-%m-%d %H:%M')} → {shift_end.strftime('%Y-%m-%d %H:%M')}")
+    else:
+        print("  Quart       : journée complète")
 
     route_id = get_route_id(args.ligne)
-    dir_id = get_direction_id(route_id, args.direction)
-    stops = get_stops_for_line(route_id, dir_id)
+    dir_id   = get_direction_id(route_id, args.direction)
+    stops    = get_stops_for_line(route_id, dir_id)
     stop_names = load_stop_names()
     gd_instructions, parcours = load_gd(args.ligne, args.direction, base)
-    events = load_events(args.ligne, args.direction, args.date, base)
+    events = load_events(
+        args.ligne, args.direction, base,
+        shift_start=shift_start,
+        shift_end=shift_end,
+        date_str=args.date,
+    )
 
     print(f"  {len(stops)} arrêts GTFS, {len(gd_instructions)} instructions G-D, {len(events)} événements actifs")
 
@@ -479,9 +680,9 @@ def main():
     outfile = Path(__file__).resolve().parent / f"rapport_{args.ligne}_{args.direction}_{args.date}.{ext}"
 
     if args.format == "html":
-        content = render_html(rows, added, args, parcours)
+        content = render_html(rows, added, args, parcours, shift_start, shift_end)
     else:
-        content = render_md(rows, added, args, parcours)
+        content = render_md(rows, added, args, parcours, shift_start, shift_end)
 
     outfile.write_text(content, encoding="utf-8")
     print(f"  ✅ Rapport écrit: {outfile}")

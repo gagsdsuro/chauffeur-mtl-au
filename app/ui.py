@@ -235,11 +235,28 @@ with tabs[4]:
     with col3:
         gdr_date = st.date_input("Date", value=date.today(), key="gdr_date")
 
+    st.markdown("**Plage horaire du quart** *(optionnel — laisser vide pour la journée complète)*")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        gdr_heure_debut = st.text_input(
+            "Heure de début", placeholder="22:00  ou  06:30",
+            key="gdr_heure_debut",
+            help="Accepte les heures de quart dépassant minuit : ex. 25:30 = 1h30 le lendemain."
+        )
+    with col_b:
+        gdr_heure_fin = st.text_input(
+            "Heure de fin", placeholder="06:30  ou  28:00",
+            key="gdr_heure_fin",
+            help="Accepte les heures de quart dépassant minuit : ex. 28:00 = 4h00 le lendemain."
+        )
+
     gdr_format = st.radio("Format de sortie", ["html", "md"], horizontal=True, key="gdr_fmt")
 
     if st.button("Générer", type="primary", key="gdr_btn"):
         if not gdr_ligne.strip():
             st.warning("Entrez un numéro de ligne.")
+        elif bool(gdr_heure_debut.strip()) != bool(gdr_heure_fin.strip()):
+            st.warning("Veuillez renseigner les deux heures (début ET fin) ou laisser les deux vides.")
         else:
             gtfs_path = DATA_DIR / "gtfs" / "gtfs_stm"
             if not gtfs_path.exists():
@@ -255,6 +272,9 @@ with tabs[4]:
                     "--format", gdr_format,
                     "--base", str(PROJECT_ROOT),
                 ]
+                if gdr_heure_debut.strip() and gdr_heure_fin.strip():
+                    cmd += ["--heure-debut", gdr_heure_debut.strip(),
+                            "--heure-fin",   gdr_heure_fin.strip()]
 
                 with st.spinner("Génération en cours…"):
                     result = subprocess.run(cmd, capture_output=True, text=True)
