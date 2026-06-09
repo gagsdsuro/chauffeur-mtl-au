@@ -53,6 +53,7 @@ with tabs[0]:
         get_available_ca_pdfs, extract_pieces_from_pdf,
         get_gd_files_for_ligne, get_event_file_mtime,
         get_gtfs_info, parse_vehicle_positions, find_vehicle,
+        get_time_range_for_direction,
     )
 
     st.header("Tableau de bord")
@@ -188,7 +189,14 @@ with tabs[0]:
                             c2.caption(f"G-D : {gd['mtime']}")
                             c3.caption(f"Évènements : {evt_mtime}")
 
+                            # Plage horaire de cette direction depuis la carte agent
+                            line_tr  = ca_data.get("line_time_ranges", {})
+                            segments = line_tr.get(ligne, [])
+                            tr = get_time_range_for_direction(gd["path"], segments)
+
                             with c4:
+                                if tr:
+                                    st.caption(f"⏱ {tr[0]} → {tr[1]}")
                                 if st.button(
                                     "🗺️ Rapport G-D",
                                     key=f"db_rpt_{ligne}_{direction}",
@@ -209,6 +217,9 @@ with tabs[0]:
                                         "--format", "html",
                                         "--base", str(PROJECT_ROOT),
                                     ]
+                                    if tr:
+                                        cmd += ["--heure-debut", tr[0],
+                                                "--heure-fin",   tr[1]]
                                     with st.spinner(f"Génération du rapport {ligne} {direction}…"):
                                         rpt_result = subprocess.run(
                                             cmd, capture_output=True, text=True

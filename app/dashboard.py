@@ -38,7 +38,7 @@ def get_available_ca_pdfs(ca_dir: Path) -> list[dict]:
 def extract_pieces_from_pdf(pdf_path: Path) -> dict | None:
     """
     Extrait les pièces de travail d'une carte agent STM (PDF).
-    Retourne {carte, pieces: [{debut, fin}], lignes} ou None si fitz manquant.
+    Retourne {carte, pieces: [{debut, fin}], lignes, line_time_ranges} ou None.
     """
     try:
         import fitz  # PyMuPDF
@@ -46,9 +46,10 @@ def extract_pieces_from_pdf(pdf_path: Path) -> dict | None:
         return None
 
     try:
-        doc   = fitz.open(str(pdf_path))
-        page  = doc[0]
-        spans = []
+        doc        = fitz.open(str(pdf_path))
+        page       = doc[0]
+        page1_text = page.get_text()
+        spans      = []
         for block in page.get_text("dict")["blocks"]:
             if block["type"] == 0:
                 for line in block["lines"]:
@@ -75,7 +76,6 @@ def extract_pieces_from_pdf(pdf_path: Path) -> dict | None:
     if len(prise_cols) < 2:
         return None
 
-    # Collecte des heures dans chaque colonne (Y élargi pour plusieurs pièces)
     for col in prise_cols:
         px0, px1 = col["range"]
         for s in spans:
@@ -84,10 +84,9 @@ def extract_pieces_from_pdf(pdf_path: Path) -> dict | None:
                 col["entries"].append({"time": s["text"], "y": by0})
         col["entries"].sort(key=lambda e: e["y"])
 
-    col0 = prise_cols[0]["entries"]   # colonne gauche = prise début
-    col1 = prise_cols[1]["entries"]   # colonne droite = prise fin
-
-    n = min(len(col0), len(col1))
+    col0 = prise_cols[0]["entries"]
+    col1 = prise_cols[1]["entries"]
+    n    = min(len(col0), len(col1))
     pieces = [{"debut": col0[i]["time"], "fin": col1[i]["time"]} for i in range(n)]
 
     # ── Numéros de ligne ──────────────────────────────────────────────────────
@@ -104,7 +103,125 @@ def extract_pieces_from_pdf(pdf_path: Path) -> dict | None:
             carte_num = s["text"]
             break
 
-    return {"carte": carte_num, "pieces": pieces, "lignes": lignes}
+    return {
+        "carte":            carte_num,
+        "pieces":           pieces,
+        "lignes":           lignes,
+        "line_time_ranges": extract_line_time_ranges(page1_text),
+    }
+
+
+# ── Extraction des plages horaires par ligne depuis le texte de la carte agent ──
+
+def _to_min(t: str) -> int:
+    h, m = map(int, t.split(":"))
+    return h * 60 + m
+
+
+def extract_line_time_ranges(page1_text: str) -> dict:
+    """
+    Extrait les plages horaires (début/fin) par ligne, avec stops de départ/arrivée.
+
+    Format HASTUS (texte extrait de PyMuPDF) :
+      - Départ : "23:46STATION ANGRIGNON (BOUCLE NORD)"  (heure collée avant le nom)
+      - Arrivée : "TERMINUS DORVAL 24:32"                (heure collée après le nom)
+
+    Retourne { '195': [{'debut': '23:46', 'fin': '24:32',
+                        'debut_stop': 'STATION ANGRIGNON (BOUCLE NORD)',
+                        'fin_stop': 'TERMINUS DORVAL'}, ...] }
+    """
+    result: dict = {}
+    blocks = re.split(r"\n(?=[a-z]?\d+\s+-\s+P\s+/|hlp\d|GARAGE)", page1_text)
+
+    for block in blocks:
+        m_ligne = re.match(r"[a-z]?(\d+)\s+-\s+P\s+/", block)
+        if not m_ligne:
+            continue
+        numero = m_ligne.group(1)
+
+        lines = [l.strip() for l in block.split("\n") if l.strip()]
+        debut_time = fin_time = None
+        debut_stop = fin_stop = None
+
+        for line in lines[1:]:
+            # Départ : heure collée au début → "23:46STATION ANGRIGNON …"
+            m = re.match(r"(\d+:\d{2})(.+)", line)
+            if m:
+                if debut_time is None:
+                    debut_time = m.group(1)
+                    debut_stop = m.group(2).strip()
+                # On continue pour chercher la fin
+                continue
+            # Arrivée : heure collée à la fin → "TERMINUS DORVAL 24:32"
+            m = re.match(r"(.+?)\s*(\d{2}:\d{2})\s*$", line)
+            if m:
+                fin_stop = m.group(1).strip()
+                fin_time = m.group(2)
+
+        if debut_time and fin_time:
+            result.setdefault(numero, []).append({
+                "debut":      debut_time,
+                "fin":        fin_time,
+                "debut_stop": debut_stop or "",
+                "fin_stop":   fin_stop or "",
+            })
+
+    return result
+
+
+def _norm_stop(name: str) -> str:
+    """Normalise un nom d'arrêt pour comparaison (casse, abbréviations, parenthèses)."""
+    n = re.sub(r"\s*\([^)]*\)", "", name.upper())
+    n = re.sub(r"\bSTE\b", "SAINTE", n)
+    n = re.sub(r"\bST\b",  "SAINT",  n)
+    return re.sub(r"\s+", " ", n).strip()
+
+
+def get_time_range_for_direction(
+    gd_path: Path,
+    segments: list[dict],
+) -> tuple[str, str] | None:
+    """
+    Associe les segments de la carte agent à un fichier G-D en comparant les noms
+    de terminus (départ / arrivée). Retourne (heure_debut_min, heure_fin_max) ou None.
+    """
+    if not segments:
+        return None
+
+    try:
+        gd_data = json.loads(gd_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+    # Collecte les (start, end) normalisés de tous les parcours du fichier G-D
+    gd_endpoints: list[tuple[str, str]] = []
+    for route in gd_data.get("routes", []):
+        for parcours in route.get("parcours", []):
+            s = _norm_stop(parcours.get("start", ""))
+            e = _norm_stop(parcours.get("end",   ""))
+            if s and e:
+                gd_endpoints.append((s, e))
+
+    if not gd_endpoints:
+        return None
+
+    matching: list[dict] = []
+    for seg in segments:
+        seg_s = _norm_stop(seg["debut_stop"])
+        seg_e = _norm_stop(seg["fin_stop"])
+        for (gd_s, gd_e) in gd_endpoints:
+            s_ok = (seg_s in gd_s) or (gd_s in seg_s)
+            e_ok = (seg_e in gd_e) or (gd_e in seg_e)
+            if s_ok and e_ok:
+                matching.append(seg)
+                break
+
+    if not matching:
+        return None
+
+    debut = min(matching, key=lambda s: _to_min(s["debut"]))["debut"]
+    fin   = max(matching, key=lambda s: _to_min(s["fin"]))["fin"]
+    return debut, fin
 
 
 # ── Fichiers de données ──────────────────────────────────────────────────────────
