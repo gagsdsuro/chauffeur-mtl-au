@@ -122,16 +122,21 @@ def extract_line_time_ranges(page1_text: str) -> dict:
     """
     Extrait les plages horaires (début/fin) par ligne, avec stops de départ/arrivée.
 
-    Format HASTUS (texte extrait de PyMuPDF) :
-      - Départ : "23:46STATION ANGRIGNON (BOUCLE NORD)"  (heure collée avant le nom)
-      - Arrivée : "TERMINUS DORVAL 24:32"                (heure collée après le nom)
+    Format PyMuPDF (fitz) pour une carte agent HASTUS :
+      - Les heures sont sur leurs propres lignes : "23:46"
+      - Les noms d'arrêts sont sur leurs propres lignes : "TERMINUS DORVAL"
+      - Exception : quand le nom est trop long, l'heure est collée à la fin :
+        "SHERBROOKE / MEADOWBROOK (Dir. O24:22"
 
     Retourne { '195': [{'debut': '23:46', 'fin': '24:32',
-                        'debut_stop': 'STATION ANGRIGNON (BOUCLE NORD)',
+                        'debut_stop': 'STATION ANGRIGNON',
                         'fin_stop': 'TERMINUS DORVAL'}, ...] }
     """
     result: dict = {}
     blocks = re.split(r"\n(?=[a-z]?\d+\s+-\s+P\s+/|hlp\d|GARAGE)", page1_text)
+
+    _pure_time = re.compile(r"^\d{1,2}:\d{2}$")
+    _end_time  = re.compile(r"^(.+?)\s*(\d{2}:\d{2})$")
 
     for block in blocks:
         m_ligne = re.match(r"[a-z]?(\d+)\s+-\s+P\s+/", block)
@@ -140,23 +145,48 @@ def extract_line_time_ranges(page1_text: str) -> dict:
         numero = m_ligne.group(1)
 
         lines = [l.strip() for l in block.split("\n") if l.strip()]
-        debut_time = fin_time = None
-        debut_stop = fin_stop = None
 
-        for line in lines[1:]:
-            # Départ : heure collée au début → "23:46STATION ANGRIGNON …"
-            m = re.match(r"(\d+:\d{2})(.+)", line)
-            if m:
-                if debut_time is None:
-                    debut_time = m.group(1)
-                    debut_stop = m.group(2).strip()
-                # On continue pour chercher la fin
-                continue
-            # Arrivée : heure collée à la fin → "TERMINUS DORVAL 24:32"
-            m = re.match(r"(.+?)\s*(\d{2}:\d{2})\s*$", line)
-            if m:
-                fin_stop = m.group(1).strip()
-                fin_time = m.group(2)
+        # Construit une liste structurée d'items
+        items: list[dict] = []
+        for line in lines[1:]:      # skip the "XX - P / ..." header
+            if _pure_time.match(line):
+                items.append({"type": "time", "time": line, "stop": None})
+            else:
+                m = _end_time.match(line)
+                if m:
+                    items.append({"type": "stop_time",
+                                  "time": m.group(2),
+                                  "stop": m.group(1).strip()})
+                else:
+                    items.append({"type": "stop", "time": None, "stop": line})
+
+        # Collecte tous les temps dans l'ordre d'apparition
+        timed = [(i, it["time"]) for i, it in enumerate(items) if it["time"]]
+        if len(timed) < 2:
+            continue
+
+        debut_i, debut_time = timed[0]
+        fin_i,   fin_time   = timed[-1]
+
+        # Stop de départ : premier item de type stop après la première heure
+        debut_stop = None
+        for j in range(debut_i + 1, len(items)):
+            if items[j]["stop"] and len(items[j]["stop"]) > 2:
+                debut_stop = items[j]["stop"]
+                break
+        # Si le premier item est stop_time, son stop est le stop de départ
+        if items[debut_i]["type"] == "stop_time":
+            debut_stop = items[debut_i]["stop"]
+
+        # Stop d'arrivée : dernier item de type stop avant la dernière heure
+        fin_stop = None
+        if items[fin_i]["type"] == "stop_time":
+            fin_stop = items[fin_i]["stop"]
+        else:
+            for j in range(fin_i - 1, -1, -1):
+                if items[j]["stop"] and len(items[j]["stop"]) > 2:
+                    fin_stop = items[j]["stop"]
+                    break
 
         if debut_time and fin_time:
             result.setdefault(numero, []).append({
@@ -171,7 +201,8 @@ def extract_line_time_ranges(page1_text: str) -> dict:
 
 def _norm_stop(name: str) -> str:
     """Normalise un nom d'arrêt pour comparaison (casse, abbréviations, parenthèses)."""
-    n = re.sub(r"\s*\([^)]*\)", "", name.upper())
+    # Supprime les parenthèses même non fermées (noms tronqués par fitz)
+    n = re.sub(r"\s*\([^)]*\)?", "", name.upper())
     n = re.sub(r"\bSTE\b", "SAINTE", n)
     n = re.sub(r"\bST\b",  "SAINT",  n)
     return re.sub(r"\s+", " ", n).strip()
