@@ -503,12 +503,12 @@ def apply_gd_detours(rows: list, events: list) -> list:
             first_pos = 0
             last_pos  = -1
 
+        # Toutes les instructions G-D dans la plage sont contournées,
+        # y compris celles associées à un arrêt annulé.
         if last_pos >= first_pos:
             for i in range(first_pos, last_pos + 1):
                 r = rows[i]
-                if (r.get("gd")
-                        and not r.get("detour_added")
-                        and r.get("stop_code", "") not in cancelled_codes):
+                if r.get("gd") and not r.get("detour_added"):
                     r["detour_removed"] = True
 
         label = event.get("titre", "")
@@ -575,6 +575,8 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, o
   .effectif {{ font-size: 10px; color: #666; font-style: italic; white-space: nowrap; }}
   .cancelled td {{ background: #fff0f0; }}
   .cancelled .stop-name {{ text-decoration: line-through; color: #c00; }}
+  .cancelled.detour-removed td {{ background: #fff0f0; }}
+  .cancelled.detour-removed .gd {{ text-decoration: line-through; color: #e65100; opacity: 0.7; }}
   .event-label {{ font-size: 10px; color: #c00; display: block; }}
   .event-precision {{ font-size: 11px; color: #b45309; font-weight: bold; display: block; }}
   .added {{ background: #f0fff0; }}
@@ -634,6 +636,8 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, o
 
         if detour_added:
             cls = ' class="detour-added"'
+        elif detour_removed and cancelled:
+            cls = ' class="cancelled detour-removed"'
         elif detour_removed:
             cls = ' class="detour-removed"'
         elif cancelled:
@@ -747,7 +751,7 @@ def render_md(rows, added, args, parcours, shift_start=None, shift_end=None, orp
             if r.get("detour_label"):
                 gd += f" *(Détour : {r['detour_label']})*"
         elif detour_removed:
-            gd = f"~~✂ {gd}~~"
+            gd = f"~~✂ {gd}~~"  # barré orange (cancelled+detour_removed ou detour_removed seul)
 
         effectif_str = ""
         if cancelled:
