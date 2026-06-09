@@ -229,12 +229,46 @@ with tabs[4]:
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        gdr_ligne = st.text_input("Ligne", placeholder="195", key="gdr_ligne")
+        gdr_ligne = st.text_input("Ligne", placeholder="195  ou  24e", key="gdr_ligne",
+                                  help="Ajoutez 'e' pour les variantes école (ex: 24e, 168e).")
     with col2:
         gdr_dir = st.selectbox("Direction", ["est", "ouest", "nord", "sud"], key="gdr_dir")
     with col3:
         gdr_date = st.date_input("Date", value=date.today(), key="gdr_date")
 
+    # ── Sélection du parcours ──────────────────────────────────────────────────
+    st.markdown("**Parcours**")
+    _parcours_options = []
+    if gdr_ligne.strip():
+        from rapport_gd import list_parcours as _list_parcours
+        _parcours_options = _list_parcours(gdr_ligne.strip(), gdr_dir, PROJECT_ROOT)
+
+    if _parcours_options:
+        _labels = [f"[{p['id']}] {p['name']}  ({p['start_code']} → {p['end_code']})"
+                   for p in _parcours_options]
+        _sel_idx = st.selectbox("Parcours disponibles", range(len(_labels)),
+                                format_func=lambda i: _labels[i], key="gdr_parcours_idx")
+        gdr_parcours_hint = _parcours_options[_sel_idx]["name"]
+    else:
+        st.caption("Entrez un numéro de ligne valide pour voir les parcours disponibles.")
+        gdr_parcours_hint = st.text_input(
+            "Mot-clé parcours (optionnel)", placeholder="principal, secondaire, école, weekend",
+            key="gdr_parcours_hint",
+        )
+
+    # ── Plage d'arrêts effective ───────────────────────────────────────────────
+    st.markdown("**Plage d'arrêts effective** *(optionnel — si le chauffeur ne fait pas le parcours complet)*")
+    col_s1, col_s2 = st.columns(2)
+    with col_s1:
+        gdr_arret_debut = st.text_input("Code arrêt de départ", placeholder="54112",
+                                         key="gdr_arret_debut",
+                                         help="Code STM à 5 chiffres. Laissez vide pour le début du parcours.")
+    with col_s2:
+        gdr_arret_fin = st.text_input("Code arrêt de fin", placeholder="57365",
+                                       key="gdr_arret_fin",
+                                       help="Code STM à 5 chiffres. Laissez vide pour la fin du parcours.")
+
+    # ── Plage horaire du quart ─────────────────────────────────────────────────
     st.markdown("**Plage horaire du quart** *(optionnel — laisser vide pour la journée complète)*")
     col_a, col_b = st.columns(2)
     with col_a:
@@ -262,7 +296,7 @@ with tabs[4]:
             if not gtfs_path.exists():
                 st.error("Données GTFS introuvables. Lancez d'abord le téléchargement GTFS (onglet GTFS).")
             else:
-                expected_out = SCRIPTS_DIR / f"rapport_{gdr_ligne}_{gdr_dir}_{gdr_date}.{gdr_format}"
+                expected_out = SCRIPTS_DIR / f"rapport_{gdr_ligne.strip()}_{gdr_dir}_{gdr_date}.{gdr_format}"
 
                 cmd = [
                     sys.executable, str(SCRIPTS_DIR / "rapport_gd.py"),
@@ -272,6 +306,16 @@ with tabs[4]:
                     "--format", gdr_format,
                     "--base", str(PROJECT_ROOT),
                 ]
+                # Parcours
+                hint = gdr_parcours_hint if not _parcours_options else gdr_parcours_hint
+                if hint and hint.strip():
+                    cmd += ["--parcours", hint.strip()]
+                # Plage d'arrêts
+                if gdr_arret_debut.strip():
+                    cmd += ["--arret-debut", gdr_arret_debut.strip()]
+                if gdr_arret_fin.strip():
+                    cmd += ["--arret-fin", gdr_arret_fin.strip()]
+                # Heures de quart
                 if gdr_heure_debut.strip() and gdr_heure_fin.strip():
                     cmd += ["--heure-debut", gdr_heure_debut.strip(),
                             "--heure-fin",   gdr_heure_fin.strip()]

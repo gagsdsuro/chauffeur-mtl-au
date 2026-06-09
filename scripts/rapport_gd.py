@@ -3,10 +3,14 @@
 Rapport détaillé G-D / Arrêts / Détours STM
 Usage: python rapport_gd.py --ligne 195 --direction ouest --date 2026-06-07 [--format html|md]
                              [--heure-debut 22:00] [--heure-fin 28:30]
+                             [--parcours principal|secondaire|école|weekend]
+                             [--arret-debut 54112] [--arret-fin 57365]
 
 Les heures de quart peuvent dépasser 24h (ex: 25:19 = 1h19 le lendemain).
 Si --heure-debut et --heure-fin sont omis, tous les événements actifs le jour J
 sont inclus (comportement précédent).
+
+Variantes école : utiliser --ligne 24e, --ligne 168e, etc.
 """
 
 import argparse
@@ -19,13 +23,22 @@ from pathlib import Path
 
 def parse_args():
     p = argparse.ArgumentParser(description="Rapport G-D / Arrêts / Détours STM")
-    p.add_argument("--ligne", required=True, help="Numéro de ligne (ex: 195)")
+    p.add_argument("--ligne", required=True, help="Numéro de ligne (ex: 195, 24e)")
     p.add_argument("--direction", required=True, choices=["est", "ouest", "nord", "sud"])
     p.add_argument("--date", required=True, help="Date de début du quart (YYYY-MM-DD)")
     p.add_argument("--heure-debut", default=None,
                    help="Heure de début du quart (HH:MM ou 25:30 pour 1h30 le lendemain)")
     p.add_argument("--heure-fin", default=None,
                    help="Heure de fin du quart (HH:MM ou 25:30 pour 1h30 le lendemain)")
+    p.add_argument("--parcours", default=None,
+                   help="Mot-clé dans le nom du parcours (ex: principal, secondaire, école, weekend). "
+                        "Par défaut: premier parcours du fichier.")
+    p.add_argument("--arret-debut", default=None,
+                   help="Code STM de l'arrêt de départ effectif (ex: 54112). "
+                        "Tronque l'affichage à partir de cet arrêt.")
+    p.add_argument("--arret-fin", default=None,
+                   help="Code STM de l'arrêt de fin effectif (ex: 57365). "
+                        "Tronque l'affichage jusqu'à cet arrêt.")
     p.add_argument("--format", default="html", choices=["html", "md"])
     p.add_argument("--base", default=None,
                    help="Chemin racine du projet STM (défaut: dossier parent du script)")
@@ -186,17 +199,61 @@ def load_stop_names():
     return stops
 
 
-def load_gd(ligne, direction, base):
+def list_parcours(ligne, direction, base):
+    """
+    Retourne la liste de tous les parcours disponibles pour cette ligne/direction,
+    ou [] si le fichier G-D n'existe pas.
+    """
     path = base / f"data/Gauche-Droite/gd{ligne}_{direction}.json"
     if not path.exists():
-        return [], None
+        return []
     with open(path) as f:
         data = json.load(f)
     routes = data.get("routes", [])
     if not routes:
-        return [], None
-    parcours = routes[0].get("parcours", [{}])[0]
-    return parcours.get("direction", []), parcours
+        return []
+    return [
+        {
+            "id":         p.get("id"),
+            "name":       p.get("name", ""),
+            "start":      p.get("start", ""),
+            "start_code": str(p.get("start_code", "")),
+            "end":        p.get("end", ""),
+            "end_code":   str(p.get("end_code", "")),
+        }
+        for p in routes[0].get("parcours", [])
+    ]
+
+
+def _select_parcours(all_parcours, hint):
+    """
+    Choisit un parcours selon un mot-clé dans le nom, ou le premier par défaut.
+    """
+    if hint and all_parcours:
+        h = hint.strip().lower()
+        for p in all_parcours:
+            if h in p.get("name", "").lower():
+                return p
+        print(f"  ⚠ Parcours '{hint}' introuvable — utilisation du premier parcours.")
+    return all_parcours[0] if all_parcours else {}
+
+
+def load_gd(ligne, direction, base, parcours_hint=None):
+    """
+    Charge les instructions G-D et le parcours sélectionné.
+    Retourne (instructions, parcours_obj, all_parcours).
+    """
+    path = base / f"data/Gauche-Droite/gd{ligne}_{direction}.json"
+    if not path.exists():
+        return [], None, []
+    with open(path) as f:
+        data = json.load(f)
+    routes = data.get("routes", [])
+    if not routes:
+        return [], None, []
+    all_parcours = routes[0].get("parcours", [])
+    parcours = _select_parcours(all_parcours, parcours_hint)
+    return parcours.get("direction", []), parcours, all_parcours
 
 
 def load_events(ligne, direction, base,
@@ -292,20 +349,59 @@ def build_rows(gd_instructions, stops_ordered, stop_names):
     return rows
 
 
+def filter_rows_by_stop_range(rows, arret_debut, arret_fin):
+    """
+    Tronque la liste de lignes selon les codes d'arrêt de départ et de fin.
+    Si un code n'est pas trouvé, un avertissement est émis et la borne est ignorée.
+    """
+    if not arret_debut and not arret_fin:
+        return rows
+
+    start_idx = 0
+    end_idx = len(rows) - 1
+
+    if arret_debut:
+        found = next(
+            (i for i, r in enumerate(rows) if r.get("stop_code") == str(arret_debut)),
+            None,
+        )
+        if found is not None:
+            start_idx = found
+        else:
+            print(f"  ⚠ Arrêt de départ '{arret_debut}' introuvable dans les arrêts GTFS — borne ignorée.")
+
+    if arret_fin:
+        found = next(
+            (i for i, r in enumerate(rows) if r.get("stop_code") == str(arret_fin)),
+            None,
+        )
+        if found is not None:
+            end_idx = found
+        else:
+            print(f"  ⚠ Arrêt de fin '{arret_fin}' introuvable dans les arrêts GTFS — borne ignorée.")
+
+    return rows[start_idx : end_idx + 1]
+
+
 def annotate_events(rows, events):
     """
     Ajoute les annotations d'événements aux lignes du tableau.
     Chaque ligne annulée reçoit une liste d'objets :
       {"label": str, "effectif": str}
+
+    Retourne (rows, added, orphan_events) où orphan_events contient les
+    événements dont aucun arrêt annulé ne figure dans le trajet GTFS
+    sélectionné (ils sont affichés dans une section "Alertes" séparée).
     """
     cancelled_ids = {}   # stop_id -> list of {label, effectif}
     added = []           # arrêts ajoutés avec descriptions
+    stop_ids_in_rows = {r["stop_id"] for r in rows if r.get("stop_id")}
 
     for e in events:
-        titre      = e.get("titre", "")
-        motif      = e.get("motif", "")
-        effectif   = (e.get("effectif") or "").strip()
-        desc       = e.get("description_gd", "") or ""
+        titre       = e.get("titre", "")
+        motif       = e.get("motif", "")
+        effectif    = (e.get("effectif") or "").strip()
+        desc        = e.get("description_gd", "") or ""
         commentaire = e.get("commentaire", "") or ""
         label = f"{titre} ({motif})"
         if desc:
@@ -327,7 +423,15 @@ def annotate_events(rows, events):
             r["cancelled"] = cancelled_ids[sid]
         else:
             r["cancelled"] = []
-    return rows, added
+
+    # Événements dont les arrêts annulés ne figurent pas dans le trajet GTFS
+    orphan_events = []
+    for e in events:
+        arrets = e.get("arrets_annules", [])
+        if arrets and not any(a["id"] in stop_ids_in_rows for a in arrets):
+            orphan_events.append(e)
+
+    return rows, added, orphan_events
 
 
 # ── Intégration G-D des détours ───────────────────────────────────────────────
@@ -444,7 +548,7 @@ def fmt_shift_range(shift_start, shift_end, base_date):
 
 # ── Rendus HTML et Markdown ───────────────────────────────────────────────────
 
-def render_html(rows, added, args, parcours, shift_start=None, shift_end=None):
+def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, orphan_events=None):
     base_date = datetime.strptime(args.date, "%Y-%m-%d").date()
     date_fmt = datetime.strptime(args.date, "%Y-%m-%d").strftime("%d %B %Y")
     start = parcours.get("start", "") if parcours else ""
@@ -477,6 +581,9 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None):
   .detour-added .gd {{ color: #2e7d32; }}
   .detour-removed .gd {{ text-decoration: line-through; color: #e65100; opacity: 0.7; }}
   .detour-badge {{ font-size: 9px; font-weight: bold; color: #2e7d32; display: block; }}
+  .alert-section {{ margin-bottom: 14px; padding: 8px 12px; background: #fff3e0; border-left: 4px solid #e65100; font-size: 12px; }}
+  .alert-section li {{ margin: 4px 0; }}
+  .alert-stops {{ color: #666; font-size: 11px; }}
   @media print {{
     body {{ margin: 10px; font-size: 11px; }}
     h1 {{ font-size: 14px; }}
@@ -488,18 +595,34 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None):
 </head>
 <body>
 <h1>Ligne {args.ligne} — {args.direction.capitalize()} &nbsp;|&nbsp; {date_fmt}</h1>
-<div class="meta">{start} → {end} &nbsp;·&nbsp; Quart : {quart}</div>
-<table>
-<thead>
-  <tr>
-    <th style="width:4%">#</th>
-    <th style="width:28%">G-D (instruction)</th>
-    <th style="width:7%">Code</th>
-    <th>Arrêt GTFS / Détour</th>
-    <th style="width:18%">Effectif</th>
-  </tr>
-</thead>
-<tbody>"""]
+<div class="meta">{start} → {end} &nbsp;·&nbsp; {parcours.get("name", "") if parcours else ""} &nbsp;·&nbsp; Quart : {quart}</div>"""]
+
+    if orphan_events:
+        lines.append('<div class="alert-section"><strong>⚠️ Alertes actives (arrêts hors trajet sélectionné)</strong><ul>')
+        for e in orphan_events:
+            titre    = e.get("titre", "")
+            motif    = e.get("motif", "")
+            effectif = (e.get("effectif") or "").strip()
+            ev_id    = e.get("evenement_id", "")
+            arrets   = ", ".join(
+                f'{a["id"]} – {a["nom"]}' for a in e.get("arrets_annules", [])
+            )
+            eff_txt  = f' <em>({effectif})</em>' if effectif else ""
+            lines.append(
+                f'<li>❌ <strong>{titre}</strong> ({motif}) — #{ev_id}{eff_txt}'
+                f'<br><span class="alert-stops">Arrêts : {arrets}</span></li>'
+            )
+        lines.append("</ul></div>")
+
+    lines.append(
+        '<table>\n<thead>\n  <tr>\n'
+        '    <th style="width:4%">#</th>\n'
+        '    <th style="width:28%">G-D (instruction)</th>\n'
+        '    <th style="width:7%">Code</th>\n'
+        '    <th>Arrêt GTFS / Détour</th>\n'
+        '    <th style="width:18%">Effectif</th>\n'
+        '  </tr>\n</thead>\n<tbody>'
+    )
 
     for r in rows:
         cancelled      = r.get("cancelled", [])
@@ -572,7 +695,7 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None):
     return "\n".join(lines)
 
 
-def render_md(rows, added, args, parcours, shift_start=None, shift_end=None):
+def render_md(rows, added, args, parcours, shift_start=None, shift_end=None, orphan_events=None):
     base_date = datetime.strptime(args.date, "%Y-%m-%d").date()
     date_fmt = datetime.strptime(args.date, "%Y-%m-%d").strftime("%d %B %Y")
     start = parcours.get("start", "") if parcours else ""
@@ -581,7 +704,24 @@ def render_md(rows, added, args, parcours, shift_start=None, shift_end=None):
 
     lines = [
         f"# Ligne {args.ligne} — {args.direction.capitalize()} | {date_fmt}",
-        f"**{start} → {end}** · Quart : {quart}\n",
+        f"**{start} → {end}** · {parcours.get('name', '') if parcours else ''} · Quart : {quart}\n",
+    ]
+
+    if orphan_events:
+        lines.append("### ⚠️ Alertes actives (arrêts hors trajet sélectionné)")
+        for e in orphan_events:
+            titre    = e.get("titre", "")
+            motif    = e.get("motif", "")
+            effectif = (e.get("effectif") or "").strip()
+            ev_id    = e.get("evenement_id", "")
+            arrets   = ", ".join(
+                f'{a["id"]} – {a["nom"]}' for a in e.get("arrets_annules", [])
+            )
+            eff_txt = f" *({effectif})*" if effectif else ""
+            lines.append(f"- ❌ **{titre}** ({motif}) — #{ev_id}{eff_txt}  \n  Arrêts : {arrets}")
+        lines.append("")
+
+    lines += [
         "| # | G-D (instruction) | Code | Arrêt GTFS / Détour | Effectif |",
         "|---|---|---|---|---|",
     ]
@@ -658,11 +798,27 @@ def main():
     else:
         print("  Quart       : journée complète")
 
-    route_id = get_route_id(args.ligne)
-    dir_id   = get_direction_id(route_id, args.direction)
-    stops    = get_stops_for_line(route_id, dir_id)
+    # Charger le G-D et sélectionner le parcours
+    gd_instructions, parcours, all_parcours = load_gd(
+        args.ligne, args.direction, base, parcours_hint=args.parcours
+    )
+    if all_parcours:
+        print("  Parcours disponibles :")
+        selected_name = (parcours or {}).get("name", "")
+        for p in all_parcours:
+            marker = "►" if p.get("name") == selected_name else " "
+            print(f"    {marker} [{p['id']}] {p['name']}  {p['start_code']} → {p['end_code']}")
+
+    # Arrêts GTFS (avec fallback si variante école absente du GTFS)
+    try:
+        route_id = get_route_id(args.ligne)
+        dir_id   = get_direction_id(route_id, args.direction)
+        stops    = get_stops_for_line(route_id, dir_id)
+    except ValueError as exc:
+        print(f"  ⚠ GTFS : {exc} — rapport sans correspondance d'arrêts GTFS.")
+        stops = []
+
     stop_names = load_stop_names()
-    gd_instructions, parcours = load_gd(args.ligne, args.direction, base)
     events = load_events(
         args.ligne, args.direction, base,
         shift_start=shift_start,
@@ -673,16 +829,26 @@ def main():
     print(f"  {len(stops)} arrêts GTFS, {len(gd_instructions)} instructions G-D, {len(events)} événements actifs")
 
     rows = build_rows(gd_instructions, stops, stop_names)
-    rows, added = annotate_events(rows, events)
+    rows, added, orphan_events = annotate_events(rows, events)
     rows = apply_gd_detours(rows, events)
+
+    # Tronquer selon la plage d'arrêts effective du chauffeur
+    if args.arret_debut or args.arret_fin:
+        before = len(rows)
+        rows = filter_rows_by_stop_range(rows, args.arret_debut, args.arret_fin)
+        print(f"  Plage d'arrêts : {args.arret_debut or '(début)'} → "
+              f"{args.arret_fin or '(fin)'}  ({len(rows)}/{before} lignes)")
+
+    if orphan_events:
+        print(f"  ⚠️  {len(orphan_events)} événement(s) actif(s) hors trajet GTFS sélectionné — affichés en alerte")
 
     ext = args.format
     outfile = Path(__file__).resolve().parent / f"rapport_{args.ligne}_{args.direction}_{args.date}.{ext}"
 
     if args.format == "html":
-        content = render_html(rows, added, args, parcours, shift_start, shift_end)
+        content = render_html(rows, added, args, parcours, shift_start, shift_end, orphan_events)
     else:
-        content = render_md(rows, added, args, parcours, shift_start, shift_end)
+        content = render_md(rows, added, args, parcours, shift_start, shift_end, orphan_events)
 
     outfile.write_text(content, encoding="utf-8")
     print(f"  ✅ Rapport écrit: {outfile}")
