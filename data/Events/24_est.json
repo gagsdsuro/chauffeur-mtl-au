@@ -1,0 +1,78 @@
+{
+  "ligne": "24",
+  "direction": "est",
+  "detours": [
+    {
+      "evenement_id": "10075400",
+      "titre": "Annulation d'arrêts",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2026-01-06T12:00:00",
+      "date_heure_fin": "2026-12-31T19:00:00",
+      "effectif": "Seulement entre 12:00 et 19:00 chaque jour",
+      "arrets_annules": [
+        {
+          "id": "52653",
+          "nom": "Sherbrooke / Plessis"
+        },
+        {
+          "id": "54019",
+          "nom": "Sherbrooke / De Champlain (Hôpital Notre-Dame)"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": "LUNDI AU VENDREDI 12H00 À 19H00",
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "10714770",
+      "titre": "Arrêt déplacé",
+      "motif": "Situation Incontrôlable",
+      "date_heure_debut": "2025-04-03T08:40:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "52772",
+          "nom": "Sherbrooke / Gascon (50 mètres après)"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": "BIXI",
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11205670",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-04-27T11:34:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "56253",
+          "nom": "Sherbrooke / Claremont"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11242321",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-05-29T10:24:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "52409",
+          "nom": "Sherbrooke / Aylmer"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_ajoutes": []
+    }
+  ]
+}

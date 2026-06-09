@@ -1,0 +1,17 @@
+{
+  "last_update": "2026-06-09T05:12:03.838511",
+  "endpoints": {
+    "tripUpdates": {
+      "status": "success",
+      "size_bytes": 341611,
+      "file": "response_tripUpdates.pb",
+      "timestamp": "2026-06-09T05:12:03.706773"
+    },
+    "vehiclePositions": {
+      "status": "success",
+      "size_bytes": 23240,
+      "file": "response_vehiclePositions.pb",
+      "timestamp": "2026-06-09T05:12:03.838502"
+    }
+  }
+}

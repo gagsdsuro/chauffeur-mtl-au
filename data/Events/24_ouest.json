@@ -1,0 +1,57 @@
+{
+  "ligne": "24",
+  "direction": "ouest",
+  "detours": [
+    {
+      "evenement_id": "11210324",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-05-01T05:47:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "51461",
+          "nom": "Sherbrooke / Décarie"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": "*** ARRÊT TEMPORAIRE DÉCARIE / SHERBROOKE ***",
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11240722",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-05-28T09:43:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "56262",
+          "nom": "Sherbrooke / Lansdowne"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11242321",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-05-29T10:24:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "59314",
+          "nom": "Sherbrooke / Aylmer"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_ajoutes": []
+    }
+  ]
+}
