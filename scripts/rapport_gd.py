@@ -545,6 +545,101 @@ def apply_gd_detours(rows: list, events: list) -> list:
     return rows
 
 
+# ── Placement inline des arrêts ajoutés ──────────────────────────────────────
+
+def _normalize_street(s: str) -> str:
+    """Normalise un nom de rue pour la comparaison : minuscules, sans accents ni tirets."""
+    import unicodedata
+    s = unicodedata.normalize("NFD", s.lower())
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+    s = re.sub(r"[-\s]+", " ", s).strip()
+    return s
+
+
+def _parse_added_stop(name: str):
+    """
+    Extrait (rue_principale, rue_transversale) normalisées depuis le nom
+    d'un arrêt ajouté.
+    "Temp. - Clément / Lafleur"        → ("clement", "lafleur")
+    "56472 - Notre-Dame / Saint-Pierre" → ("notre dame", "saint pierre")
+    "Temp. - ST PATRICK / ST PATRICK"  → ("st patrick", "st patrick")
+    """
+    m = re.match(r'^(?:Temp\.|[\d]+)\s*[-–]\s*(.+)$', name, re.IGNORECASE)
+    clean = m.group(1).strip() if m else name.strip()
+    parts = [_normalize_street(p) for p in clean.split("/")]
+    main  = parts[0] if parts else None
+    cross = parts[1] if len(parts) >= 2 else None
+    return main, cross
+
+
+def insert_added_stops_inline(rows: list, added: list) -> tuple:
+    """
+    Tente de placer chaque arrêt ajouté directement dans le tableau,
+    après l'instruction de détour qui longe la rue principale de l'arrêt.
+
+    Logique de placement :
+      1. Cherche les lignes detour_added dont la rue correspond à la rue
+         principale de l'arrêt.
+      2. Parmi elles, préfère celle immédiatement suivie d'une instruction
+         sur la rue transversale (= on est au bon coin de rue).
+      3. Insère un arrêt vert juste après cette instruction.
+
+    Retourne (rows_mis_à_jour, still_added) où still_added contient les
+    arrêts qui n'ont pas pu être positionnés inline.
+    """
+    still_added = []
+
+    for stop_info in added:
+        name = stop_info["name"]
+        main_street, cross_street = _parse_added_stop(name)
+        if not main_street:
+            still_added.append(stop_info)
+            continue
+
+        # Candidats : indices des lignes detour_added dont la rue ≈ main_street
+        candidates = []
+        for i, r in enumerate(rows):
+            if not r.get("detour_added") or not r.get("gd"):
+                continue
+            instr_street = _normalize_street(extract_street(r["gd"]))
+            if main_street in instr_street or instr_street in main_street:
+                candidates.append(i)
+
+        best_idx = None
+        if candidates:
+            if cross_street:
+                # Préfère le candidat suivi d'une instruction sur la rue transversale
+                for idx in candidates:
+                    j = idx + 1
+                    while j < len(rows) and rows[j].get("detour_added") and not rows[j].get("gd"):
+                        j += 1
+                    if j < len(rows) and rows[j].get("detour_added") and rows[j].get("gd"):
+                        next_street = _normalize_street(extract_street(rows[j]["gd"]))
+                        if cross_street in next_street or next_street in cross_street:
+                            best_idx = idx
+                            break
+            if best_idx is None:
+                best_idx = candidates[-1]  # dernier candidat sur cette rue
+
+        if best_idx is not None:
+            new_row = {
+                "gd": "",
+                "seq": None,
+                "stop_id": None,
+                "stop_code": "",
+                "stop_name": name,
+                "cancelled": [],
+                "added_inline": True,
+                "added_label": stop_info.get("label", ""),
+                "effectif":    stop_info.get("effectif", ""),
+            }
+            rows = rows[: best_idx + 1] + [new_row] + rows[best_idx + 1 :]
+        else:
+            still_added.append(stop_info)
+
+    return rows, still_added
+
+
 # ── Formatage de la plage de quart ────────────────────────────────────────────
 
 def fmt_shift_range(shift_start, shift_end, base_date):
@@ -597,6 +692,9 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, o
   .added-section {{ margin-top: 16px; padding: 8px; background: #e8f5e9; border-left: 4px solid #4caf50; }}
   .detour-added td {{ background: #e8f5e9; }}
   .detour-added .gd {{ color: #2e7d32; }}
+  .added-inline td {{ background: #f0fff0; }}
+  .added-inline .stop-name {{ color: #2e7d32; font-weight: bold; }}
+  .added-inline-label {{ font-size: 10px; color: #388e3c; display: block; }}
   .detour-removed .gd {{ text-decoration: line-through; color: #e65100; opacity: 0.7; }}
   .detour-badge {{ font-size: 9px; font-weight: bold; color: #2e7d32; display: block; }}
   .alert-section {{ margin-bottom: 14px; padding: 8px 12px; background: #fff3e0; border-left: 4px solid #e65100; font-size: 12px; }}
@@ -647,8 +745,11 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, o
         detour_added   = r.get("detour_added", False)
         detour_removed = r.get("detour_removed", False)
         detour_label   = r.get("detour_label", "")
+        added_inline   = r.get("added_inline", False)
 
-        if detour_added:
+        if added_inline:
+            cls = ' class="added-inline"'
+        elif detour_added:
             cls = ' class="detour-added"'
         elif detour_removed and cancelled:
             cls = ' class="cancelled detour-removed"'
@@ -658,6 +759,24 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, o
             cls = ' class="cancelled"'
         else:
             cls = ""
+
+        # Arrêt temporaire inline : rendu spécial, pas de cellule G-D
+        if added_inline:
+            name_span = f'<span class="stop-name">➕ {r["stop_name"]}</span>'
+            if r.get("added_label"):
+                name_span += f'<span class="added-inline-label">{r["added_label"]}</span>'
+            eff = r.get("effectif", "")
+            eff_cell = f'<span class="effectif">{eff}</span>' if eff else ""
+            lines.append(
+                f'<tr{cls}>'
+                f'<td class="seq"></td>'
+                f'<td></td>'
+                f'<td class="code"></td>'
+                f'<td>{name_span}</td>'
+                f'<td>{eff_cell}</td>'
+                f'</tr>'
+            )
+            continue
 
         gd_text = r["gd"]
         if detour_added:
@@ -755,6 +874,13 @@ def render_md(rows, added, args, parcours, shift_start=None, shift_end=None, orp
         detour_added   = r.get("detour_added", False)
         detour_removed = r.get("detour_removed", False)
 
+        # Arrêt temporaire inline
+        if r.get("added_inline"):
+            label_md = f" *{r['added_label']}*" if r.get("added_label") else ""
+            eff_md   = r.get("effectif", "")
+            lines.append(f"| | | | ➕ **{r['stop_name']}**{label_md} | {eff_md} |")
+            continue
+
         seq  = str(r["seq"]) if r["seq"] else ""
         gd   = r["gd"]
         code = r["stop_code"]
@@ -765,7 +891,7 @@ def render_md(rows, added, args, parcours, shift_start=None, shift_end=None, orp
             if r.get("detour_label"):
                 gd += f" *(Détour : {r['detour_label']})*"
         elif detour_removed:
-            gd = f"~~✂ {gd}~~"  # barré orange (cancelled+detour_removed ou detour_removed seul)
+            gd = f"~~✂ {gd}~~"
 
         effectif_str = ""
         if cancelled:
@@ -861,6 +987,7 @@ def main():
     rows = build_rows(gd_instructions, stops, stop_names)
     rows, added, orphan_events = annotate_events(rows, events)
     rows = apply_gd_detours(rows, events)
+    rows, added = insert_added_stops_inline(rows, added)
 
     # Tronquer selon la plage d'arrêts effective du chauffeur
     if args.arret_debut or args.arret_fin:
