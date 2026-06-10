@@ -59,8 +59,8 @@ def _fmt_size(path: Path) -> str:
 
 
 def _event_applies_to_date(event: dict, date_str: str) -> bool:
-    debut = event.get("date_heure_debut", "")
-    fin   = event.get("date_heure_fin",   "")
+    debut = event.get("date_heure_debut") or ""
+    fin   = event.get("date_heure_fin")   or ""
     if not debut:
         return True
     try:
@@ -309,8 +309,8 @@ with tabs[0]:
                                                 eid   = evt.get("evenement_id", "?")
                                                 titre = evt.get("titre", "(sans titre)")
                                                 eff   = evt.get("effectif", "")
-                                                d_deb = evt.get("date_heure_debut", "")[:10]
-                                                d_fin = evt.get("date_heure_fin",   "")[:10]
+                                                d_deb = (evt.get("date_heure_debut") or "")[:10]
+                                                d_fin = (evt.get("date_heure_fin")   or "")[:10]
                                                 label = f"{'✅' if applies else '⬜'} #{eid} — {titre}"
                                                 with st.expander(label, expanded=applies):
                                                     if not applies:
