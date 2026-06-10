@@ -34,6 +34,13 @@ python3 scripts/gen_rapport.py --output /tmp/out.pdf    # chemin de sortie
 python3 scripts/carte_agent_stm.py --pdf data/ca/carte-agent-2026-06-04.pdf --out data/ca/annotée.pdf --gtfs data/gtfs/gtfs_stm/ --date 2026-06-04
 ```
 
+**Tests de régression carte agent** — rejoue des cas figés (PDF + horaires GTFS gelés dans `tests/cas/<nom>/`) et compare le plan d'annotations à `attendu.json` (requiert `PyMuPDF`) :
+```bash
+python3 tests/test_carte_agent.py              # tous les cas
+python3 tests/test_carte_agent.py carte-449    # un cas précis
+python3 tests/creer_cas_test.py --pdf data/ca/carte-agent-2026-06-09.pdf --gtfs data/gtfs/gtfs_stm/   # figer un nouveau cas (vérifier attendu.json avant de committer)
+```
+
 **Téléchargement GTFS** — données statiques (hebdomadaire) et temps-réel (requiert `requests`) :
 ```bash
 python3 scripts/fetch_gtfs.py
