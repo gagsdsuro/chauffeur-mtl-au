@@ -1,6 +1,14 @@
 services:
   chauffeur-stm:
-    build: .
+    build:
+      context: .
+      args:
+        # Alignés sur l'UID/GID de l'hôte pour que les fichiers générés
+        # dans ./data appartiennent à l'utilisateur, pas à root.
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    # Sécurité supplémentaire au cas où l'image serait construite ailleurs.
+    user: "${UID:-1000}:${GID:-1000}"
     ports:
       - "8501:8501"
     volumes:
