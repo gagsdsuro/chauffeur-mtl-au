@@ -16,4 +16,6 @@ services:
       - ./data:/app/data
       # La config secrets (clé API GTFS-RT) reste sur l'hôte
       - ./Installation:/app/Installation
+    environment:
+      - TZ=America/Toronto
     restart: unless-stopped
