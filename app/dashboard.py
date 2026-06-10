@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import re
 import struct
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -132,14 +133,18 @@ def extract_line_time_ranges(page1_text: str) -> dict:
                         'debut_stop': 'STATION ANGRIGNON',
                         'fin_stop': 'TERMINUS DORVAL'}, ...] }
     """
+    # En-tête de trajet : « 168 /  -  / Régulier » ou « 168 - P /  -  / Régulier ».
+    # Le « - P » (ou « - 05 », etc.) est une désignation de voiture optionnelle, pas
+    # toujours présente ; on ne doit donc pas l'exiger pour reconnaître un trajet.
+    _trip_header = r"[a-z]?\d+(?:\s+-\s+\w+)?\s+/"
     result: dict = {}
-    blocks = re.split(r"\n(?=[a-z]?\d+\s+-\s+P\s+/|hlp\d|GARAGE)", page1_text)
+    blocks = re.split(rf"\n(?={_trip_header}|hlp\d|GARAGE)", page1_text)
 
     _pure_time = re.compile(r"^\d{1,2}:\d{2}$")
     _end_time  = re.compile(r"^(.+?)\s*(\d{2}:\d{2})$")
 
     for block in blocks:
-        m_ligne = re.match(r"[a-z]?(\d+)\s+-\s+P\s+/", block)
+        m_ligne = re.match(r"[a-z]?(\d+)(?:\s+-\s+\w+)?\s+/", block)
         if not m_ligne:
             continue
         numero = m_ligne.group(1)
@@ -199,13 +204,45 @@ def extract_line_time_ranges(page1_text: str) -> dict:
     return result
 
 
-def _norm_stop(name: str) -> str:
-    """Normalise un nom d'arrêt pour comparaison (casse, abbréviations, parenthèses)."""
-    # Supprime les parenthèses même non fermées (noms tronqués par fitz)
-    n = re.sub(r"\s*\([^)]*\)?", "", name.upper())
-    n = re.sub(r"\bSTE\b", "SAINTE", n)
-    n = re.sub(r"\bST\b",  "SAINT",  n)
-    return re.sub(r"\s+", " ", n).strip()
+# Jetons trop communs pour distinguer un terminus (articles, génériques, indicateurs
+# de quai/direction). On les ignore lors de l'appariement.
+_STOP_NOISE = {
+    "DE", "DU", "DES", "LA", "LE", "LES", "AU", "AUX", "ET", "A",
+    "NO", "DIR", "STATION", "REM", "TERMINUS", "GARAGE",
+    "NORD", "SUD", "EST", "OUEST",
+}
+
+_ABBREV = {
+    "STE": "SAINTE", "ST": "SAINT", "PRES": "PRESIDENT",
+}
+
+
+def _stop_tokens(name: str) -> set[str]:
+    """
+    Réduit un nom d'arrêt à un ensemble de jetons distinctifs pour l'appariement.
+
+    Conserve le contenu des parenthèses (la carte agent y trouve souvent le nom de
+    rue que le fichier G-D met entre parenthèses, ex. « Station McGill (R.-Bourassa
+    / Président-Kennedy) » ↔ « ROBERT-BOURASSA / PRÉS.-KENNEDY »). Retire les
+    accents, les articles/génériques et les jetons trop courts ou numériques.
+    """
+    n = unicodedata.normalize("NFKD", name.upper())
+    n = "".join(c for c in n if not unicodedata.combining(c))
+    tokens = set()
+    for raw in re.split(r"[^A-Z0-9]+", n):
+        if not raw:
+            continue
+        tok = _ABBREV.get(raw, raw)
+        if len(tok) < 2 or tok.isdigit() or tok in _STOP_NOISE:
+            continue
+        tokens.add(tok)
+    return tokens
+
+
+def _stops_match(a: str, b: str) -> bool:
+    """Deux noms d'arrêt désignent-ils le même lieu (≥ 1 jeton distinctif commun) ?"""
+    ta, tb = _stop_tokens(a), _stop_tokens(b)
+    return bool(ta and tb and (ta & tb))
 
 
 def get_time_range_for_direction(
@@ -224,12 +261,12 @@ def get_time_range_for_direction(
     except Exception:
         return None
 
-    # Collecte les (start, end) normalisés de tous les parcours du fichier G-D
+    # Collecte les (start, end) de tous les parcours du fichier G-D
     gd_endpoints: list[tuple[str, str]] = []
     for route in gd_data.get("routes", []):
         for parcours in route.get("parcours", []):
-            s = _norm_stop(parcours.get("start", ""))
-            e = _norm_stop(parcours.get("end",   ""))
+            s = parcours.get("start", "")
+            e = parcours.get("end",   "")
             if s and e:
                 gd_endpoints.append((s, e))
 
@@ -238,12 +275,8 @@ def get_time_range_for_direction(
 
     matching: list[dict] = []
     for seg in segments:
-        seg_s = _norm_stop(seg["debut_stop"])
-        seg_e = _norm_stop(seg["fin_stop"])
         for (gd_s, gd_e) in gd_endpoints:
-            s_ok = (seg_s in gd_s) or (gd_s in seg_s)
-            e_ok = (seg_e in gd_e) or (gd_e in seg_e)
-            if s_ok and e_ok:
+            if _stops_match(seg["debut_stop"], gd_s) and _stops_match(seg["fin_stop"], gd_e):
                 matching.append(seg)
                 break
 
@@ -280,6 +313,14 @@ def get_event_file_mtime(ligne: str, direction: str, data_dir: Path) -> str:
     return fmt_mtime(data_dir / "Events" / f"{ligne}_{direction}.json")
 
 
+def fmt_iso(value: str) -> str:
+    """Formate un horodatage ISO 8601 en 'YYYY-MM-DD HH:MM', ou retourne la valeur brute."""
+    try:
+        return datetime.fromisoformat(value).strftime("%Y-%m-%d %H:%M")
+    except (ValueError, TypeError):
+        return value
+
+
 def get_gtfs_info(data_dir: Path) -> dict:
     """Retourne les métadonnées GTFS statique et RT."""
     static_manifest = data_dir / "gtfs" / "gtfs_manifest.json"
@@ -290,7 +331,7 @@ def get_gtfs_info(data_dir: Path) -> dict:
     if static_manifest.exists():
         try:
             m = json.loads(static_manifest.read_text(encoding="utf-8"))
-            static_ts = m.get("last_update") or m.get("downloaded_at") or fmt_mtime(static_manifest)
+            static_ts = fmt_iso(m.get("last_update") or m.get("downloaded_at")) if (m.get("last_update") or m.get("downloaded_at")) else fmt_mtime(static_manifest)
         except Exception:
             static_ts = fmt_mtime(static_manifest)
 
@@ -298,7 +339,7 @@ def get_gtfs_info(data_dir: Path) -> dict:
     if rt_manifest.exists():
         try:
             m = json.loads(rt_manifest.read_text(encoding="utf-8"))
-            rt_ts = m.get("last_update") or fmt_mtime(rt_manifest)
+            rt_ts = fmt_iso(m["last_update"]) if m.get("last_update") else fmt_mtime(rt_manifest)
         except Exception:
             rt_ts = fmt_mtime(rt_manifest)
 

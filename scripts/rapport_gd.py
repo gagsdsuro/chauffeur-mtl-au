@@ -42,6 +42,8 @@ def parse_args():
     p.add_argument("--format", default="html", choices=["html", "md"])
     p.add_argument("--base", default=None,
                    help="Chemin racine du projet STM (défaut: dossier parent du script)")
+    p.add_argument("--output", default=None,
+                   help="Chemin du fichier de sortie (défaut: à côté du script)")
     return p.parse_args()
 
 
@@ -305,38 +307,60 @@ def build_rows(gd_instructions, stops_ordered, stop_names):
     """
     Aligne les instructions G-D avec les arrêts GTFS par correspondance de rue.
     Retourne une liste de dicts : {gd, seq, stop_id, stop_name, stop_code}
+
+    Alignement à deux pointeurs (instructions / arrêts), tous deux monotones :
+      - Pour chaque arrêt, on cherche la première instruction restante dont la rue
+        figure dans le nom de l'arrêt. On compare d'abord à la **rue principale**
+        (avant le « / »), pour qu'un arrêt « René-Lévesque / Berlioz » s'associe à
+        « Droite - René-Lévesque » plutôt qu'à « Droite - Berlioz ».
+      - Les instructions sautées (segments sans arrêt GTFS : autoroutes, virages)
+        sont émises sans arrêt, dans l'ordre.
+      - Un arrêt qui ne correspond à aucune instruction restante (terminus/stations
+        nommés différemment, ex. « Station McGill ») est rattaché au groupe courant
+        (l'instruction active la plus récente), sans bloquer l'alignement.
     """
-    rows = []
-    stop_idx = 0
+    streets = [extract_street(instr) for instr in gd_instructions]
+    n_instr = len(gd_instructions)
     n_stops = len(stops_ordered)
 
-    for instr in gd_instructions:
-        street = extract_street(instr)
+    def _match_index(name_low, start):
+        """Première instruction >= start dont la rue est dans le nom (rue principale d'abord)."""
+        primary = name_low.split(" / ", 1)[0]
+        for haystack in (primary, name_low):
+            for k in range(start, n_instr):
+                if streets[k] and streets[k] in haystack:
+                    return k
+        return None
 
-        matched = []
-        tmp_idx = stop_idx
-        while tmp_idx < n_stops:
-            seq, sid = stops_ordered[tmp_idx]
-            name = stop_names.get(sid, {}).get("name", "").lower()
-            if street in name:
-                matched.append((seq, sid))
-                tmp_idx += 1
-            else:
-                break
+    rows = []
+    cur = -1            # instruction active (dernier appariement), -1 si aucune
+    emitted = -1        # index de la dernière instruction déjà écrite
 
-        if matched:
-            stop_idx = tmp_idx
-            rows.append({"gd": instr, "seq": matched[0][0], "stop_id": matched[0][1]})
-            for seq, sid in matched[1:]:
-                rows.append({"gd": "", "seq": seq, "stop_id": sid})
-        else:
-            rows.append({"gd": instr, "seq": None, "stop_id": None})
+    for seq, sid in stops_ordered:
+        name_low = stop_names.get(sid, {}).get("name", "").lower()
+        search_start = cur if cur >= 0 else 0
+        j = _match_index(name_low, search_start)
 
-    # Arrêts restants sans instruction G-D
-    while stop_idx < n_stops:
-        seq, sid = stops_ordered[stop_idx]
-        rows.append({"gd": "", "seq": seq, "stop_id": sid})
-        stop_idx += 1
+        if j is None:
+            # Arrêt orphelin : rattaché au groupe courant (cellule G-D vide).
+            rows.append({"gd": "", "seq": seq, "stop_id": sid})
+            continue
+
+        if j == cur:
+            # Même rue que l'instruction active : arrêt groupé.
+            rows.append({"gd": "", "seq": seq, "stop_id": sid})
+            continue
+
+        # Nouvelle instruction : émet d'abord les instructions sautées (sans arrêt).
+        for k in range(emitted + 1, j):
+            rows.append({"gd": gd_instructions[k], "seq": None, "stop_id": None})
+        rows.append({"gd": gd_instructions[j], "seq": seq, "stop_id": sid})
+        emitted = j
+        cur = j
+
+    # Instructions restantes sans arrêt
+    for k in range(emitted + 1, n_instr):
+        rows.append({"gd": gd_instructions[k], "seq": None, "stop_id": None})
 
     # Enrichissement avec les noms
     for r in rows:
@@ -1000,7 +1024,11 @@ def main():
         print(f"  ⚠️  {len(orphan_events)} événement(s) actif(s) hors trajet GTFS sélectionné — affichés en alerte")
 
     ext = args.format
-    outfile = Path(__file__).resolve().parent / f"rapport_{args.ligne}_{args.direction}_{args.date}.{ext}"
+    if args.output:
+        outfile = Path(args.output)
+        outfile.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        outfile = Path(__file__).resolve().parent / f"rapport_{args.ligne}_{args.direction}_{args.date}.{ext}"
 
     if args.format == "html":
         content = render_html(rows, added, args, parcours, shift_start, shift_end, orphan_events)

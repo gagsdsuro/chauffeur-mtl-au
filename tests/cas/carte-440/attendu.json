@@ -11,7 +11,11 @@
   "annotations": [
     {
       "type": "jaune",
-      "texte": "(12)"
+      "texte": "22:28"
+    },
+    {
+      "type": "jaune",
+      "texte": "29:48"
     },
     {
       "type": "bleu",
@@ -20,7 +24,7 @@
     },
     {
       "type": "rouge",
-      "texte": "p:22.03",
+      "texte": "p22:03",
       "ligne": "12",
       "heure": "22:30",
       "prec": "22:03"
@@ -37,7 +41,7 @@
     },
     {
       "type": "rouge",
-      "texte": "p:23.17",
+      "texte": "p23:17",
       "ligne": "195",
       "heure": "23:46",
       "prec": "23:17"
@@ -59,7 +63,7 @@
     },
     {
       "type": "rouge",
-      "texte": "p:26.34",
+      "texte": "p26:34",
       "ligne": "354",
       "heure": "27:19",
       "prec": "26:34"

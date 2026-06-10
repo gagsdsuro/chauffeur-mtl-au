@@ -351,6 +351,7 @@ with tabs[0]:
                                 if not gtfs_path.exists():
                                     st.warning("Données GTFS introuvables.")
                                 else:
+                                    out_path = DATA_DIR / "rapports" / f"rapport_{ligne}_{direction}_{ca_date_str}.html"
                                     cmd = [
                                         sys.executable, str(SCRIPTS_DIR / "rapport_gd.py"),
                                         "--ligne", ligne,
@@ -358,13 +359,12 @@ with tabs[0]:
                                         "--date", ca_date_str,
                                         "--format", "html",
                                         "--base", str(PROJECT_ROOT),
+                                        "--output", str(out_path),
                                     ]
                                     if tr:
                                         cmd += ["--heure-debut", tr[0], "--heure-fin", tr[1]]
                                     with st.spinner(f"Génération rapport {ligne} {direction}…"):
                                         rpt_result = subprocess.run(cmd, capture_output=True, text=True)
-
-                                    out_path = SCRIPTS_DIR / f"rapport_{ligne}_{direction}_{ca_date_str}.html"
                                     if rpt_result.returncode == 0 and out_path.exists():
                                         rpt_html = out_path.read_bytes()
                                         st.download_button(
@@ -626,7 +626,7 @@ with tabs[2]:
                 if not gtfs_path.exists():
                     st.error("Données GTFS introuvables. Lancez d'abord le téléchargement GTFS.")
                 else:
-                    expected_out = SCRIPTS_DIR / f"rapport_{gdr_ligne.strip()}_{gdr_dir}_{gdr_date}.{gdr_format}"
+                    expected_out = DATA_DIR / "rapports" / f"rapport_{gdr_ligne.strip()}_{gdr_dir}_{gdr_date}.{gdr_format}"
 
                     cmd = [
                         sys.executable, str(SCRIPTS_DIR / "rapport_gd.py"),
@@ -635,6 +635,7 @@ with tabs[2]:
                         "--date", str(gdr_date),
                         "--format", gdr_format,
                         "--base", str(PROJECT_ROOT),
+                        "--output", str(expected_out),
                     ]
                     hint = gdr_parcours_hint if not _parcours_options else gdr_parcours_hint
                     if hint and hint.strip():
@@ -749,15 +750,20 @@ with tabs[3]:
 with tabs[4]:
     st.header("Données GTFS")
 
+    from dashboard import get_gtfs_info
+
     gtfs_path     = DATA_DIR / "gtfs" / "gtfs_stm"
     gtfs_manifest = DATA_DIR / "gtfs" / "gtfs_manifest.json"
+    gtfs_info     = get_gtfs_info(DATA_DIR)
 
     if gtfs_manifest.exists():
-        manifest = json.loads(gtfs_manifest.read_text())
-        dl_date  = manifest.get("downloaded_at", "?")
-        st.info(f"GTFS statique présent — téléchargé le {dl_date}")
+        st.info(f"GTFS statique présent — dernier téléchargement le {gtfs_info['static_ts']}")
     else:
         st.warning("Aucune donnée GTFS statique. Cliquez sur **Télécharger** pour initialiser.")
+
+    c1, c2 = st.columns(2)
+    c1.metric("GTFS statique — dernier téléchargement", gtfs_info["static_ts"])
+    c2.metric("GTFS temps réel — dernier téléchargement", gtfs_info["rt_ts"])
 
     col1, col2 = st.columns(2)
 
