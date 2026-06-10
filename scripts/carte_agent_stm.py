@@ -3,13 +3,9 @@
 carte_agent_stm.py — Annotation autonome de la carte agent STM (version CLI)
 
 Prend un PDF de carte agent STM déjà téléchargé et produit une version annotée :
-  • Heures de prise (début / fin) et marqueurs de ligne précédente/suivante
-    « (XXX) »                        surlignés en JAUNE
-  • Numéro de ligne de chaque segment (« XX - P » rampe avant et
-    « XX / - / Régulier »)           surligné en BLEU
-  • Départ précédent (GTFS) annoté en ROUGE au-dessus de l'heure de départ,
-    au premier segment de chaque pièce de travail et à chaque changement
-    de ligne à l'intérieur d'une pièce
+  • Heures de prise (début / fin)  surlignées en JAUNE
+  • Numéros de ligne ("XX - P")    surlignés en BLEU
+  • Départ précédent de chaque segment annoté en ROUGE (au-dessus de l'heure)
 
 Les horaires terminus proviennent des données GTFS statiques de la STM, lues
 localement — aucun appel réseau, aucun navigateur, aucune API Google.
@@ -63,10 +59,8 @@ BLEU  = (0.4, 0.7, 1.0)
 ROUGE = (0.8, 0.1, 0.1)
 
 PAGE_MID = 200          # frontière colonne gauche / droite du PDF STM
-BODY_Y   = 125          # sous cette ordonnée commence le corps (segments)
 TIME_RE  = re.compile(r'^\d{1,2}:\d{2}$')
-LINE_RE  = re.compile(r'^(\d+)\s*(?:-\s*P\b|\s+/)')
-MARKER_RE = re.compile(r'^\(\d+\)$')   # ligne précédente / suivante : « (168) »
+LINE_RE  = re.compile(r'^(\d+)\s*-\s*P\b')
 
 
 def log(msg: str) -> None:
@@ -280,148 +274,91 @@ def highlight_prise(page, spans) -> None:
         for s in spans:
             bx0, by0, bx1, _ = s['bbox']
             if px0 <= bx0 and bx1 <= px1 and 92 < by0 < 120:
-                page.draw_rect(fitz.Rect(bx0 - 2, by0 - 2, bx1 + 2, by1_safe(s) + 2),
-                               color=None, fill=JAUNE, fill_opacity=0.4, overlay=False)
+                annot = page.add_highlight_annot(
+                    fitz.Rect(bx0 - 2, by0 - 2, bx1 + 2, by1_safe(s) + 2))
+                annot.set_colors(stroke=JAUNE)
+                annot.update()
 
 
 def by1_safe(s) -> float:
     return s['bbox'][3]
 
 
-def collect_items(spans: list) -> list:
+def process_line(page, spans, line_no, times_a, times_b, stop_a, stop_b) -> None:
     """
-    Repère dans le corps de la page (y > BODY_Y), en ordre de lecture
-    (colonne gauche puis droite, de haut en bas) :
-      • 'piece'   : en-tête « Voiture » d'une pièce de travail
-      • 'marker'  : ligne précédente / suivante « (XXX) »
-      • 'segment' : trajet « XX - P » ou « XX / - / Régulier »
+    Surligne en bleu le numéro de ligne seulement (sans '- P') et annote en rouge
+    le départ précédent uniquement sur le premier segment (= première occurrence
+    de cette ligne, i.e. nouvelle ligne ou première ligne du quart).
     """
-    items = []
-    for s in spans:
-        x0, y0 = s['bbox'][0], s['bbox'][1]
-        if y0 <= BODY_Y:
-            continue
-        col = 0 if x0 < PAGE_MID else 1
-        m = LINE_RE.match(s['text'])
-        if m:
-            items.append({'kind': 'segment', 'ligne': m.group(1),
-                          'span': s, 'col': col, 'y': y0})
-        elif s['text'] == 'Voiture':
-            items.append({'kind': 'piece', 'col': col, 'y': y0})
-        elif MARKER_RE.match(s['text']):
-            items.append({'kind': 'marker', 'span': s, 'col': col, 'y': y0})
-    items.sort(key=lambda i: (i['col'], i['y']))
-    return items
-
-
-def find_departure(spans: list, seg_bbox, in_left: bool):
-    """(arrêt de départ, heure, bbox de l'heure) juste sous un segment."""
-    _, _, _, ry1 = seg_bbox
-    first_stop_y, dep_stop = None, None
-    for s in spans:
-        bx0, by0, _, _ = s['bbox']
-        if ((bx0 < PAGE_MID) == in_left and ry1 < by0 < ry1 + 40
-                and not TIME_RE.match(s['text']) and len(s['text']) > 5):
-            first_stop_y, dep_stop = by0, s['text']
-            break
-    if first_stop_y is None:
-        return None, None, None
-    for s in spans:
-        bx0, by0, _, _ = s['bbox']
-        if (abs(by0 - first_stop_y) < 3 and TIME_RE.match(s['text'])
-                and (bx0 < PAGE_MID) == in_left):
-            return dep_stop, s['text'], s['bbox']
-    return dep_stop, None, None
-
-
-def pick_direction(dep_stop: str, stop_a: str, stop_b: str) -> bool:
-    """True = direction A, selon les mots-clés du nom d'arrêt de départ."""
-    if not dep_stop:
-        return True
     def norm(x):
         return x.lower().replace('-', ' ').replace('/', ' ')
-    dn = norm(dep_stop)
-    ka = [k for k in norm(stop_a).split() if len(k) > 3]
-    kb = [k for k in norm(stop_b).split() if len(k) > 3]
-    return sum(k in dn for k in ka) >= sum(k in dn for k in kb)
 
+    stop_a_norm, stop_b_norm = norm(stop_a), norm(stop_b)
 
-def num_rect_in_span(page, span, ligne) -> fitz.Rect:
-    """Rectangle couvrant uniquement le numéro de ligne dans le span."""
-    rect = fitz.Rect(span['bbox'])
-    hits = page.search_for(str(ligne), clip=rect)
-    if hits:
-        return hits[0]
-    ratio = len(str(ligne)) / max(len(span['text']), 1)
-    return fitz.Rect(rect.x0, rect.y0, rect.x0 + rect.width * ratio, rect.y1)
+    hits = page.search_for(f'{line_no} - P')
+    if not hits:
+        log(f"  Ligne {line_no}: aucun hit trouvé")
+        return
+    log(f"  Ligne {line_no}: {len(hits)} segment(s)")
 
+    # Ratio de largeur : ne couvrir que le numéro, pas " - P"
+    num_str  = str(line_no)
+    full_str = f'{line_no} - P'
+    num_ratio = len(num_str) / len(full_str)
 
-def plan_annotations(page, spans: list, schedules: dict) -> list:
-    """
-    Construit le plan d'annotations du corps de la carte (liste de dicts),
-    sans rien dessiner — c'est cette structure que les tests de régression
-    comparent à l'attendu :
-      {'type': 'jaune',  'texte': '(168)'}
-      {'type': 'bleu',   'ligne': '168', 'heure': '16:31'}
-      {'type': 'rouge',  'ligne': '168', 'heure': '16:31', 'prec': '16:07',
-       'texte': 'p:16.07'}
-    Règle du rouge : premier segment de chaque pièce de travail, puis chaque
-    changement de ligne à l'intérieur d'une pièce.
-    """
-    plan = []
-    prev_ligne = None
-    for it in collect_items(spans):
-        if it['kind'] == 'piece':
-            prev_ligne = None
+    for hit_idx, rect in enumerate(hits):
+        # ── Surlignage bleu : numéro seulement ──────────────────────────────
+        num_rect = fitz.Rect(rect.x0, rect.y0,
+                             rect.x0 + rect.width * num_ratio, rect.y1)
+        annot = page.add_highlight_annot(num_rect)
+        annot.set_colors(stroke=BLEU)
+        annot.update()
+
+        # ── Annotation Prec : seulement sur le premier segment ───────────────
+        if hit_idx > 0:
             continue
 
-        if it['kind'] == 'marker':
-            plan.append({'type': 'jaune', 'texte': it['span']['text'],
-                         'rect': fitz.Rect(it['span']['bbox'])})
-            continue
+        rx0, _, _, ry1 = rect
+        in_left = rx0 < PAGE_MID
 
-        # --- segment -------------------------------------------------------
-        ligne = it['ligne']
-        in_left = it['col'] == 0
-        dep_stop, dep_time, dep_bbox = find_departure(spans, it['span']['bbox'], in_left)
-        plan.append({'type': 'bleu', 'ligne': ligne, 'heure': dep_time,
-                     'rect': num_rect_in_span(page, it['span'], ligne)})
+        # 1) premier arrêt (non-heure) juste sous le segment, même colonne
+        first_stop_y, dep_stop = None, None
+        for s in spans:
+            bx0, by0, _, _ = s['bbox']
+            if ((bx0 < PAGE_MID) == in_left and ry1 < by0 < ry1 + 40
+                    and not TIME_RE.match(s['text']) and len(s['text']) > 5):
+                first_stop_y, dep_stop = by0, s['text']
+                break
 
-        nouvelle_ligne = ligne != prev_ligne
-        prev_ligne = ligne
-        if not nouvelle_ligne:
-            continue
-        if ligne not in schedules:
-            log(f"  Ligne {ligne} @ {dep_time}: pas de données GTFS -- pas de rouge")
-            continue
+        # 2) heure sur la même ligne Y, même colonne
+        dep_time, dep_bbox = None, None
+        if first_stop_y is not None:
+            for s in spans:
+                bx0, by0, _, _ = s['bbox']
+                if (abs(by0 - first_stop_y) < 3 and TIME_RE.match(s['text'])
+                        and (bx0 < PAGE_MID) == in_left):
+                    dep_time, dep_bbox = s['text'], s['bbox']
+                    break
+
         if not dep_time:
-            log(f"  Ligne {ligne}: heure de départ non trouvée (stop={dep_stop})")
+            log(f"    heure non trouvée (stop={dep_stop})")
             continue
-        sc = schedules[ligne]
-        use_a = pick_direction(dep_stop, sc['stop_a'], sc['stop_b'])
-        prec = prev_dep(sc['a'] if use_a else sc['b'], dep_time)
-        log(f"  Ligne {ligne} @ {dep_time} ({dep_stop}) "
-            f"dir={'A' if use_a else 'B'} -> Prec={prec}")
+
+        # 3) direction A ou B selon le nom de l'arrêt
+        if dep_stop:
+            dn = norm(dep_stop)
+            ka = [k for k in stop_a_norm.split() if len(k) > 3]
+            kb = [k for k in stop_b_norm.split() if len(k) > 3]
+            use_a = sum(k in dn for k in ka) >= sum(k in dn for k in kb)
+        else:
+            use_a = True
+
+        prec = prev_dep(times_a if use_a else times_b, dep_time)
+        log(f"    dep={dep_time} -> Prec={prec} (premier segment uniquement)")
+
         if prec:
-            plan.append({'type': 'rouge', 'ligne': ligne, 'heure': dep_time,
-                         'prec': prec, 'texte': f"p:{prec.replace(':', '.')}",
-                         'point': (dep_bbox[0], dep_bbox[1] - 1)})
-    return plan
-
-
-def apply_annotations(page, plan: list) -> None:
-    """Dessine le plan d'annotations sur la page."""
-    for a in plan:
-        if a['type'] == 'jaune':
-            r = a['rect']
-            page.draw_rect(fitz.Rect(r.x0 - 2, r.y0 - 2, r.x1 + 2, r.y1 + 2),
-                           color=None, fill=JAUNE, fill_opacity=0.4, overlay=False)
-        elif a['type'] == 'bleu':
-            page.draw_rect(a['rect'], color=None, fill=BLEU,
-                           fill_opacity=0.4, overlay=False)
-        elif a['type'] == 'rouge':
-            page.insert_text(fitz.Point(*a['point']), a['texte'],
-                             fontsize=7, color=ROUGE, fontname='helv')
+            page.insert_text(fitz.Point(dep_bbox[0], dep_bbox[1] - 1),
+                             f'p{prec}', fontsize=7, color=ROUGE, fontname='helv')
 
 
 def annotate(src: str, dst: str, schedules: dict) -> dict:
@@ -433,10 +370,20 @@ def annotate(src: str, dst: str, schedules: dict) -> dict:
     meta = extract_meta(spans)
 
     highlight_prise(page, spans)
-    plan = plan_annotations(page, spans, schedules)
-    apply_annotations(page, plan)
-    n = {t: sum(1 for a in plan if a['type'] == t) for t in ('jaune', 'bleu', 'rouge')}
-    log(f"Annotations : {n['jaune']} jaune(s), {n['bleu']} bleu(s), {n['rouge']} rouge(s)")
+
+    for ln in meta["lignes"]:
+        if ln in schedules:
+            sc = schedules[ln]
+            process_line(page, spans, ln, sc['a'], sc['b'], sc['stop_a'], sc['stop_b'])
+        else:
+            log(f"  Ligne {ln}: pas de données GTFS -- bleu seulement")
+            num_ratio = len(str(ln)) / len(f'{ln} - P')
+            for rect in page.search_for(f'{ln} - P'):
+                num_rect = fitz.Rect(rect.x0, rect.y0,
+                                     rect.x0 + rect.width * num_ratio, rect.y1)
+                annot = page.add_highlight_annot(num_rect)
+                annot.set_colors(stroke=BLEU)
+                annot.update()
 
     tmp = os.path.join(tempfile.gettempdir(), f'_carte_agent_{os.getpid()}.pdf')
     doc.save(tmp, garbage=4, deflate=True)
