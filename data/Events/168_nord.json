@@ -1,0 +1,23 @@
+{
+  "ligne": "168",
+  "direction": "nord",
+  "detours": [
+    {
+      "evenement_id": "11202851",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-04-27T00:01:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "60748",
+          "nom": "Campus Bell (de la Pointe-Nord / J.-Le Ber)"
+        }
+      ],
+      "description_gd": "VIA BLOULEVARD R-LÉVESQUE G/ IND. 10 OUEST / 15 NORD VIA 10 OUEST VIA RR",
+      "commentaire": null,
+      "arrets_ajoutes": []
+    }
+  ]
+}

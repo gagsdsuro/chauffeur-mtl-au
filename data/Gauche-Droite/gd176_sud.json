@@ -1,0 +1,29 @@
+{
+  "ligne": "176",
+  "direction": "sud",
+  "routes": [
+    {
+      "line_number": "176",
+      "direction": "Sud",
+      "parcours": [
+        {
+          "id": 11,
+          "name": "Parcours principal",
+          "start": "Station Île-des-Soeurs",
+          "start_code": 62065,
+          "end": "de la Pointe-Sud / No 250",
+          "end_code": 60699,
+          "direction": [
+            "Via - Station REM Île-des-Soeurs",
+            "Gauche - Pont Champlain",
+            "Droite - René-Lévesque",
+            "Gauche - du Commerce",
+            "Via - Berlioz",
+            "Gauche - de l'Île-des-Soeurs",
+            "Via - de la Pointe-Sud"
+          ]
+        }
+      ]
+    }
+  ]
+}

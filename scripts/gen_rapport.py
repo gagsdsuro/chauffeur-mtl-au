@@ -595,20 +595,60 @@ def normalize_stop(name: str) -> str:
     return n.strip()
 
 
+# Mots non discriminants à ignorer lors de la comparaison par tokens.
+_NOISE_TOKENS = {
+    'STATION', 'REM', 'TERMINUS', 'BOUCLE', 'VIA',
+    'NORD', 'SUD', 'EST', 'OUEST',
+    'DE', 'DU', 'DES', 'LA', 'LE', 'LES', 'AU', 'AUX', 'NO',
+}
+
+
+def stop_tokens(name: str) -> list:
+    """Mots significatifs (≥3 lettres, hors mots vides) d'un nom d'arrêt.
+
+    Conserve le contenu des parenthèses (souvent le vrai nom du terminus côté
+    G-D, ex. « Station McGill (R.-Bourassa / Président-Kennedy) ») et ignore les
+    préfixes type « STATION », « REM » ainsi que les chiffres.
+    """
+    n = name.upper()
+    n = re.sub(r'\bSTE\b', 'SAINTE', n)
+    n = re.sub(r'\bST\b',  'SAINT',  n)
+    words = re.findall(r'[^\W\d_]+', n, re.UNICODE)
+    return [w for w in words if len(w) >= 3 and w not in _NOISE_TOKENS]
+
+
+def _tokens_overlap(a_tokens: list, b_tokens: list) -> bool:
+    """Vrai si deux listes de tokens partagent un mot (égal ou préfixe commun).
+
+    Le repli par préfixe rattrape les abréviations de la carte agent
+    (« PRÉS.-KENNEDY » ↔ « Président-Kennedy »).
+    """
+    for a in a_tokens:
+        for b in b_tokens:
+            if a == b or a.startswith(b) or b.startswith(a):
+                return True
+    return False
+
+
 def parcours_matches_segments(parcours: dict, segments: list) -> bool:
     """
     Vérifie si un parcours G-D correspond à au moins un segment de la carte agent.
-    Comparaison insensible à la casse et aux parenthèses.
+    Comparaison insensible à la casse et aux parenthèses, avec repli par tokens
+    significatifs (la carte agent abrège/tronque les noms d'arrêts).
     """
     gd_start = normalize_stop(parcours.get('start', ''))
     gd_end   = normalize_stop(parcours.get('end', ''))
+    gd_start_tok = stop_tokens(parcours.get('start', ''))
+    gd_end_tok   = stop_tokens(parcours.get('end', ''))
 
     for (dep, arr) in segments:
         c_dep = normalize_stop(dep)
         c_arr = normalize_stop(arr)
-        # Correspondance si les noms se contiennent mutuellement
-        start_ok = (gd_start in c_dep) or (c_dep in gd_start)
-        end_ok   = (gd_end   in c_arr) or (c_arr in gd_end)
+        # Correspondance si les noms se contiennent mutuellement…
+        start_ok = (gd_start in c_dep) or (c_dep in gd_start) \
+                   or _tokens_overlap(gd_start_tok, stop_tokens(dep))
+        end_ok   = (gd_end   in c_arr) or (c_arr in gd_end) \
+                   or _tokens_overlap(gd_end_tok, stop_tokens(arr))
         if start_ok and end_ok:
             return True
     return False
