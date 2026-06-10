@@ -66,8 +66,11 @@ def _event_applies_to_date(event: dict, date_str: str) -> bool:
     try:
         d      = date.fromisoformat(date_str)
         d_deb  = datetime.fromisoformat(debut).date()
-        d_fin  = datetime.fromisoformat(fin).date() if fin else d_deb
-        return d_deb <= d <= d_fin
+        if fin:
+            d_fin = datetime.fromisoformat(fin).date()
+            return d_deb <= d <= d_fin
+        else:
+            return d >= d_deb
     except Exception:
         return True
 
