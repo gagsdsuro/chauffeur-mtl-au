@@ -324,15 +324,21 @@ with tabs[0]:
                                                     if ann:
                                                         st.markdown("**Arrêts annulés :**")
                                                         for a in ann:
-                                                            nm = a.get("nom", a.get("code", "?"))
-                                                            cd = a.get("code", "")
-                                                            st.text(f"  ✖ {nm}" + (f" ({cd})" if cd else ""))
+                                                            if isinstance(a, str):
+                                                                st.text(f"  ✖ {a}")
+                                                            else:
+                                                                nm = a.get("nom", a.get("code", "?"))
+                                                                cd = a.get("code", "")
+                                                                st.text(f"  ✖ {nm}" + (f" ({cd})" if cd else ""))
                                                     if ajt:
                                                         st.markdown("**Arrêts ajoutés :**")
                                                         for a in ajt:
-                                                            nm = a.get("nom", a.get("code", "?"))
-                                                            cd = a.get("code", "")
-                                                            st.text(f"  ✚ {nm}" + (f" ({cd})" if cd else ""))
+                                                            if isinstance(a, str):
+                                                                st.text(f"  ✚ {a}")
+                                                            else:
+                                                                nm = a.get("nom", a.get("code", "?"))
+                                                                cd = a.get("code", "")
+                                                                st.text(f"  ✚ {nm}" + (f" ({cd})" if cd else ""))
                                     except Exception as e:
                                         st.error(f"Erreur lecture évènements : {e}")
 
