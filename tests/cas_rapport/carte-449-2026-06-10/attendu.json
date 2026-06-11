@@ -1,0 +1,29 @@
+{
+  "carte": "449",
+  "lignes": [
+    "168",
+    "176"
+  ],
+  "directions": {
+    "168": [
+      {
+        "sens": "Nord",
+        "parcours": "Parcours principal"
+      },
+      {
+        "sens": "Sud",
+        "parcours": "Parcours principal"
+      }
+    ],
+    "176": [
+      {
+        "sens": "Nord",
+        "parcours": "Parcours principal"
+      },
+      {
+        "sens": "Sud",
+        "parcours": "Parcours principal"
+      }
+    ]
+  }
+}
