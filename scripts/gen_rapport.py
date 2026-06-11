@@ -13,6 +13,7 @@ import argparse
 import json
 import re
 import sys
+import unicodedata
 from datetime import date, datetime
 from pathlib import Path
 
@@ -481,9 +482,12 @@ def parse_carte_agent(pdf_path: Path) -> dict:
         result['heure_debut'] = times[0]
         result['heure_fin']   = times[1]
 
-    # Lignes travaillées : "12 - P / - / Régulier" ou "a12 - P / ..." (note ref)
+    # Lignes travaillées : "12 - P / - / Régulier", "125 / - / Régulier" ou
+    # "a12 - P / ..." (note ref). Le " - P" (rampe avant) est OPTIONNEL : certaines
+    # lignes n'ont pas cette désignation et seraient sinon absentes du rapport.
+    # Ancré en début de ligne (^) pour ne pas capturer "hlp1/hlp2" comme "1"/"2".
     seen = []
-    for m in re.finditer(r'[a-z]?(\d+)\s+-\s+P\s+/', page1_text, re.MULTILINE):
+    for m in re.finditer(r'^[a-z]?(\d+)(?:\s+-\s+\w+)?\s+/', page1_text, re.MULTILINE):
         num = m.group(1)
         if num not in seen:
             seen.append(num)
@@ -531,10 +535,12 @@ def extract_segments_from_carte(page1_text: str) -> dict:
     _end_time  = re.compile(r'^(.+?)\s*(\d{2}:\d{2})$')
 
     segments: dict = {}
-    blocks = re.split(r'\n(?=[a-z]?\d+\s+-\s+P\s+/|hlp\d|GARAGE)', page1_text)
+    # " - P" optionnel (cf. parse_carte_agent) ; re.match ancre déjà au début du
+    # bloc, donc "hlp1/hlp2" ne matchent pas (pas de chiffre en tête après [a-z]?).
+    blocks = re.split(r'\n(?=[a-z]?\d+(?:\s+-\s+\w+)?\s+/|hlp\d|GARAGE)', page1_text)
 
     for block in blocks:
-        m_ligne = re.match(r'[a-z]?(\d+)\s+-\s+P\s+/', block)
+        m_ligne = re.match(r'[a-z]?(\d+)(?:\s+-\s+\w+)?\s+/', block)
         if not m_ligne:
             continue
         numero = m_ligne.group(1)
@@ -584,32 +590,57 @@ def extract_segments_from_carte(page1_text: str) -> dict:
     return segments
 
 
-def normalize_stop(name: str) -> str:
-    """Normalise un nom d'arrêt pour comparaison (majuscules, abréviations, sans parenthèses)."""
-    n = name.upper().strip()
-    n = re.sub(r'\s*\([^)]*\)', '', n)   # supprime "(BOUCLE NORD)", "(54112)", etc.
-    # Expand abréviations courantes (avec/sans tiret ou espace)
-    n = re.sub(r'\bSTE\b', 'SAINTE', n)
-    n = re.sub(r'\bST\b',  'SAINT',  n)
-    n = re.sub(r'\s+', ' ', n)
-    return n.strip()
+# Jetons trop communs pour distinguer un terminus (articles, génériques, indicateurs
+# de quai/direction). Ignorés lors de l'appariement. (Aligné sur app/dashboard.py.)
+_STOP_NOISE = {
+    "DE", "DU", "DES", "LA", "LE", "LES", "AU", "AUX", "ET", "A",
+    "NO", "DIR", "STATION", "REM", "TERMINUS", "GARAGE",
+    "NORD", "SUD", "EST", "OUEST",
+}
+
+_ABBREV = {"STE": "SAINTE", "ST": "SAINT", "PRES": "PRESIDENT"}
+
+
+def _stop_tokens(name: str) -> set:
+    """
+    Réduit un nom d'arrêt à un ensemble de jetons distinctifs pour l'appariement.
+
+    Conserve le contenu des parenthèses : la carte agent y trouve souvent le nom de
+    rue que le fichier G-D met entre parenthèses, ex. « Station McGill (De Maisonneuve
+    / Robert-Bourassa) » ↔ « DE MAISONNEUVE / ROBERT-BOURASSA ». Retire accents,
+    articles/génériques, et jetons trop courts ou purement numériques. Robuste aux
+    noms tronqués par la mise en page du PDF (« STATION VIAU(P.-DE-COUBERTIN O./TH »).
+    """
+    n = unicodedata.normalize("NFKD", name.upper())
+    n = "".join(c for c in n if not unicodedata.combining(c))
+    tokens = set()
+    for raw in re.split(r"[^A-Z0-9]+", n):
+        if not raw:
+            continue
+        tok = _ABBREV.get(raw, raw)
+        if len(tok) < 2 or tok.isdigit() or tok in _STOP_NOISE:
+            continue
+        tokens.add(tok)
+    return tokens
+
+
+def _stops_match(a: str, b: str) -> bool:
+    """Deux noms d'arrêt désignent-ils le même lieu (≥ 1 jeton distinctif commun) ?"""
+    ta, tb = _stop_tokens(a), _stop_tokens(b)
+    return bool(ta and tb and (ta & tb))
 
 
 def parcours_matches_segments(parcours: dict, segments: list) -> bool:
     """
     Vérifie si un parcours G-D correspond à au moins un segment de la carte agent.
-    Comparaison insensible à la casse et aux parenthèses.
+    Appariement par jetons distinctifs (cf. _stop_tokens) — insensible à la casse,
+    aux accents, et capable de relier un nom de station à son nom de rue (parenthèses).
     """
-    gd_start = normalize_stop(parcours.get('start', ''))
-    gd_end   = normalize_stop(parcours.get('end', ''))
+    gd_start = parcours.get('start', '')
+    gd_end   = parcours.get('end', '')
 
     for (dep, arr) in segments:
-        c_dep = normalize_stop(dep)
-        c_arr = normalize_stop(arr)
-        # Correspondance si les noms se contiennent mutuellement
-        start_ok = (gd_start in c_dep) or (c_dep in gd_start)
-        end_ok   = (gd_end   in c_arr) or (c_arr in gd_end)
-        if start_ok and end_ok:
+        if _stops_match(gd_start, dep) and _stops_match(gd_end, arr):
             return True
     return False
 
