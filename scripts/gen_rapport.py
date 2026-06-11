@@ -504,11 +504,15 @@ def parse_carte_agent(pdf_path: Path) -> dict:
     # HLP depuis page 2
     # Format: "hlp1: 61564 - [V] de l'Église, ... - 54112"
     # ou:     "hlp3: 60238 - [V] Tupper, ..."  (sans code de fin)
+    # Les instructions peuvent s'étaler sur plusieurs lignes : on capture
+    # jusqu'au prochain « hlpN: », « Page: » ou la fin du texte (DOTALL).
     for m in re.finditer(
-        r'(hlp\d+):\s+\d+\s+-\s+(.+?)(?:\s+-\s+\d+)?$',
-        page2_text, re.MULTILINE | re.IGNORECASE
+        r'(hlp\d+):\s+\d+\s+-\s+(.+?)(?=\n\s*hlp\d+:|\n\s*Page:|\Z)',
+        page2_text, re.DOTALL | re.IGNORECASE
     ):
-        raw = m.group(2).strip()
+        # Aplatit les sauts de ligne puis retire un éventuel code d'arrêt final
+        raw = re.sub(r'\s+', ' ', m.group(2)).strip()
+        raw = re.sub(r'\s*-\s*\d+\s*$', '', raw)
         # Convertir [V]/[G]/[D] en abréviations lisibles
         instructions = re.sub(r'\[V\]', 'Via', raw)
         instructions = re.sub(r'\[G\]', 'Gauche', instructions)
