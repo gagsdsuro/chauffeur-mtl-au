@@ -17,7 +17,11 @@ from pathlib import Path
 
 CA_DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 TIME_RE    = re.compile(r"^\d{1,2}:\d{2}$")
-LINE_RE    = re.compile(r"^(\d+)\s*-\s*P\b")
+# En-tête de trajet : « 136 - P /  -  / Régulier » ou « 125 /  -  / Régulier ».
+# Le « - P » (désignation de voiture, rampe avant) est optionnel ; on ne doit pas
+# l'exiger, sinon les lignes sans cette mention (ex. 125) sont ignorées. Exclut les
+# numéros de voiture (« 29 - 04 ») et la date (« 11/06/2026 ») qui n'ont pas le « / ».
+LINE_RE    = re.compile(r"^[a-z]?(\d+)(?:\s+-\s+\w+)?\s+/")
 
 
 # ── Carte Agent ──────────────────────────────────────────────────────────────────
