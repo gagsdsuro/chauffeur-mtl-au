@@ -9,6 +9,7 @@ Installation/config/secrets.*.json
 *.key
 
 # 🗂️ DONNÉES SENSIBLES / VOLUMINEUSES
+data/
 data/gtfs/archives
 data/gtfs/gtfs_stm.zip
 data/gtfs/gtfs_stm_*.zip
