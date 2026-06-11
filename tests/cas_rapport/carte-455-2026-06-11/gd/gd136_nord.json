@@ -1,0 +1,29 @@
+{
+  "ligne": "136",
+  "direction": "nord",
+  "routes": [
+    {
+      "line_number": "136",
+      "direction": "Nord",
+      "parcours": [
+        {
+          "id": 1,
+          "name": "Parcours principal",
+          "start": "Station Viau",
+          "start_code": 50105,
+          "end": "des Grandes-Prairies / No 5940",
+          "end_code": 54776,
+          "direction": [
+            "Via - Pierre-De Coubertin",
+            "Via - carrefour giratoire",
+            "Via - Pierre-De Coubertin",
+            "Gauche - Viau",
+            "Gauche - Couture",
+            "Droite - Lionel-Groulx",
+            "Droite - des Grandes-Prairies"
+          ]
+        }
+      ]
+    }
+  ]
+}

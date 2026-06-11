@@ -1,0 +1,29 @@
+{
+  "carte": "455",
+  "lignes": [
+    "136",
+    "125"
+  ],
+  "directions": {
+    "136": [
+      {
+        "sens": "Nord",
+        "parcours": "Parcours principal"
+      },
+      {
+        "sens": "Sud",
+        "parcours": "Parcours principal"
+      }
+    ],
+    "125": [
+      {
+        "sens": "Est",
+        "parcours": "Parcours principal"
+      },
+      {
+        "sens": "Ouest",
+        "parcours": "Parcours principal"
+      }
+    ]
+  }
+}

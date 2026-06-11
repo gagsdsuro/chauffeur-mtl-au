@@ -41,6 +41,13 @@ python3 tests/test_carte_agent.py carte-449    # un cas précis
 python3 tests/creer_cas_test.py --pdf data/ca/carte-agent-2026-06-09.pdf --gtfs data/gtfs/gtfs_stm/   # figer un nouveau cas (vérifier attendu.json avant de committer)
 ```
 
+**Tests de régression rapport** — rejoue des cas figés (PDF + G-D gelés dans `tests/cas_rapport/<nom>/`) et compare les lignes reconnues et leurs directions G-D appariées à `attendu.json`. Hermétique : `GD_DIR` est redirigé vers le `gd/` du cas (requiert `PyMuPDF`) :
+```bash
+python3 tests/test_rapport.py                          # tous les cas
+python3 tests/test_rapport.py carte-455-2026-06-11     # un cas précis
+python3 tests/creer_cas_rapport.py --pdf data/ca/carte-agent-2026-06-11.pdf   # figer un nouveau cas (vérifier attendu.json avant de committer)
+```
+
 **Téléchargement GTFS** — données statiques (hebdomadaire) et temps-réel (requiert `requests`) :
 ```bash
 python3 scripts/fetch_gtfs.py
