@@ -4,6 +4,15 @@
     "136",
     "125"
   ],
+  "meta": {
+    "date_travail": "2026-06-11",
+    "jour_semaine": "Jeudi",
+    "heure_prise": "",
+    "lieu_prise": "",
+    "heure_fin": "",
+    "voiture": "",
+    "garage": "Frontenac"
+  },
   "directions": {
     "136": [
       {
@@ -25,5 +34,37 @@
         "parcours": "Parcours principal"
       }
     ]
-  }
+  },
+  "evenements": {
+    "136": {
+      "applicables": [
+        "10796521",
+        "10968634"
+      ],
+      "non_applicables": []
+    },
+    "125": {
+      "applicables": [
+        "10570801",
+        "10700602",
+        "11154688",
+        "11188805",
+        "11191753",
+        "11208333",
+        "11253616",
+        "11255025"
+      ],
+      "non_applicables": []
+    }
+  },
+  "hlp": [
+    {
+      "id": "hlp1",
+      "instructions": "Via des Grandes-Prairies, Droite du Prado, Droite Couture, Gauche Lacordaire, Via Dickson, Droite Hochelaga, Gauche D'Iberville, Gauche Ontario, Droite du Havre"
+    },
+    {
+      "id": "hlp2",
+      "instructions": "Via Pierre-De Coubertin, Via carrefour giratoire, Via Pierre-De Coubertin, Droite carrefour giratoire, Droite Pierre-De Coubertin, Gauche Pie-IX, Droite Hochelaga, Gauche D'Iberville, Gauche Ontario, Droite du Havre"
+    }
+  ]
 }

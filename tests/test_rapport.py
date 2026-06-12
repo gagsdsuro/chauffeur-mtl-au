@@ -22,7 +22,9 @@ Usage :
 Code de sortie : 0 si tous les cas passent, 1 sinon.
 """
 import json
+import re
 import sys
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -31,44 +33,86 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import gen_rapport as gr  # noqa: E402
 
 
-def calculer_snapshot(dossier: Path) -> dict:
-    """Produit la structure de référence d'un cas (lignes + directions appariées)."""
-    gr.GD_DIR = dossier / "gd"          # redirige vers les G-D gelés du cas
-    carte = gr.parse_carte_agent(dossier / "carte.pdf")
+def _date_du_nom(nom: str) -> date:
+    """Extrait la date cible du nom de cas (ex. « carte-455-2026-06-11 »)."""
+    m = re.search(r"\d{4}-\d{2}-\d{2}", nom)
+    return date.fromisoformat(m.group(0)) if m else date.today()
 
-    directions = {}
-    for numero in carte["lignes"]:
-        segments = carte["segments"].get(numero, [])
-        dirs = gr.load_gd_directions(numero, segments)
-        directions[numero] = sorted(
-            ({"sens": d["sens"], "parcours": d["parcours_nom"]} for d in dirs),
+
+def calculer_snapshot(dossier: Path) -> dict:
+    """Produit la projection de référence d'un cas à partir de build_rapport_data().
+
+    Hermétique : GD_DIR et (si présent) EVENTS_DIR sont redirigés vers les
+    fichiers gelés du cas. La projection couvre tout ce qu'un refactor pourrait
+    altérer au niveau des données du rapport : méta, directions G-D appariées,
+    classement applicable/non-applicable des évènements, et HLP.
+    """
+    gr.GD_DIR = dossier / "gd"          # redirige vers les G-D gelés du cas
+    ev_dir = dossier / "events"
+    if ev_dir.exists():
+        gr.EVENTS_DIR = ev_dir          # redirige vers les évènements gelés du cas
+
+    carte = gr.parse_carte_agent(dossier / "carte.pdf")
+    data = gr.build_rapport_data(carte, _date_du_nom(dossier.name))
+
+    directions, evenements = {}, {}
+    for lg in data["lignes"]:
+        num = lg["numero"]
+        directions[num] = sorted(
+            ({"sens": d["sens"], "parcours": d["parcours_nom"]} for d in lg["directions"]),
             key=lambda x: (x["sens"], x["parcours"]),
         )
+        evenements[num] = {
+            "applicables": sorted(
+                ev.get("evenement_id", "") for ev in lg["detours_applicables"]),
+            "non_applicables": sorted(
+                ({"id": ev.get("evenement_id", ""),
+                  "raison": ev.get("raison_exclusion", "")}
+                 for ev in lg["detours_non_applicables"]),
+                key=lambda x: x["id"],
+            ),
+        }
 
     return {
-        "carte":      carte["assignation"],
-        "lignes":     carte["lignes"],
+        "carte":  carte["assignation"],
+        "lignes": carte["lignes"],
+        "meta": {
+            "date_travail": data["date_travail"],
+            "jour_semaine": data["jour_semaine"],
+            "heure_prise":  data["heure_prise"],
+            "lieu_prise":   data["lieu_prise"],
+            "heure_fin":    data["heure_fin"],
+            "voiture":      data["voiture"],
+            "garage":       data["agent"]["garage"],
+        },
         "directions": directions,
+        "evenements": evenements,
+        "hlp": [{"id": h["id"], "instructions": h["instructions"]} for h in data["hlp"]],
     }
+
+
+def _diff(obtenu, attendu, chemin: str = "") -> list:
+    """Compare récursivement deux structures JSON ; retourne les écarts par chemin."""
+    if isinstance(attendu, dict) and isinstance(obtenu, dict):
+        ecarts = []
+        for k in sorted(set(attendu) | set(obtenu)):
+            sous = f"{chemin}.{k}" if chemin else k
+            ecarts += _diff(obtenu.get(k, "(absent)"), attendu.get(k, "(absent)"), sous)
+        return ecarts
+    if isinstance(attendu, list) and isinstance(obtenu, list):
+        if len(attendu) != len(obtenu):
+            return [f"{chemin}: longueur obtenu {len(obtenu)} ≠ attendu {len(attendu)}"]
+        ecarts = []
+        for i, (o, a) in enumerate(zip(obtenu, attendu)):
+            ecarts += _diff(o, a, f"{chemin}[{i}]")
+        return ecarts
+    return [] if obtenu == attendu else [f"{chemin}: obtenu {obtenu!r}, attendu {attendu!r}"]
 
 
 def jouer_cas(dossier: Path) -> list:
     """Rejoue un cas ; retourne la liste des écarts (vide = succès)."""
     attendu = json.loads((dossier / "attendu.json").read_text(encoding="utf-8"))
-    obtenu = calculer_snapshot(dossier)
-
-    ecarts = []
-    if obtenu["carte"] != attendu["carte"]:
-        ecarts.append(f"carte: obtenu {obtenu['carte']!r}, attendu {attendu['carte']!r}")
-    if obtenu["lignes"] != attendu["lignes"]:
-        ecarts.append(f"lignes: obtenu {obtenu['lignes']!r}, attendu {attendu['lignes']!r}")
-
-    for ligne in sorted(set(obtenu["directions"]) | set(attendu["directions"])):
-        o = obtenu["directions"].get(ligne, "(absente)")
-        a = attendu["directions"].get(ligne, "(absente)")
-        if o != a:
-            ecarts.append(f"directions[{ligne}]: obtenu {o}, attendu {a}")
-    return ecarts
+    return _diff(calculer_snapshot(dossier), attendu)
 
 
 def main() -> int:

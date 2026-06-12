@@ -1,0 +1,23 @@
+{
+  "ligne": "168",
+  "direction": "sud",
+  "detours": [
+    {
+      "evenement_id": "11202851",
+      "titre": "Arrêt déplacé",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-04-24T08:40:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "60747",
+          "nom": "Campus Bell (100 mètres avant)"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_ajoutes": []
+    }
+  ]
+}

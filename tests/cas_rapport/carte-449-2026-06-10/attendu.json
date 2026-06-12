@@ -4,6 +4,15 @@
     "168",
     "176"
   ],
+  "meta": {
+    "date_travail": "2026-06-10",
+    "jour_semaine": "Mercredi",
+    "heure_prise": "",
+    "lieu_prise": "",
+    "heure_fin": "",
+    "voiture": "",
+    "garage": "Frontenac"
+  },
   "directions": {
     "168": [
       {
@@ -25,5 +34,36 @@
         "parcours": "Parcours principal"
       }
     ]
-  }
+  },
+  "evenements": {
+    "168": {
+      "applicables": [
+        "11202851",
+        "11202851"
+      ],
+      "non_applicables": []
+    },
+    "176": {
+      "applicables": [],
+      "non_applicables": []
+    }
+  },
+  "hlp": [
+    {
+      "id": "hlp1",
+      "instructions": "Via Robert-Bourassa, Droite du Président-Kennedy, Droite Union"
+    },
+    {
+      "id": "hlp2",
+      "instructions": "Via André-Prévost, Via de la Pointe-Sud"
+    },
+    {
+      "id": "hlp3",
+      "instructions": "Via de la Pointe-Sud, Droite André-Prévost"
+    },
+    {
+      "id": "hlp4",
+      "instructions": "Via André-Prévost, Via de la Pointe-Sud, Via de l'Île-des-Soeurs, Via carrefour giratoire, Droite de l'Île-des-Soeurs, Droite carrefour giratoire, Via de l'Île-des-Soeurs, Via de la Pointe-Nord, Via carrefour giratoire Alexandre-Graham-Bell, Droite vers Île-des-Soeur Via vers aut. 10 Ouest, Via Bonaventure dir. E, Via Robert-Bourassa, Via entrée route 136 Est, Via 136 Ville-Marie Est, Via Ville-Marie, Via Notre-Dame, Gauche Frontenac, Droite Sainte-Catherine, Gauche du Havre"
+    }
+  ]
 }

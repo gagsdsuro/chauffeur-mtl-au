@@ -5,7 +5,8 @@ creer_cas_rapport.py — Fige un cas de test de régression pour gen_rapport.py
 Capture, dans tests/cas_rapport/<nom>/ :
   • carte.pdf      copie du PDF source
   • gd/            copie des fichiers Gauche-Droite des lignes détectées
-  • attendu.json   lignes reconnues + directions G-D appariées
+  • events/        copie des fichiers d'évènements des lignes détectées
+  • attendu.json   projection de build_rapport_data (méta, directions, évènements, HLP)
 
 Le snapshot capturé devient la référence : VÉRIFIER MANUELLEMENT attendu.json
 avant de committer le cas (s'assurer que chaque pièce de travail / ligne est
@@ -63,13 +64,23 @@ def main() -> int:
         print("⚠️  Aucun fichier G-D trouvé pour les lignes détectées — "
               "directions vides dans attendu.json.")
 
+    # Gèle aussi les évènements des lignes détectées (depuis les données live),
+    # pour que le snapshot d'applicabilité soit hermétique.
+    (dossier / "events").mkdir(parents=True, exist_ok=True)
+    ev_copies = []
+    for numero in carte["lignes"]:
+        for ev_file in sorted(gr.EVENTS_DIR.glob(f"{numero}_*.json")):
+            shutil.copy2(ev_file, dossier / "events" / ev_file.name)
+            ev_copies.append(ev_file.name)
+
     snapshot = calculer_snapshot(dossier)   # pointe GD_DIR sur le gd/ gelé
     (dossier / "attendu.json").write_text(
         json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print(f"Cas de test créé : {dossier.relative_to(ROOT)}")
-    print(f"  G-D copiés : {', '.join(copies) or '(aucun)'}")
-    print(f"  Lignes     : {', '.join(snapshot['lignes'])}")
+    print(f"  G-D copiés    : {', '.join(copies) or '(aucun)'}")
+    print(f"  Events copiés : {', '.join(ev_copies) or '(aucun)'}")
+    print(f"  Lignes        : {', '.join(snapshot['lignes'])}")
     print("VÉRIFIER attendu.json avant de committer — il fige le comportement actuel.")
     return 0
 
