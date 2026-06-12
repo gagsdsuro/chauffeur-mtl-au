@@ -51,10 +51,14 @@
         "11188805",
         "11191753",
         "11208333",
-        "11253616",
-        "11255025"
+        "11253616"
       ],
-      "non_applicables": []
+      "non_applicables": [
+        {
+          "id": "11255025",
+          "raison": "Effectif : Seulement entre 07:00 et 19:00 chaque jour"
+        }
+      ]
     }
   },
   "hlp": [

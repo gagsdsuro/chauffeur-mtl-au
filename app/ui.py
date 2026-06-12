@@ -75,6 +75,22 @@ def _event_applies_to_date(event: dict, date_str: str) -> bool:
         return True
 
 
+def _event_applies(event: dict, date_str: str, tr) -> bool:
+    """Marqueur ✅/⬜ cohérent avec gen_rapport : si la plage horaire travaillée
+    (tr = (début, fin)) est connue, évalue la plage d'effectif vs le quart ;
+    sinon repli sur la seule plage de validité (date)."""
+    if tr:
+        try:
+            from chauffeur.effectif import parse_shift_time
+            from chauffeur.evenements import applicable_au_quart
+            d = date.fromisoformat(date_str)
+            return applicable_au_quart(
+                event, parse_shift_time(tr[0], d), parse_shift_time(tr[1], d))
+        except Exception:
+            pass
+    return _event_applies_to_date(event, date_str)
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Tab 1 — Tableau de bord
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -308,7 +324,7 @@ with tabs[0]:
                                             if not events:
                                                 st.caption("Aucun évènement enregistré.")
                                             for evt in events:
-                                                applies = _event_applies_to_date(evt, ca_date_str)
+                                                applies = _event_applies(evt, ca_date_str, tr)
                                                 eid   = evt.get("evenement_id", "?")
                                                 titre = evt.get("titre", "(sans titre)")
                                                 eff   = evt.get("effectif", "")
@@ -317,7 +333,7 @@ with tabs[0]:
                                                 label = f"{'✅' if applies else '⬜'} #{eid} — {titre}"
                                                 with st.expander(label, expanded=applies):
                                                     if not applies:
-                                                        st.caption("⚠️ Hors de la plage de validité pour cette date.")
+                                                        st.caption("⚠️ Non applicable à ce quart (plage de validité ou d'effectif).")
                                                     if eff:
                                                         st.caption(f"Effectif : {eff}")
                                                     if d_deb:

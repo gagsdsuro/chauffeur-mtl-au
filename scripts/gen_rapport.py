@@ -29,6 +29,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from chauffeur.matching import stops_match as _stops_match  # noqa: E402
 from chauffeur.carte_agent import parse_carte as _parse_carte  # noqa: E402
+from chauffeur.effectif import parse_shift_time  # noqa: E402
+from chauffeur.evenements import applicable_au_quart, raison_exclusion  # noqa: E402
 
 try:
     from reportlab.lib import colors
@@ -453,6 +455,7 @@ def parse_carte_agent(pdf_path: Path) -> dict:
         'garage':      ca.garage,
         'lignes':      ca.lignes,
         'segments':    ca.segments_par_ligne(),
+        'time_ranges': ca.time_ranges_par_ligne(),
         'hlp':         [{'id': h.id, 'instructions': h.instructions} for h in ca.hlp],
     }
 
@@ -576,13 +579,31 @@ def is_event_applicable(event: dict, target_date: date):
     return True, ''
 
 
-def load_events_for_ligne(numero: str, target_date: date):
+def _shift_range_pour_ligne(time_ranges: list, target_date: date):
+    """Plage de quart [début, fin] (datetimes) pour une ligne, depuis ses trajets.
+
+    Retourne (None, None) si aucune heure exploitable — on retombe alors sur le
+    filtrage date-seule (is_event_applicable)."""
+    if not time_ranges:
+        return None, None
+    debuts = [parse_shift_time(tr['debut'], target_date) for tr in time_ranges]
+    fins   = [parse_shift_time(tr['fin'],   target_date) for tr in time_ranges]
+    return min(debuts), max(fins)
+
+
+def load_events_for_ligne(numero: str, target_date: date,
+                          shift_start=None, shift_end=None):
     """
     Charge et filtre les événements d'une ligne.
+
+    Si la plage de quart est connue (shift_start/shift_end), l'applicabilité tient
+    compte de la plage horaire d'effectif vs les heures réellement travaillées sur
+    la ligne (chauffeur.evenements). Sinon, repli sur le filtrage date-seule.
     Retourne (applicables, non_applicables).
     """
     applicables     = []
     non_applicables = []
+    par_quart = shift_start is not None and shift_end is not None
 
     for ev_file in sorted(EVENTS_DIR.glob(f"{numero}_*.json")):
         try:
@@ -593,7 +614,11 @@ def load_events_for_ligne(numero: str, target_date: date):
 
         direction = data.get('direction', '').capitalize()  # 'est' → 'Est'
         for event in data.get('detours', []):
-            ok, raison = is_event_applicable(event, target_date)
+            if par_quart:
+                ok = applicable_au_quart(event, shift_start, shift_end)
+                raison = '' if ok else raison_exclusion(event, shift_start, shift_end)
+            else:
+                ok, raison = is_event_applicable(event, target_date)
             ev = dict(event)
             ev['direction'] = direction
             if ok:
@@ -611,12 +636,15 @@ def build_rapport_data(carte: dict, target_date: date) -> dict:
     """Construit le dictionnaire de données complet à partir de la carte agent."""
     jour_str = JOURS_FR.get(target_date.weekday(), '')
 
-    all_segments = carte.get('segments', {})
+    all_segments    = carte.get('segments', {})
+    all_time_ranges = carte.get('time_ranges', {})
     lignes = []
     for numero in carte['lignes']:
         segments = all_segments.get(numero, [])
         directions = load_gd_directions(numero, segments)
-        app, non_app = load_events_for_ligne(numero, target_date)
+        shift_start, shift_end = _shift_range_pour_ligne(
+            all_time_ranges.get(numero, []), target_date)
+        app, non_app = load_events_for_ligne(numero, target_date, shift_start, shift_end)
         lignes.append({
             'numero':                 numero,
             'nom':                    '',
