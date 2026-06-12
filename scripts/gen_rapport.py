@@ -28,6 +28,7 @@ OUTPUT_DIR   = DATA_DIR / "rapports"
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from chauffeur.matching import stops_match as _stops_match  # noqa: E402
+from chauffeur.carte_agent import parse_carte as _parse_carte  # noqa: E402
 
 try:
     from reportlab.lib import colors
@@ -432,170 +433,28 @@ def find_carte_agent(target_date: date) -> Path:
 
 
 def parse_carte_agent(pdf_path: Path) -> dict:
-    """Extrait les données structurées de la carte agent HASTUS (PDF)."""
+    """Adapte le modèle CarteAgent (chauffeur.carte_agent) au dict historique.
+
+    Le parsing texte est désormais centralisé dans chauffeur/carte_agent.py ;
+    cette fonction conserve la forme de retour attendue par build_rapport_data().
+    """
     try:
-        import fitz  # PyMuPDF
-    except ImportError:
-        print("PyMuPDF non installé. Exécute: pip install pymupdf --break-system-packages")
+        ca = _parse_carte(pdf_path)
+    except ImportError as e:
+        print(e)
         sys.exit(1)
-
-    doc = fitz.open(str(pdf_path))
-    page1_text = doc[0].get_text() if len(doc) > 0 else ''
-    page2_text = doc[1].get_text() if len(doc) > 1 else ''
-    doc.close()
-
-    result = {
-        'assignation': '',
-        'date': None,
-        'voiture': '',
-        'heure_debut': '',
-        'lieu_debut': '',
-        'heure_fin': '',
-        'garage': '',
-        'lignes': [],
-        'hlp': [],
+    return {
+        'assignation': ca.assignation,
+        'date':        ca.date,
+        'voiture':     ca.voiture,
+        'heure_debut': ca.heure_debut,
+        'lieu_debut':  ca.lieu_debut,
+        'heure_fin':   ca.heure_fin,
+        'garage':      ca.garage,
+        'lignes':      ca.lignes,
+        'segments':    ca.segments_par_ligne(),
+        'hlp':         [{'id': h.id, 'instructions': h.instructions} for h in ca.hlp],
     }
-
-    # Assignation : premier nombre ≥ 3 chiffres en début de ligne
-    m = re.search(r'^(\d{3,4})\s', page1_text, re.MULTILINE)
-    if m:
-        result['assignation'] = m.group(1)
-
-    # Date : format dd/mm/yyyy
-    m = re.search(r'(\d{2})/(\d{2})/(\d{4})', page1_text)
-    if m:
-        result['date'] = date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
-
-    # Ligne du tableau shift — fitz mélange les colonnes, ex :
-    # "V036 5622:28 22:28 29:38 29:48 12 - 04"
-    # Voiture : dernier motif "NN - NN" de la ligne contenant les heures
-    shift_line_m = re.search(r'[A-Z]\w+\s+\d+\d{2}:\d{2}.+?(\d+\s*-\s*\d+)\s*$',
-                             page1_text, re.MULTILINE)
-    if shift_line_m:
-        result['voiture'] = shift_line_m.group(1).replace(' ', '')
-
-    # Lieu début : code alphanumérique avant les heures fusionnées (ex: V036)
-    lieu_m = re.search(r'([A-Z]\d+)\s+\d+\d{2}:\d{2}', page1_text)
-    if lieu_m:
-        result['lieu_debut'] = lieu_m.group(1)
-
-    # Heures : extraire les HH:MM non précédés d'un chiffre (évite "5622:28")
-    shift_line_text = shift_line_m.group(0) if shift_line_m else ''
-    times = re.findall(r'(?<!\d)(\d{2}:\d{2})', shift_line_text)
-    if len(times) >= 2:
-        result['heure_debut'] = times[0]
-        result['heure_fin']   = times[1]
-
-    # Lignes travaillées : "12 - P / - / Régulier", "125 / - / Régulier" ou
-    # "a12 - P / ..." (note ref). Le " - P" (rampe avant) est OPTIONNEL : certaines
-    # lignes n'ont pas cette désignation et seraient sinon absentes du rapport.
-    # Ancré en début de ligne (^) pour ne pas capturer "hlp1/hlp2" comme "1"/"2".
-    seen = []
-    for m in re.finditer(r'^[a-z]?(\d+)(?:\s+-\s+\w+)?\s+/', page1_text, re.MULTILINE):
-        num = m.group(1)
-        if num not in seen:
-            seen.append(num)
-    result['lignes'] = seen
-
-    # Segments départ/arrivée par ligne (pour filtrage des parcours G-D)
-    result['segments'] = extract_segments_from_carte(page1_text)
-
-    # Garage : "GARAGE LASALLE" → "LaSalle"
-    m = re.search(r'GARAGE\s+(\S+)', page1_text, re.IGNORECASE)
-    if m:
-        result['garage'] = m.group(1).capitalize()
-
-    # HLP depuis page 2
-    # Format: "hlp1: 61564 - [V] de l'Église, ... - 54112"
-    # ou:     "hlp3: 60238 - [V] Tupper, ..."  (sans code de fin)
-    # Les instructions peuvent s'étaler sur plusieurs lignes : on capture
-    # jusqu'au prochain « hlpN: », « Page: » ou la fin du texte (DOTALL).
-    for m in re.finditer(
-        r'(hlp\d+):\s+\d+\s+-\s+(.+?)(?=\n\s*hlp\d+:|\n\s*Page:|\Z)',
-        page2_text, re.DOTALL | re.IGNORECASE
-    ):
-        # Aplatit les sauts de ligne puis retire un éventuel code d'arrêt final
-        raw = re.sub(r'\s+', ' ', m.group(2)).strip()
-        raw = re.sub(r'\s*-\s*\d+\s*$', '', raw)
-        # Convertir [V]/[G]/[D] en abréviations lisibles
-        instructions = re.sub(r'\[V\]', 'Via', raw)
-        instructions = re.sub(r'\[G\]', 'Gauche', instructions)
-        instructions = re.sub(r'\[D\]', 'Droite', instructions)
-        result['hlp'].append({
-            'id': m.group(1),
-            'instructions': instructions,
-        })
-
-    return result
-
-
-# ─── Extraction des segments de la carte agent ───────────────────────────────
-
-def extract_segments_from_carte(page1_text: str) -> dict:
-    """
-    Extrait les paires (départ, arrivée) par ligne depuis le texte de la carte agent.
-    Retourne: { '195': [('STATION ANGRIGNON', 'TERMINUS DORVAL'), ...], ... }
-
-    Format PyMuPDF (fitz) : chaque heure est sur sa propre ligne, sauf quand
-    le nom d'arrêt est trop long — l'heure est alors collée à la fin.
-    """
-    _pure_time = re.compile(r'^\d{1,2}:\d{2}$')
-    _end_time  = re.compile(r'^(.+?)\s*(\d{2}:\d{2})$')
-
-    segments: dict = {}
-    # " - P" optionnel (cf. parse_carte_agent) ; re.match ancre déjà au début du
-    # bloc, donc "hlp1/hlp2" ne matchent pas (pas de chiffre en tête après [a-z]?).
-    blocks = re.split(r'\n(?=[a-z]?\d+(?:\s+-\s+\w+)?\s+/|hlp\d|GARAGE)', page1_text)
-
-    for block in blocks:
-        m_ligne = re.match(r'[a-z]?(\d+)(?:\s+-\s+\w+)?\s+/', block)
-        if not m_ligne:
-            continue
-        numero = m_ligne.group(1)
-
-        lines = [l.strip() for l in block.split('\n') if l.strip()]
-
-        # Classe chaque ligne en (time, stop, stop_time)
-        items: list[dict] = []
-        for line in lines[1:]:
-            if _pure_time.match(line):
-                items.append({'type': 'time', 'stop': None})
-            else:
-                m = _end_time.match(line)
-                if m:
-                    items.append({'type': 'stop_time', 'stop': m.group(1).strip()})
-                else:
-                    items.append({'type': 'stop', 'stop': line})
-
-        # Temps indexés dans l'ordre d'apparition
-        timed = [i for i, it in enumerate(items) if it['type'] in ('time', 'stop_time')]
-        if len(timed) < 2:
-            continue
-
-        # Stop de départ : premier item stop après le premier temps
-        debut_stop = None
-        for j in range(timed[0] + 1, len(items)):
-            if items[j]['stop'] and len(items[j]['stop']) > 2:
-                debut_stop = items[j]['stop']
-                break
-        if items[timed[0]]['type'] == 'stop_time':
-            debut_stop = items[timed[0]]['stop']
-
-        # Stop d'arrivée : dernier item stop avant/dans le dernier temps
-        fin_stop = None
-        last_i = timed[-1]
-        if items[last_i]['type'] == 'stop_time':
-            fin_stop = items[last_i]['stop']
-        else:
-            for j in range(last_i - 1, -1, -1):
-                if items[j]['stop'] and len(items[j]['stop']) > 2:
-                    fin_stop = items[j]['stop']
-                    break
-
-        if debut_stop and fin_stop:
-            segments.setdefault(numero, []).append((debut_stop, fin_stop))
-
-    return segments
 
 
 def parcours_matches_segments(parcours: dict, segments: list) -> bool:
@@ -618,7 +477,7 @@ def parcours_matches_segments(parcours: dict, segments: list) -> bool:
 def load_gd_directions(numero: str, segments: list) -> list:
     """
     Charge les directions G-D d'une ligne filtrées selon les segments de la carte agent.
-    segments : liste de (départ, arrivée) issus de extract_segments_from_carte().
+    segments : liste de (départ, arrivée) issus de CarteAgent.segments_par_ligne().
     Retourne une liste de directions au format attendu par page1_gd().
     """
     directions = []

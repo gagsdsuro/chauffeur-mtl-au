@@ -129,92 +129,18 @@ def _to_min(t: str) -> int:
 
 
 def extract_line_time_ranges(page1_text: str) -> dict:
+    """Plages horaires (début/fin + terminus) par ligne.
+
+    Délègue au parser texte unifié (chauffeur.carte_agent). Forme inchangée :
+    { '195': [{'debut','fin','debut_stop','fin_stop'}, …] }.
     """
-    Extrait les plages horaires (début/fin) par ligne, avec stops de départ/arrivée.
-
-    Format PyMuPDF (fitz) pour une carte agent HASTUS :
-      - Les heures sont sur leurs propres lignes : "23:46"
-      - Les noms d'arrêts sont sur leurs propres lignes : "TERMINUS DORVAL"
-      - Exception : quand le nom est trop long, l'heure est collée à la fin :
-        "SHERBROOKE / MEADOWBROOK (Dir. O24:22"
-
-    Retourne { '195': [{'debut': '23:46', 'fin': '24:32',
-                        'debut_stop': 'STATION ANGRIGNON',
-                        'fin_stop': 'TERMINUS DORVAL'}, ...] }
-    """
-    # En-tête de trajet : « 168 /  -  / Régulier » ou « 168 - P /  -  / Régulier ».
-    # Le « - P » (ou « - 05 », etc.) est une désignation de voiture optionnelle, pas
-    # toujours présente ; on ne doit donc pas l'exiger pour reconnaître un trajet.
-    _trip_header = r"[a-z]?\d+(?:\s+-\s+\w+)?\s+/"
-    result: dict = {}
-    blocks = re.split(rf"\n(?={_trip_header}|hlp\d|GARAGE)", page1_text)
-
-    _pure_time = re.compile(r"^\d{1,2}:\d{2}$")
-    _end_time  = re.compile(r"^(.+?)\s*(\d{2}:\d{2})$")
-
-    for block in blocks:
-        m_ligne = re.match(r"[a-z]?(\d+)(?:\s+-\s+\w+)?\s+/", block)
-        if not m_ligne:
-            continue
-        numero = m_ligne.group(1)
-
-        lines = [l.strip() for l in block.split("\n") if l.strip()]
-
-        # Construit une liste structurée d'items
-        items: list[dict] = []
-        for line in lines[1:]:      # skip the "XX - P / ..." header
-            if _pure_time.match(line):
-                items.append({"type": "time", "time": line, "stop": None})
-            else:
-                m = _end_time.match(line)
-                if m:
-                    items.append({"type": "stop_time",
-                                  "time": m.group(2),
-                                  "stop": m.group(1).strip()})
-                else:
-                    items.append({"type": "stop", "time": None, "stop": line})
-
-        # Collecte tous les temps dans l'ordre d'apparition
-        timed = [(i, it["time"]) for i, it in enumerate(items) if it["time"]]
-        if len(timed) < 2:
-            continue
-
-        debut_i, debut_time = timed[0]
-        fin_i,   fin_time   = timed[-1]
-
-        # Stop de départ : premier item de type stop après la première heure
-        debut_stop = None
-        for j in range(debut_i + 1, len(items)):
-            if items[j]["stop"] and len(items[j]["stop"]) > 2:
-                debut_stop = items[j]["stop"]
-                break
-        # Si le premier item est stop_time, son stop est le stop de départ
-        if items[debut_i]["type"] == "stop_time":
-            debut_stop = items[debut_i]["stop"]
-
-        # Stop d'arrivée : dernier item de type stop avant la dernière heure
-        fin_stop = None
-        if items[fin_i]["type"] == "stop_time":
-            fin_stop = items[fin_i]["stop"]
-        else:
-            for j in range(fin_i - 1, -1, -1):
-                if items[j]["stop"] and len(items[j]["stop"]) > 2:
-                    fin_stop = items[j]["stop"]
-                    break
-
-        if debut_time and fin_time:
-            result.setdefault(numero, []).append({
-                "debut":      debut_time,
-                "fin":        fin_time,
-                "debut_stop": debut_stop or "",
-                "fin_stop":   fin_stop or "",
-            })
-
-    return result
+    return CarteAgent(trajets=parse_trajets(page1_text)).time_ranges_par_ligne()
 
 
-# Appariement de noms d'arrêts : source de vérité dans chauffeur/matching.py.
+# Noyau de domaine partagé : appariement d'arrêts + parser texte de la carte agent.
 from chauffeur.matching import stops_match as _stops_match  # noqa: E402
+from chauffeur.carte_agent import parse_trajets  # noqa: E402
+from chauffeur.modeles import CarteAgent  # noqa: E402
 
 
 def get_time_range_for_direction(
