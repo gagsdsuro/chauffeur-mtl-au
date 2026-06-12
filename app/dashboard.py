@@ -11,9 +11,14 @@ from __future__ import annotations
 import json
 import re
 import struct
-import unicodedata
+import sys
 from datetime import datetime
 from pathlib import Path
+
+# Rendre le package `chauffeur/` (noyau de domaine) importable depuis app/.
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 CA_DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 TIME_RE    = re.compile(r"^\d{1,2}:\d{2}$")
@@ -208,45 +213,8 @@ def extract_line_time_ranges(page1_text: str) -> dict:
     return result
 
 
-# Jetons trop communs pour distinguer un terminus (articles, génériques, indicateurs
-# de quai/direction). On les ignore lors de l'appariement.
-_STOP_NOISE = {
-    "DE", "DU", "DES", "LA", "LE", "LES", "AU", "AUX", "ET", "A",
-    "NO", "DIR", "STATION", "REM", "TERMINUS", "GARAGE",
-    "NORD", "SUD", "EST", "OUEST",
-}
-
-_ABBREV = {
-    "STE": "SAINTE", "ST": "SAINT", "PRES": "PRESIDENT",
-}
-
-
-def _stop_tokens(name: str) -> set[str]:
-    """
-    Réduit un nom d'arrêt à un ensemble de jetons distinctifs pour l'appariement.
-
-    Conserve le contenu des parenthèses (la carte agent y trouve souvent le nom de
-    rue que le fichier G-D met entre parenthèses, ex. « Station McGill (R.-Bourassa
-    / Président-Kennedy) » ↔ « ROBERT-BOURASSA / PRÉS.-KENNEDY »). Retire les
-    accents, les articles/génériques et les jetons trop courts ou numériques.
-    """
-    n = unicodedata.normalize("NFKD", name.upper())
-    n = "".join(c for c in n if not unicodedata.combining(c))
-    tokens = set()
-    for raw in re.split(r"[^A-Z0-9]+", n):
-        if not raw:
-            continue
-        tok = _ABBREV.get(raw, raw)
-        if len(tok) < 2 or tok.isdigit() or tok in _STOP_NOISE:
-            continue
-        tokens.add(tok)
-    return tokens
-
-
-def _stops_match(a: str, b: str) -> bool:
-    """Deux noms d'arrêt désignent-ils le même lieu (≥ 1 jeton distinctif commun) ?"""
-    ta, tb = _stop_tokens(a), _stop_tokens(b)
-    return bool(ta and tb and (ta & tb))
+# Appariement de noms d'arrêts : source de vérité dans chauffeur/matching.py.
+from chauffeur.matching import stops_match as _stops_match  # noqa: E402
 
 
 def get_time_range_for_direction(

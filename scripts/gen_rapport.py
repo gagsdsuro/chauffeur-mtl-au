@@ -13,7 +13,6 @@ import argparse
 import json
 import re
 import sys
-import unicodedata
 from datetime import date, datetime
 from pathlib import Path
 
@@ -24,6 +23,11 @@ GD_DIR       = DATA_DIR / "Gauche-Droite"
 EVENTS_DIR   = DATA_DIR / "Events"
 DOCS_DIR     = DATA_DIR / "ca"
 OUTPUT_DIR   = DATA_DIR / "rapports"
+
+# Noyau de domaine partagé (appariement d'arrêts) — cf. chauffeur/matching.py
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+from chauffeur.matching import stops_match as _stops_match  # noqa: E402
 
 try:
     from reportlab.lib import colors
@@ -592,46 +596,6 @@ def extract_segments_from_carte(page1_text: str) -> dict:
             segments.setdefault(numero, []).append((debut_stop, fin_stop))
 
     return segments
-
-
-# Jetons trop communs pour distinguer un terminus (articles, génériques, indicateurs
-# de quai/direction). Ignorés lors de l'appariement. (Aligné sur app/dashboard.py.)
-_STOP_NOISE = {
-    "DE", "DU", "DES", "LA", "LE", "LES", "AU", "AUX", "ET", "A",
-    "NO", "DIR", "STATION", "REM", "TERMINUS", "GARAGE",
-    "NORD", "SUD", "EST", "OUEST",
-}
-
-_ABBREV = {"STE": "SAINTE", "ST": "SAINT", "PRES": "PRESIDENT"}
-
-
-def _stop_tokens(name: str) -> set:
-    """
-    Réduit un nom d'arrêt à un ensemble de jetons distinctifs pour l'appariement.
-
-    Conserve le contenu des parenthèses : la carte agent y trouve souvent le nom de
-    rue que le fichier G-D met entre parenthèses, ex. « Station McGill (De Maisonneuve
-    / Robert-Bourassa) » ↔ « DE MAISONNEUVE / ROBERT-BOURASSA ». Retire accents,
-    articles/génériques, et jetons trop courts ou purement numériques. Robuste aux
-    noms tronqués par la mise en page du PDF (« STATION VIAU(P.-DE-COUBERTIN O./TH »).
-    """
-    n = unicodedata.normalize("NFKD", name.upper())
-    n = "".join(c for c in n if not unicodedata.combining(c))
-    tokens = set()
-    for raw in re.split(r"[^A-Z0-9]+", n):
-        if not raw:
-            continue
-        tok = _ABBREV.get(raw, raw)
-        if len(tok) < 2 or tok.isdigit() or tok in _STOP_NOISE:
-            continue
-        tokens.add(tok)
-    return tokens
-
-
-def _stops_match(a: str, b: str) -> bool:
-    """Deux noms d'arrêt désignent-ils le même lieu (≥ 1 jeton distinctif commun) ?"""
-    ta, tb = _stop_tokens(a), _stop_tokens(b)
-    return bool(ta and tb and (ta & tb))
 
 
 def parcours_matches_segments(parcours: dict, segments: list) -> bool:
