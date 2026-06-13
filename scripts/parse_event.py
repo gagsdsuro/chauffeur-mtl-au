@@ -118,10 +118,15 @@ class STMEventParser:
 
         event['effectif'] = extract_field(r'Effectif', r'Arrêt|Description|Commentaire')
 
-        # Arrêts annulés
+        # Arrêts annulés : capture ligne-par-ligne jusqu'au prochain en-tête de
+        # section (Description / Commentaire / Arrêt(s) ajouté). S'arrête net même
+        # quand la section est vide — ex. « Détour sans annulation » où « Arrêt(s) »
+        # est immédiatement suivi de « Description Gauche-Droite » — au lieu d'avaler
+        # le bloc virage-par-virage et de produire des avertissements parasites.
         arrets_match = re.search(
-            r'Arrêt\(s\)\s*\n?((?:\s*\*[^\n]+\n?)+|.+?)(?=\nDescription|\nCommentaire|\nArrêt\(s\)\s+ajouté|$)',
-            event_text, re.IGNORECASE | re.DOTALL
+            r'Arrêt\(s\)[^\S\n]*\n'
+            r'((?:(?!\s*(?:Description|Commentaire|Arrêt\(s\)\s+ajouté))[^\n]*\n?)*)',
+            event_text, re.IGNORECASE
         )
         event['arrets_annules'] = self.parse_arrets(arrets_match.group(1)) if arrets_match else []
 

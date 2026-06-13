@@ -1,0 +1,151 @@
+Détour / 34 Ouest
+Évènement - 11130856 - Annulation d'arrêts
+Motif
+Situation Incontrôlable
+Date / heure début
+2026-02-16 15:00
+Date / heure de fin
+2026-12-31 18:30
+Effectif
+Seulement entre 15:00 et 18:30 chaque jour
+Arrêt(s)
+53046 - De Maisonneuve / De Lorimier
+Commentaire
+ARRET ANNULÉ DE 15H-18H30 POUR CONGESTION DU LUNDI AU VENDREDI
+Évènement - 11205733 - Détour sans annulation
+Motif
+Travaux
+Date / heure début
+2026-04-29 02:00
+Date / heure de fin
+2026-06-30 06:00
+Effectif
+Seulement entre 02:00 et 06:00 chaque jour
+Arrêt(s)
+Description Gauche-Droite
+VIA DE MAISONNEUVE
+G DE LORIMIER
+D RENÉ-LÉVESQUE
+D PAPINEAU
+D STE-CATHERINE
+G CARTIER
+D MAISONNEUVE ( CONTRE-SENS AUTORISÉ)
+D DORION
+VIA RR
+Commentaire
+34 OUEST LE VIRAGE SUR CARTIER À PARTIR DE RENÉ-LEVESQUE N'EST PAS SÉCURITAIRE A/C DE LA PISTE CICLABLE ET DU VIRAGE TROP SERRÉ SI AUTOS STATIONNÉES.SVP UTILISEZ PAPINEAU.
+Évènement - 11205733 - Détour avec annulation d'arrêt
+Motif
+Travaux
+Date / heure début
+2026-04-30 06:00
+Date / heure de fin
+2026-06-30 02:00
+Effectif
+Seulement entre 06:00 et 02:00 chaque jour
+Arrêt(s)
+53046 - De Maisonneuve / De Lorimier
+53062 - De Maisonneuve / Parthenais
+53074 - De Maisonneuve / Fullum
+53090 - De Maisonneuve / Dufresne
+53104 - De Maisonneuve / D'Iberville
+54188 - Station Papineau (Dorion / Sainte-Catherine)
+Description Gauche-Droite
+VIA FRONTENAC
+DESCENTE SEULEMENT FRONTENAC / ONTARIO (54038)
+D/ ONTARIO
+D/ DU HAVRE TERMINUS TEMPORAIRE DU HAVRE / ONTARIO (53016)
+
+Commentaire
+TRAVAUX DE 6H AM A 2H AM
+POINT DE RELEVE HABITUEL STE-CATHERINE ET DU HAVRE
+
+Arrêt(s) ajouté(s):
+53016 - Station Frontenac (du Havre / Ontario)
+54038 - Station Frontenac (Frontenac / Ontario)
+Évènement - 11205949 - Arrêt déplacé
+Motif
+Travaux
+Date / heure début
+2026-04-27 15:17
+Date / heure de fin
+non définie
+Effectif
+En tout temps
+Arrêt(s)
+53285 - Sainte-Catherine / Letourneux (15 mètres après)
+Évènement - 11218486 - Détour avec annulation d'arrêt
+Motif
+Travaux
+Date / heure début
+2026-05-11 00:00
+Date / heure de fin
+non définie
+Effectif
+En tout temps
+Arrêt(s)
+53269 - Sainte-Catherine / Pie-IX
+Description Gauche-Droite
+VIA STE-CATHERINE
+D LETOURNEUX
+G LA FONTAINE
+G JEANNE-D'ARC
+D STE-CATHERINE
+VIA RR
+Commentaire
+Arrêt(s) ajouté(s):
+53222 - Pie-IX / La Fontaine
+
+Détour / 34 Est
+Évènement - 11205733 - Détour avec annulation d'arrêt
+Motif
+Travaux
+Date / heure début
+2026-04-30 06:00
+Date / heure de fin
+2026-06-30 02:00
+Effectif
+Seulement entre 06:00 et 02:00 chaque jour
+Arrêt(s)
+53065 - Sainte-Catherine / De Lorimier
+53079 - Sainte-Catherine / Parthenais
+53094 - Sainte-Catherine / Fullum
+53110 - Sainte-Catherine / Dufresne
+53119 - Sainte-Catherine / D'Iberville
+53137 - Sainte-Catherine / du Havre
+54188 - Station Papineau (Dorion / Sainte-Catherine)
+Description Gauche-Droite
+VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016
+G/ STE CATHERINE
+VIA R.R
+
+Commentaire
+TRAVAUX DE 6 AM A 2AM
+POINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)
+VOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE
+
+Arrêt(s) ajouté(s):
+53016 - Station Frontenac (du Havre / Ontario)
+Temp. - Ste-Catherine / Du havre (E/S)
+Évènement - 11218486 - Détour avec annulation d'arrêt
+Motif
+Travaux
+Date / heure début
+2026-05-11 00:00
+Date / heure de fin
+non définie
+Effectif
+En tout temps
+Arrêt(s)
+53259 - Sainte-Catherine / Jeanne-d'Arc
+53271 - Sainte-Catherine / Pie-IX
+Description Gauche-Droite
+VIA SAINTE-CATHERINE
+G BOURBONNIÈRE
+D ADAM
+D DE LA SALLE
+G STE-CATHERINE
+VIA RR
+Commentaire
+Arrêt(s) ajouté(s):
+53238 - Pie-IX / Adam
