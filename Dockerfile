@@ -19,8 +19,9 @@ RUN groupadd -g ${GID} app \
     && useradd -u ${UID} -g ${GID} -m -s /bin/bash app
 
 # Code source (les données sont montées via volume)
-COPY app/      ./app/
-COPY scripts/  ./scripts/
+COPY app/        ./app/
+COPY scripts/    ./scripts/
+COPY chauffeur/  ./chauffeur/
 
 USER app
 
