@@ -1,0 +1,334 @@
+{
+  "stops": [
+    [
+      1,
+      "54200"
+    ],
+    [
+      2,
+      "53117"
+    ],
+    [
+      3,
+      "61588"
+    ],
+    [
+      4,
+      "61589"
+    ],
+    [
+      5,
+      "61590"
+    ],
+    [
+      6,
+      "53245"
+    ],
+    [
+      7,
+      "53231"
+    ],
+    [
+      8,
+      "54213"
+    ],
+    [
+      9,
+      "53216"
+    ],
+    [
+      10,
+      "53189"
+    ],
+    [
+      11,
+      "53169"
+    ],
+    [
+      12,
+      "53154"
+    ],
+    [
+      13,
+      "53140"
+    ],
+    [
+      14,
+      "53122"
+    ],
+    [
+      15,
+      "53113"
+    ],
+    [
+      16,
+      "53108"
+    ],
+    [
+      17,
+      "53089"
+    ],
+    [
+      18,
+      "61355"
+    ],
+    [
+      19,
+      "53058"
+    ],
+    [
+      20,
+      "53027"
+    ],
+    [
+      21,
+      "53007"
+    ],
+    [
+      22,
+      "52993"
+    ],
+    [
+      23,
+      "52964"
+    ],
+    [
+      24,
+      "52935"
+    ],
+    [
+      25,
+      "52896"
+    ],
+    [
+      26,
+      "52868"
+    ],
+    [
+      27,
+      "52841"
+    ],
+    [
+      28,
+      "52820"
+    ],
+    [
+      29,
+      "52808"
+    ],
+    [
+      30,
+      "52762"
+    ],
+    [
+      31,
+      "52729"
+    ],
+    [
+      32,
+      "52680"
+    ],
+    [
+      33,
+      "52663"
+    ],
+    [
+      34,
+      "52645"
+    ],
+    [
+      35,
+      "52629"
+    ],
+    [
+      36,
+      "52611"
+    ],
+    [
+      37,
+      "52580"
+    ],
+    [
+      38,
+      "52540"
+    ],
+    [
+      39,
+      "52516"
+    ],
+    [
+      40,
+      "52438"
+    ],
+    [
+      41,
+      "52433"
+    ]
+  ],
+  "stop_names": {
+    "54200": {
+      "code": "54200",
+      "name": "Station Viau"
+    },
+    "53117": {
+      "code": "53117",
+      "name": "Pierre-De Coubertin / Viau"
+    },
+    "61588": {
+      "code": "61588",
+      "name": "Viau / Hochelaga"
+    },
+    "61589": {
+      "code": "61589",
+      "name": "Viau / de Rouen"
+    },
+    "61590": {
+      "code": "61590",
+      "name": "Viau / Ontario"
+    },
+    "53245": {
+      "code": "53245",
+      "name": "Ontario / Leclaire"
+    },
+    "53231": {
+      "code": "53231",
+      "name": "Ontario / Bennett"
+    },
+    "54213": {
+      "code": "54213",
+      "name": "Ontario / William-David"
+    },
+    "53216": {
+      "code": "53216",
+      "name": "Ontario / Letourneux"
+    },
+    "53189": {
+      "code": "53189",
+      "name": "Ontario / Pie-IX"
+    },
+    "53169": {
+      "code": "53169",
+      "name": "Ontario / d'Orléans"
+    },
+    "53154": {
+      "code": "53154",
+      "name": "Place Simon-Valois (Ontario / Valois)"
+    },
+    "53140": {
+      "code": "53140",
+      "name": "Ontario / De Chambly"
+    },
+    "53122": {
+      "code": "53122",
+      "name": "Ontario / Aylwin"
+    },
+    "53113": {
+      "code": "53113",
+      "name": "Ontario / Davidson"
+    },
+    "53108": {
+      "code": "53108",
+      "name": "Ontario / Saint-Germain"
+    },
+    "53089": {
+      "code": "53089",
+      "name": "Ontario / Moreau"
+    },
+    "61355": {
+      "code": "61355",
+      "name": "Ontario / Lespérance"
+    },
+    "53058": {
+      "code": "53058",
+      "name": "Ontario / Wurtele"
+    },
+    "53027": {
+      "code": "53027",
+      "name": "Ontario / Bercy"
+    },
+    "53007": {
+      "code": "53007",
+      "name": "Station Frontenac (Ontario / Frontenac)"
+    },
+    "52993": {
+      "code": "52993",
+      "name": "Ontario / Dufresne"
+    },
+    "52964": {
+      "code": "52964",
+      "name": "Ontario / Fullum"
+    },
+    "52935": {
+      "code": "52935",
+      "name": "Ontario / Parthenais"
+    },
+    "52896": {
+      "code": "52896",
+      "name": "Ontario / De Lorimier"
+    },
+    "52868": {
+      "code": "52868",
+      "name": "Ontario / Dorion"
+    },
+    "52841": {
+      "code": "52841",
+      "name": "Ontario / Papineau"
+    },
+    "52820": {
+      "code": "52820",
+      "name": "Ontario / De Champlain"
+    },
+    "52808": {
+      "code": "52808",
+      "name": "Ontario / Alexandre-DeSève"
+    },
+    "52762": {
+      "code": "52762",
+      "name": "Ontario / de la Visitation"
+    },
+    "52729": {
+      "code": "52729",
+      "name": "Ontario / Atateken"
+    },
+    "52680": {
+      "code": "52680",
+      "name": "Ontario / Saint-Hubert"
+    },
+    "52663": {
+      "code": "52663",
+      "name": "Ontario / Berri"
+    },
+    "52645": {
+      "code": "52645",
+      "name": "Ontario / Saint-Denis"
+    },
+    "52629": {
+      "code": "52629",
+      "name": "Ontario / de l'Hôtel-de-ville"
+    },
+    "52611": {
+      "code": "52611",
+      "name": "Ontario / Saint-Laurent"
+    },
+    "52580": {
+      "code": "52580",
+      "name": "Ontario / Saint-Urbain"
+    },
+    "52540": {
+      "code": "52540",
+      "name": "Station Place-des-Arts"
+    },
+    "52516": {
+      "code": "52516",
+      "name": "Station Place-des-Arts (Président-Kennedy / De Ble"
+    },
+    "52438": {
+      "code": "52438",
+      "name": "du Président-Kennedy / Aylmer"
+    },
+    "52433": {
+      "code": "52433",
+      "name": "Station McGill (De Maisonneuve / Robert-Bourassa)"
+    }
+  }
+}

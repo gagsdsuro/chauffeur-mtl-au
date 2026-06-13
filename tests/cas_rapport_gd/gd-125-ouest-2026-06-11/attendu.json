@@ -1,0 +1,454 @@
+{
+  "parcours": {
+    "name": "Parcours principal",
+    "start": "Station Viau",
+    "end": "Station McGill (De Maisonneuve / Robert-Bourassa)"
+  },
+  "rows": [
+    {
+      "gd": "Via - Pierre-De Coubertin",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - carrefour giratoire",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - Pierre-De Coubertin",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - Viau",
+      "seq": 1,
+      "stop_id": "54200",
+      "stop_code": "54200",
+      "stop_name": "Station Viau",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 2,
+      "stop_id": "53117",
+      "stop_code": "53117",
+      "stop_name": "Pierre-De Coubertin / Viau",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 3,
+      "stop_id": "61588",
+      "stop_code": "61588",
+      "stop_name": "Viau / Hochelaga",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 4,
+      "stop_id": "61589",
+      "stop_code": "61589",
+      "stop_name": "Viau / de Rouen",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 5,
+      "stop_id": "61590",
+      "stop_code": "61590",
+      "stop_name": "Viau / Ontario",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - Ontario",
+      "seq": 6,
+      "stop_id": "53245",
+      "stop_code": "53245",
+      "stop_name": "Ontario / Leclaire",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 7,
+      "stop_id": "53231",
+      "stop_code": "53231",
+      "stop_name": "Ontario / Bennett",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 8,
+      "stop_id": "54213",
+      "stop_code": "54213",
+      "stop_name": "Ontario / William-David",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 9,
+      "stop_id": "53216",
+      "stop_code": "53216",
+      "stop_name": "Ontario / Letourneux",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 10,
+      "stop_id": "53189",
+      "stop_code": "53189",
+      "stop_name": "Ontario / Pie-IX",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 11,
+      "stop_id": "53169",
+      "stop_code": "53169",
+      "stop_name": "Ontario / d'Orléans",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 12,
+      "stop_id": "53154",
+      "stop_code": "53154",
+      "stop_name": "Place Simon-Valois (Ontario / Valois)",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 13,
+      "stop_id": "53140",
+      "stop_code": "53140",
+      "stop_name": "Ontario / De Chambly",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 14,
+      "stop_id": "53122",
+      "stop_code": "53122",
+      "stop_name": "Ontario / Aylwin",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 15,
+      "stop_id": "53113",
+      "stop_code": "53113",
+      "stop_name": "Ontario / Davidson",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 16,
+      "stop_id": "53108",
+      "stop_code": "53108",
+      "stop_name": "Ontario / Saint-Germain",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 17,
+      "stop_id": "53089",
+      "stop_code": "53089",
+      "stop_name": "Ontario / Moreau",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 18,
+      "stop_id": "61355",
+      "stop_code": "61355",
+      "stop_name": "Ontario / Lespérance",
+      "cancelled": [
+        {
+          "label": "Arrêt déplacé (Situation Incontrôlable) — RAISON CSR",
+          "effectif": "En tout temps",
+          "nom_evt": "Ontario / Lespérance (25 mètres après)"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 19,
+      "stop_id": "53058",
+      "stop_code": "53058",
+      "stop_name": "Ontario / Wurtele",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 20,
+      "stop_id": "53027",
+      "stop_code": "53027",
+      "stop_name": "Ontario / Bercy",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 21,
+      "stop_id": "53007",
+      "stop_code": "53007",
+      "stop_name": "Station Frontenac (Ontario / Frontenac)",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 22,
+      "stop_id": "52993",
+      "stop_code": "52993",
+      "stop_name": "Ontario / Dufresne",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 23,
+      "stop_id": "52964",
+      "stop_code": "52964",
+      "stop_name": "Ontario / Fullum",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 24,
+      "stop_id": "52935",
+      "stop_code": "52935",
+      "stop_name": "Ontario / Parthenais",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 25,
+      "stop_id": "52896",
+      "stop_code": "52896",
+      "stop_name": "Ontario / De Lorimier",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 26,
+      "stop_id": "52868",
+      "stop_code": "52868",
+      "stop_name": "Ontario / Dorion",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 27,
+      "stop_id": "52841",
+      "stop_code": "52841",
+      "stop_name": "Ontario / Papineau",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 28,
+      "stop_id": "52820",
+      "stop_code": "52820",
+      "stop_name": "Ontario / De Champlain",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 29,
+      "stop_id": "52808",
+      "stop_code": "52808",
+      "stop_name": "Ontario / Alexandre-DeSève",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 30,
+      "stop_id": "52762",
+      "stop_code": "52762",
+      "stop_name": "Ontario / de la Visitation",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 31,
+      "stop_id": "52729",
+      "stop_code": "52729",
+      "stop_name": "Ontario / Atateken",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - ONTARIO",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "Détour avec annulation d'arrêt"
+    },
+    {
+      "gd": "Gauche - ST-ANDRÉ",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": ""
+    },
+    {
+      "gd": "Droite - MAISONNEUVE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": ""
+    },
+    {
+      "gd": "Droite - ST-HUBERT",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": ""
+    },
+    {
+      "gd": "Gauche - ONTARIO",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": ""
+    },
+    {
+      "gd": "Via - R.R.",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": ""
+    },
+    {
+      "gd": "",
+      "seq": 32,
+      "stop_id": "52680",
+      "stop_code": "52680",
+      "stop_name": "Ontario / Saint-Hubert",
+      "cancelled": [
+        {
+          "label": "Annulation d'arrêts (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "Ontario / Saint-Hubert"
+        },
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA ONTARIO G ST-ANDRÉ D MAISONNEUVE D ST-HUBERT G ONTARIO VIA RR — TRAVAUX DE7H00 À 19H00",
+          "effectif": "Seulement entre 07:00 et 19:00 chaque jour",
+          "nom_evt": "Ontario / Saint-Hubert"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 33,
+      "stop_id": "52663",
+      "stop_code": "52663",
+      "stop_name": "Ontario / Berri",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 34,
+      "stop_id": "52645",
+      "stop_code": "52645",
+      "stop_name": "Ontario / Saint-Denis",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 35,
+      "stop_id": "52629",
+      "stop_code": "52629",
+      "stop_name": "Ontario / de l'Hôtel-de-ville",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 36,
+      "stop_id": "52611",
+      "stop_code": "52611",
+      "stop_name": "Ontario / Saint-Laurent",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 37,
+      "stop_id": "52580",
+      "stop_code": "52580",
+      "stop_name": "Ontario / Saint-Urbain",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 38,
+      "stop_id": "52540",
+      "stop_code": "52540",
+      "stop_name": "Station Place-des-Arts",
+      "cancelled": [
+        {
+          "label": "Annulation d'arrêts (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "Station Place-des-Arts"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 39,
+      "stop_id": "52516",
+      "stop_code": "52516",
+      "stop_name": "Station Place-des-Arts (Président-Kennedy / De Ble",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - du Président-Kennedy",
+      "seq": 40,
+      "stop_id": "52438",
+      "stop_code": "52438",
+      "stop_name": "du Président-Kennedy / Aylmer",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - Union",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - De Maisonneuve",
+      "seq": 41,
+      "stop_id": "52433",
+      "stop_code": "52433",
+      "stop_name": "Station McGill (De Maisonneuve / Robert-Bourassa)",
+      "cancelled": []
+    }
+  ],
+  "added": [],
+  "orphan_events": []
+}

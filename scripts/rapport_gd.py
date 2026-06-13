@@ -14,11 +14,25 @@ Variantes école : utiliser --ligne 24e, --ligne 168e, etc.
 """
 
 import argparse
-import csv
 import json
-import re
+import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
+
+# ── Noyau de domaine partagé (chauffeur/) ────────────────────────────────────
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+from chauffeur.effectif import parse_shift_time, event_applies_to_shift  # noqa: E402
+from chauffeur.gd import (  # noqa: E402
+    _select_parcours, build_rows, filter_rows_by_stop_range, annotate_events,
+    apply_gd_detours, insert_added_stops_inline,
+)
+from chauffeur import gtfs as _gtfs  # noqa: E402
+
+# Dossier GTFS par défaut ; main() le réaffecte selon --base, les outils de test
+# peuvent le surcharger (rg.GTFS = ...).
+GTFS = PROJECT_ROOT / "data" / "gtfs" / "gtfs_stm"
 
 
 def parse_args():
@@ -47,159 +61,28 @@ def parse_args():
     return p.parse_args()
 
 
-# ── Gestion des heures de quart ───────────────────────────────────────────────
-
-def parse_shift_time(time_str: str, base_date: date) -> datetime:
-    """
-    Convertit une heure de quart en datetime.
-    "22:00" → base_date à 22:00
-    "25:19" → base_date+1 à 01:19  (heure dépassant minuit du quart de nuit)
-    "30:00" → base_date+1 à 06:00
-    """
-    parts = time_str.strip().split(":")
-    total_hours = int(parts[0])
-    minutes = int(parts[1]) if len(parts) > 1 else 0
-    extra_days = total_hours // 24
-    hours = total_hours % 24
-    base_dt = datetime(base_date.year, base_date.month, base_date.day, hours, minutes)
-    return base_dt + timedelta(days=extra_days)
-
-
-def parse_effectif_times(effectif: str):
-    """
-    Extrait une plage horaire journalière depuis le champ effectif.
-    Retourne (h_debut, m_debut, h_fin, m_fin) ou None si non trouvé.
-
-    Exemples reconnus :
-      "Seulement entre 12:00 et 19:00 chaque jour"
-      "12H00 À 19H00"
-      "entre 7h30 et 23h00"
-    """
-    # Format "HH:MM à HH:MM" ou "HHhMM à HHhMM"
-    m = re.search(
-        r'(\d{1,2})[h:](\d{2})\s*[àa]\s*(\d{1,2})[h:](\d{2})',
-        effectif, re.IGNORECASE
-    )
-    if m:
-        return (int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4)))
-    # Format "entre HH:MM et HH:MM"
-    m = re.search(
-        r'entre\s+(\d{1,2})[h:](\d{2})\s+et\s+(\d{1,2})[h:](\d{2})',
-        effectif, re.IGNORECASE
-    )
-    if m:
-        return (int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4)))
-    return None
-
-
-def _day_range(start: datetime, end: datetime):
-    """Génère tous les objets date entre start et end (inclus)."""
-    d = start.date()
-    while d <= end.date():
-        yield d
-        d += timedelta(days=1)
-
-
-def event_applies_to_shift(event: dict, shift_start: datetime, shift_end: datetime) -> bool:
-    """
-    Détermine si un événement est actif pendant la plage de quart donnée.
-
-    Critères :
-    1. La plage de validité de l'événement (date_heure_debut / date_heure_fin)
-       doit chevaucher [shift_start, shift_end].
-    2. Le champ effectif peut restreindre :
-       - Les jours de la semaine (lundi-vendredi, fins de semaine…)
-       - Une plage horaire quotidienne (ex. "12:00 à 19:00")
-    """
-    debut_str = event.get("date_heure_debut")
-    fin_str   = event.get("date_heure_fin")
-
-    event_start = datetime.fromisoformat(debut_str) if debut_str else datetime.min
-    event_end   = datetime.fromisoformat(fin_str)   if fin_str   else datetime.max
-
-    # 1. Chevauchement de la plage de validité
-    if event_end < shift_start or event_start > shift_end:
-        return False
-
-    effectif = (event.get("effectif") or "").strip()
-
-    # 2. Filtre jour de la semaine
-    weekdays_in_shift = {d.weekday() for d in _day_range(shift_start, shift_end)}
-    if re.search(r'lundi.*vendredi|jour.*semaine|semaine(?!\s*de)', effectif, re.IGNORECASE):
-        if not any(w < 5 for w in weekdays_in_shift):
-            return False
-    elif re.search(r'fin.*semaine|samedi.*dimanche|week.?end', effectif, re.IGNORECASE):
-        if not any(w >= 5 for w in weekdays_in_shift):
-            return False
-
-    # 3. Filtre plage horaire quotidienne
-    tw = parse_effectif_times(effectif)
-    if tw:
-        h_s, m_s, h_e, m_e = tw
-        overlaps = False
-        for d in _day_range(shift_start, shift_end):
-            w_start = datetime(d.year, d.month, d.day, h_s, m_s)
-            w_end   = datetime(d.year, d.month, d.day, h_e, m_e)
-            # Si fin ≤ début → la fenêtre passe minuit
-            if w_end <= w_start:
-                w_end += timedelta(days=1)
-            if w_start < shift_end and w_end > shift_start:
-                overlaps = True
-                break
-        if not overlaps:
-            return False
-
-    return True
+# Logique d'effectif (parse_shift_time, event_applies_to_shift) : importée de
+# chauffeur.effectif (cf. en-tête).
 
 
 # ── Chargement des données ────────────────────────────────────────────────────
 
+# Accès GTFS : délégué à chauffeur.gtfs (dossier GTFS injecté). Wrappers minces
+# conservant l'API historique (rg.get_route_id, …) liée à la variable GTFS.
 def get_route_id(ligne):
-    with open(GTFS / "routes.txt") as f:
-        for r in csv.DictReader(f):
-            if r["route_short_name"] == ligne:
-                return r["route_id"]
-    raise ValueError(f"Ligne {ligne} introuvable dans GTFS")
+    return _gtfs.route_id(GTFS, ligne)
 
 
 def get_direction_id(route_id, direction):
-    # Limite de mot (\b) : évite que "est" matche dans "ouest"
-    pattern = re.compile(r'\b' + re.escape(direction.lower()) + r'\b', re.IGNORECASE)
-    seen = {}
-    with open(GTFS / "trips.txt") as f:
-        for r in csv.DictReader(f):
-            if r["route_id"] == route_id:
-                seen[r["direction_id"]] = r["trip_headsign"]
-                if pattern.search(r["trip_headsign"]):
-                    return r["direction_id"]
-    raise ValueError(f"Direction '{direction}' introuvable. Disponibles: {seen}")
+    return _gtfs.direction_id(GTFS, route_id, direction)
 
 
 def get_stops_for_line(route_id, dir_id):
-    trip_ids = set()
-    with open(GTFS / "trips.txt") as f:
-        for r in csv.DictReader(f):
-            if r["route_id"] == route_id and r["direction_id"] == dir_id:
-                trip_ids.add(r["trip_id"])
-
-    trip_stops = {}
-    with open(GTFS / "stop_times.txt") as f:
-        for r in csv.DictReader(f):
-            if r["trip_id"] in trip_ids:
-                trip_stops.setdefault(r["trip_id"], []).append(
-                    (int(r["stop_sequence"]), r["stop_id"])
-                )
-
-    best = max(trip_stops, key=lambda t: len(trip_stops[t]))
-    return [(seq, sid) for seq, sid in sorted(trip_stops[best])]
+    return _gtfs.stops_for_line(GTFS, route_id, dir_id)
 
 
 def load_stop_names():
-    stops = {}
-    with open(GTFS / "stops.txt") as f:
-        for r in csv.DictReader(f):
-            stops[r["stop_id"]] = {"code": r["stop_code"], "name": r["stop_name"]}
-    return stops
+    return _gtfs.stop_names(GTFS)
 
 
 def list_parcours(ligne, direction, base):
@@ -226,19 +109,6 @@ def list_parcours(ligne, direction, base):
         }
         for p in routes[0].get("parcours", [])
     ]
-
-
-def _select_parcours(all_parcours, hint):
-    """
-    Choisit un parcours selon un mot-clé dans le nom, ou le premier par défaut.
-    """
-    if hint and all_parcours:
-        h = hint.strip().lower()
-        for p in all_parcours:
-            if h in p.get("name", "").lower():
-                return p
-        print(f"  ⚠ Parcours '{hint}' introuvable — utilisation du premier parcours.")
-    return all_parcours[0] if all_parcours else {}
 
 
 def load_gd(ligne, direction, base, parcours_hint=None):
@@ -294,374 +164,6 @@ def load_events(ligne, direction, base,
 
     return active
 
-
-# ── Alignement G-D / arrêts ───────────────────────────────────────────────────
-
-def extract_street(instruction):
-    """'Gauche - Lafleur' → 'lafleur'"""
-    parts = instruction.split(" - ", 1)
-    return parts[1].strip().lower() if len(parts) == 2 else instruction.lower()
-
-
-def build_rows(gd_instructions, stops_ordered, stop_names):
-    """
-    Aligne les instructions G-D avec les arrêts GTFS par correspondance de rue.
-    Retourne une liste de dicts : {gd, seq, stop_id, stop_name, stop_code}
-
-    Alignement à deux pointeurs (instructions / arrêts), tous deux monotones :
-      - Pour chaque arrêt, on cherche la première instruction restante dont la rue
-        figure dans le nom de l'arrêt. On compare d'abord à la **rue principale**
-        (avant le « / »), pour qu'un arrêt « René-Lévesque / Berlioz » s'associe à
-        « Droite - René-Lévesque » plutôt qu'à « Droite - Berlioz ».
-      - Les instructions sautées (segments sans arrêt GTFS : autoroutes, virages)
-        sont émises sans arrêt, dans l'ordre.
-      - Un arrêt qui ne correspond à aucune instruction restante (terminus/stations
-        nommés différemment, ex. « Station McGill ») est rattaché au groupe courant
-        (l'instruction active la plus récente), sans bloquer l'alignement.
-    """
-    streets = [extract_street(instr) for instr in gd_instructions]
-    n_instr = len(gd_instructions)
-    n_stops = len(stops_ordered)
-
-    def _match_index(name_low, start):
-        """Première instruction >= start dont la rue est dans le nom (rue principale d'abord)."""
-        primary = name_low.split(" / ", 1)[0]
-        for haystack in (primary, name_low):
-            for k in range(start, n_instr):
-                if streets[k] and streets[k] in haystack:
-                    return k
-        return None
-
-    rows = []
-    cur = -1            # instruction active (dernier appariement), -1 si aucune
-    emitted = -1        # index de la dernière instruction déjà écrite
-
-    for seq, sid in stops_ordered:
-        name_low = stop_names.get(sid, {}).get("name", "").lower()
-        search_start = cur if cur >= 0 else 0
-        j = _match_index(name_low, search_start)
-
-        if j is None:
-            # Arrêt orphelin : rattaché au groupe courant (cellule G-D vide).
-            rows.append({"gd": "", "seq": seq, "stop_id": sid})
-            continue
-
-        if j == cur:
-            # Même rue que l'instruction active : arrêt groupé.
-            rows.append({"gd": "", "seq": seq, "stop_id": sid})
-            continue
-
-        # Nouvelle instruction : émet d'abord les instructions sautées (sans arrêt).
-        for k in range(emitted + 1, j):
-            rows.append({"gd": gd_instructions[k], "seq": None, "stop_id": None})
-        rows.append({"gd": gd_instructions[j], "seq": seq, "stop_id": sid})
-        emitted = j
-        cur = j
-
-    # Instructions restantes sans arrêt
-    for k in range(emitted + 1, n_instr):
-        rows.append({"gd": gd_instructions[k], "seq": None, "stop_id": None})
-
-    # Enrichissement avec les noms
-    for r in rows:
-        if r["stop_id"]:
-            s = stop_names.get(r["stop_id"], {})
-            r["stop_code"] = s.get("code", "")
-            r["stop_name"] = s.get("name", "")
-        else:
-            r["stop_code"] = ""
-            r["stop_name"] = ""
-    return rows
-
-
-def filter_rows_by_stop_range(rows, arret_debut, arret_fin):
-    """
-    Tronque la liste de lignes selon les codes d'arrêt de départ et de fin.
-    Si un code n'est pas trouvé, un avertissement est émis et la borne est ignorée.
-    """
-    if not arret_debut and not arret_fin:
-        return rows
-
-    start_idx = 0
-    end_idx = len(rows) - 1
-
-    if arret_debut:
-        found = next(
-            (i for i, r in enumerate(rows) if r.get("stop_code") == str(arret_debut)),
-            None,
-        )
-        if found is not None:
-            start_idx = found
-        else:
-            print(f"  ⚠ Arrêt de départ '{arret_debut}' introuvable dans les arrêts GTFS — borne ignorée.")
-
-    if arret_fin:
-        found = next(
-            (i for i, r in enumerate(rows) if r.get("stop_code") == str(arret_fin)),
-            None,
-        )
-        if found is not None:
-            end_idx = found
-        else:
-            print(f"  ⚠ Arrêt de fin '{arret_fin}' introuvable dans les arrêts GTFS — borne ignorée.")
-
-    return rows[start_idx : end_idx + 1]
-
-
-def annotate_events(rows, events):
-    """
-    Ajoute les annotations d'événements aux lignes du tableau.
-    Chaque ligne annulée reçoit une liste d'objets :
-      {"label": str, "effectif": str}
-
-    Retourne (rows, added, orphan_events) où orphan_events contient les
-    événements dont aucun arrêt annulé ne figure dans le trajet GTFS
-    sélectionné (ils sont affichés dans une section "Alertes" séparée).
-    """
-    cancelled_ids = {}   # stop_id -> list of {label, effectif}
-    added = []           # arrêts ajoutés avec descriptions
-    stop_ids_in_rows = {r["stop_id"] for r in rows if r.get("stop_id")}
-
-    for e in events:
-        titre       = e.get("titre", "")
-        motif       = e.get("motif", "")
-        effectif    = (e.get("effectif") or "").strip()
-        desc        = e.get("description_gd", "") or ""
-        commentaire = e.get("commentaire", "") or ""
-        label = f"{titre} ({motif})"
-        if desc:
-            label += f" — G-D: {desc}"
-        if commentaire:
-            label += f" — {commentaire}"
-
-        for a in e.get("arrets_annules", []):
-            cancelled_ids.setdefault(a["id"], []).append(
-                {"label": label, "effectif": effectif, "nom_evt": a.get("nom", "")}
-            )
-        for a in e.get("arrets_ajoutes", []):
-            name = a if isinstance(a, str) else a.get("nom", "")
-            added.append({"name": name, "label": label, "effectif": effectif})
-
-    for r in rows:
-        sid = r.get("stop_id")
-        if sid and sid in cancelled_ids:
-            r["cancelled"] = cancelled_ids[sid]
-        else:
-            r["cancelled"] = []
-
-    # Événements dont les arrêts annulés ne figurent pas dans le trajet GTFS
-    orphan_events = []
-    for e in events:
-        arrets = e.get("arrets_annules", [])
-        if arrets and not any(a["id"] in stop_ids_in_rows for a in arrets):
-            orphan_events.append(e)
-
-    return rows, added, orphan_events
-
-
-# ── Intégration G-D des détours ───────────────────────────────────────────────
-
-_RR_RE = re.compile(r'^R[.\s]?R\.?$', re.IGNORECASE)
-
-
-def parse_description_gd(desc: str):
-    """
-    Tente de parser une description_gd en liste d'instructions normalisées.
-    Retourne ["Via - X", "Gauche - Y", ...] ou None (texte libre).
-    """
-    if not desc:
-        return None
-    if not re.search(r'\b(VIA\s+\w|G[/.\s]\w|D[/.\s]\w)', desc, re.IGNORECASE):
-        return None
-
-    if '\n' in desc:
-        raw = [l.strip() for l in desc.split('\n') if l.strip()]
-    else:
-        raw = re.split(r'(?=\bVIA\b|\bG[/.\s]|\bD[/.\s])', desc.strip(), flags=re.IGNORECASE)
-        raw = [p.strip() for p in raw if p.strip()]
-
-    instructions = []
-    for part in raw:
-        part = part.strip().rstrip('.')
-        m = re.match(r'^VIA\s+(.+)$', part, re.IGNORECASE)
-        if m:
-            text = m.group(1).strip()
-            instructions.append("Via - R.R." if _RR_RE.match(text) else f"Via - {text}")
-            continue
-        m = re.match(r'^G[/.\s]\s*(.+)$', part, re.IGNORECASE)
-        if m:
-            instructions.append(f"Gauche - {m.group(1).strip()}")
-            continue
-        m = re.match(r'^D[/.\s]\s*(.+)$', part, re.IGNORECASE)
-        if m:
-            instructions.append(f"Droite - {m.group(1).strip()}")
-            continue
-        instructions.append(f"Via - {part}")
-
-    return instructions if instructions else None
-
-
-def apply_gd_detours(rows: list, events: list) -> list:
-    """
-    Pour chaque événement avec une description_gd parseable :
-    - Insère les étapes du détour avant le premier arrêt annulé (detour_added=True)
-    - Marque les instructions G-D régulières contournées (detour_removed=True)
-    """
-    for event in events:
-        desc = event.get("description_gd") or ""
-        instructions = parse_description_gd(desc)
-        if not instructions:
-            continue
-
-        cancelled_codes = {a["id"] for a in event.get("arrets_annules", [])}
-
-        cancelled_positions = [
-            i for i, r in enumerate(rows)
-            if r.get("stop_code") in cancelled_codes
-        ]
-
-        if cancelled_positions:
-            first_pos = cancelled_positions[0]
-            last_pos  = cancelled_positions[-1]
-        else:
-            first_pos = 0
-            last_pos  = -1
-
-        # Étendre last_pos pour inclure les instructions G-D sans arrêt GTFS
-        # qui suivent immédiatement le dernier arrêt annulé.
-        # Ex. : "Gauche - Clément" dont le stop a été consommé par une
-        # instruction précédente ("Droite - Clément") et qui se retrouve
-        # sans stop_code → tombe en dehors de la plage sans cette extension.
-        if last_pos >= 0:
-            i = last_pos + 1
-            while i < len(rows):
-                sc = rows[i].get("stop_code", "")
-                if sc and sc not in cancelled_codes:
-                    break  # premier arrêt régulier non annulé : fin de la zone
-                last_pos = i
-                i += 1
-
-        # Toutes les instructions G-D dans la plage sont contournées,
-        # y compris celles associées à un arrêt annulé.
-        if last_pos >= first_pos:
-            for i in range(first_pos, last_pos + 1):
-                r = rows[i]
-                if r.get("gd") and not r.get("detour_added"):
-                    r["detour_removed"] = True
-
-        label = event.get("titre", "")
-        detour_rows = [
-            {
-                "gd": instr,
-                "seq": None,
-                "stop_id": None,
-                "stop_code": "",
-                "stop_name": "",
-                "cancelled": [],
-                "detour_added": True,
-                "detour_label": label if i == 0 else "",
-            }
-            for i, instr in enumerate(instructions)
-        ]
-
-        rows = rows[:first_pos] + detour_rows + rows[first_pos:]
-
-    return rows
-
-
-# ── Placement inline des arrêts ajoutés ──────────────────────────────────────
-
-def _normalize_street(s: str) -> str:
-    """Normalise un nom de rue pour la comparaison : minuscules, sans accents ni tirets."""
-    import unicodedata
-    s = unicodedata.normalize("NFD", s.lower())
-    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
-    s = re.sub(r"[-\s]+", " ", s).strip()
-    return s
-
-
-def _parse_added_stop(name: str):
-    """
-    Extrait (rue_principale, rue_transversale) normalisées depuis le nom
-    d'un arrêt ajouté.
-    "Temp. - Clément / Lafleur"        → ("clement", "lafleur")
-    "56472 - Notre-Dame / Saint-Pierre" → ("notre dame", "saint pierre")
-    "Temp. - ST PATRICK / ST PATRICK"  → ("st patrick", "st patrick")
-    """
-    m = re.match(r'^(?:Temp\.|[\d]+)\s*[-–]\s*(.+)$', name, re.IGNORECASE)
-    clean = m.group(1).strip() if m else name.strip()
-    parts = [_normalize_street(p) for p in clean.split("/")]
-    main  = parts[0] if parts else None
-    cross = parts[1] if len(parts) >= 2 else None
-    return main, cross
-
-
-def insert_added_stops_inline(rows: list, added: list) -> tuple:
-    """
-    Tente de placer chaque arrêt ajouté directement dans le tableau,
-    après l'instruction de détour qui longe la rue principale de l'arrêt.
-
-    Logique de placement :
-      1. Cherche les lignes detour_added dont la rue correspond à la rue
-         principale de l'arrêt.
-      2. Parmi elles, préfère celle immédiatement suivie d'une instruction
-         sur la rue transversale (= on est au bon coin de rue).
-      3. Insère un arrêt vert juste après cette instruction.
-
-    Retourne (rows_mis_à_jour, still_added) où still_added contient les
-    arrêts qui n'ont pas pu être positionnés inline.
-    """
-    still_added = []
-
-    for stop_info in added:
-        name = stop_info["name"]
-        main_street, cross_street = _parse_added_stop(name)
-        if not main_street:
-            still_added.append(stop_info)
-            continue
-
-        # Candidats : indices des lignes detour_added dont la rue ≈ main_street
-        candidates = []
-        for i, r in enumerate(rows):
-            if not r.get("detour_added") or not r.get("gd"):
-                continue
-            instr_street = _normalize_street(extract_street(r["gd"]))
-            if main_street in instr_street or instr_street in main_street:
-                candidates.append(i)
-
-        best_idx = None
-        if candidates:
-            if cross_street:
-                # Préfère le candidat suivi d'une instruction sur la rue transversale
-                for idx in candidates:
-                    j = idx + 1
-                    while j < len(rows) and rows[j].get("detour_added") and not rows[j].get("gd"):
-                        j += 1
-                    if j < len(rows) and rows[j].get("detour_added") and rows[j].get("gd"):
-                        next_street = _normalize_street(extract_street(rows[j]["gd"]))
-                        if cross_street in next_street or next_street in cross_street:
-                            best_idx = idx
-                            break
-            if best_idx is None:
-                best_idx = candidates[-1]  # dernier candidat sur cette rue
-
-        if best_idx is not None:
-            new_row = {
-                "gd": "",
-                "seq": None,
-                "stop_id": None,
-                "stop_code": "",
-                "stop_name": name,
-                "cancelled": [],
-                "added_inline": True,
-                "added_label": stop_info.get("label", ""),
-                "effectif":    stop_info.get("effectif", ""),
-            }
-            rows = rows[: best_idx + 1] + [new_row] + rows[best_idx + 1 :]
-        else:
-            still_added.append(stop_info)
-
-    return rows, still_added
 
 
 # ── Formatage de la plage de quart ────────────────────────────────────────────

@@ -1,0 +1,70 @@
+[
+  {
+    "evenement_id": "10700602",
+    "titre": "Annulation d'arrêts",
+    "motif": "Situation Incontrôlable",
+    "date_heure_debut": "2025-12-22T08:17:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "52517",
+        "nom": "Station Place-des-Arts (Pr.-Kennedy/Bleury)"
+      }
+    ],
+    "description_gd": null,
+    "commentaire": "***ARRÊT # 52517 PRÉSIDENT-KENNEDY/DE BLEUR ANNULÉ A/C OBILAGATION DE TOURNER À DROITE***",
+    "arrets_ajoutes": []
+  },
+  {
+    "evenement_id": "11154688",
+    "titre": "Arrêt déplacé",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-03-08T12:03:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "52681",
+        "nom": "Ontario / Saint-Hubert (10 mètres avant)"
+      }
+    ],
+    "description_gd": null,
+    "commentaire": null,
+    "arrets_ajoutes": []
+  },
+  {
+    "evenement_id": "11188805",
+    "titre": "Annulation d'arrêts",
+    "motif": "Situation Incontrôlable",
+    "date_heure_debut": "2026-04-11T09:23:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "53141",
+        "nom": "Ontario / De Chambly"
+      }
+    ],
+    "description_gd": null,
+    "commentaire": null,
+    "arrets_ajoutes": []
+  },
+  {
+    "evenement_id": "11191753",
+    "titre": "Arrêt déplacé",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-04-14T15:42:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "52731",
+        "nom": "Ontario / Atateken (50 mètres après)"
+      }
+    ],
+    "description_gd": null,
+    "commentaire": null,
+    "arrets_ajoutes": []
+  }
+]
