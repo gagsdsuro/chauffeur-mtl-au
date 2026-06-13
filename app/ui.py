@@ -264,12 +264,20 @@ with tabs[0]:
                             st.caption(f"Aucun fichier G-D pour la ligne {ligne}.")
                             continue
 
-                        for gd in gd_files:
+                        segments = line_tr.get(ligne, [])
+                        # N'afficher que les directions réellement travaillées ce
+                        # jour-là : un trajet de la carte agent doit correspondre au
+                        # parcours G-D (tr non None). Repli : si aucune direction
+                        # n'est appariée (ligne sans horaire exploitable ou noms
+                        # divergents), tout afficher pour ne rien masquer à tort.
+                        gd_tr = [(gd, get_time_range_for_direction(gd["path"], segments))
+                                 for gd in gd_files]
+                        travaillees = [(gd, tr) for gd, tr in gd_tr if tr is not None] or gd_tr
+
+                        for gd, tr in travaillees:
                             direction = gd["direction"]
                             evt_path  = EVENTS_DIR / f"{ligne}_{direction}.json"
                             evt_mtime = get_event_file_mtime(ligne, direction, DATA_DIR)
-                            segments  = line_tr.get(ligne, [])
-                            tr        = get_time_range_for_direction(gd["path"], segments)
 
                             # ── Ligne d'info ───────────────────────────────────
                             ci1, ci2, ci3, ci4 = st.columns([1, 3, 3, 2])
