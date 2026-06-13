@@ -11,6 +11,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 # ── Chemins ───────────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -399,7 +400,7 @@ with tabs[0]:
                                             key=f"db_rpt_dl_{ligne}_{direction}",
                                         )
                                         with st.expander(f"Aperçu — {ligne} {direction}", expanded=True):
-                                            st.components.v1.html(
+                                            components.html(
                                                 rpt_html.decode("utf-8"), height=600, scrolling=True
                                             )
                                     else:
@@ -691,7 +692,7 @@ with tabs[2]:
                         )
                         if gdr_format == "html":
                             with st.expander("Aperçu HTML"):
-                                st.components.v1.html(content.decode("utf-8"), height=600, scrolling=True)
+                                components.html(content.decode("utf-8"), height=600, scrolling=True)
                     else:
                         st.error("Erreur lors de la génération.")
 
