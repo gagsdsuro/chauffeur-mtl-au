@@ -1,0 +1,254 @@
+{
+  "stops": [
+    [
+      1,
+      "54188"
+    ],
+    [
+      2,
+      "53065"
+    ],
+    [
+      3,
+      "53079"
+    ],
+    [
+      4,
+      "53094"
+    ],
+    [
+      5,
+      "53110"
+    ],
+    [
+      6,
+      "53119"
+    ],
+    [
+      7,
+      "53137"
+    ],
+    [
+      8,
+      "53172"
+    ],
+    [
+      9,
+      "53181"
+    ],
+    [
+      10,
+      "53193"
+    ],
+    [
+      11,
+      "53213"
+    ],
+    [
+      12,
+      "53227"
+    ],
+    [
+      13,
+      "53236"
+    ],
+    [
+      14,
+      "53244"
+    ],
+    [
+      15,
+      "53259"
+    ],
+    [
+      16,
+      "53271"
+    ],
+    [
+      17,
+      "53286"
+    ],
+    [
+      18,
+      "53299"
+    ],
+    [
+      19,
+      "53310"
+    ],
+    [
+      20,
+      "53325"
+    ],
+    [
+      21,
+      "53331"
+    ],
+    [
+      22,
+      "53343"
+    ],
+    [
+      23,
+      "53354"
+    ],
+    [
+      24,
+      "53348"
+    ],
+    [
+      25,
+      "53333"
+    ],
+    [
+      26,
+      "53317"
+    ],
+    [
+      27,
+      "53295"
+    ],
+    [
+      28,
+      "53274"
+    ],
+    [
+      29,
+      "53223"
+    ],
+    [
+      30,
+      "53166"
+    ],
+    [
+      31,
+      "53753"
+    ]
+  ],
+  "stop_names": {
+    "54188": {
+      "code": "54188",
+      "name": "Station Papineau (Dorion / Sainte-Catherine)"
+    },
+    "53065": {
+      "code": "53065",
+      "name": "Sainte-Catherine / De Lorimier"
+    },
+    "53079": {
+      "code": "53079",
+      "name": "Sainte-Catherine / Parthenais"
+    },
+    "53094": {
+      "code": "53094",
+      "name": "Sainte-Catherine / Fullum"
+    },
+    "53110": {
+      "code": "53110",
+      "name": "Sainte-Catherine / Dufresne"
+    },
+    "53119": {
+      "code": "53119",
+      "name": "Sainte-Catherine / D'Iberville"
+    },
+    "53137": {
+      "code": "53137",
+      "name": "Sainte-Catherine / du Havre"
+    },
+    "53172": {
+      "code": "53172",
+      "name": "Sainte-Catherine / Alphonse-D.-Roy"
+    },
+    "53181": {
+      "code": "53181",
+      "name": "Sainte-Catherine / Moreau"
+    },
+    "53193": {
+      "code": "53193",
+      "name": "Sainte-Catherine / Dézéry"
+    },
+    "53213": {
+      "code": "53213",
+      "name": "Sainte-Catherine / Davidson"
+    },
+    "53227": {
+      "code": "53227",
+      "name": "Sainte-Catherine / Aylwin"
+    },
+    "53236": {
+      "code": "53236",
+      "name": "Sainte-Catherine / Nicolet"
+    },
+    "53244": {
+      "code": "53244",
+      "name": "Sainte-Catherine / Bourbonnière"
+    },
+    "53259": {
+      "code": "53259",
+      "name": "Sainte-Catherine / Jeanne-d'Arc"
+    },
+    "53271": {
+      "code": "53271",
+      "name": "Sainte-Catherine / Pie-IX"
+    },
+    "53286": {
+      "code": "53286",
+      "name": "Sainte-Catherine / Letourneux"
+    },
+    "53299": {
+      "code": "53299",
+      "name": "Sainte-Catherine / William-David"
+    },
+    "53310": {
+      "code": "53310",
+      "name": "Sainte-Catherine / Aird"
+    },
+    "53325": {
+      "code": "53325",
+      "name": "Sainte-Catherine / Leclaire"
+    },
+    "53331": {
+      "code": "53331",
+      "name": "Sainte-Catherine / Saint-Clément"
+    },
+    "53343": {
+      "code": "53343",
+      "name": "Sainte-Catherine / Vimont"
+    },
+    "53354": {
+      "code": "53354",
+      "name": "Sainte-Catherine / Notre-Dame"
+    },
+    "53348": {
+      "code": "53348",
+      "name": "Notre-Dame / Viau"
+    },
+    "53333": {
+      "code": "53333",
+      "name": "Viau / Sainte-Catherine"
+    },
+    "53317": {
+      "code": "53317",
+      "name": "Viau / Adam"
+    },
+    "53295": {
+      "code": "53295",
+      "name": "Viau / La Fontaine"
+    },
+    "53274": {
+      "code": "53274",
+      "name": "Viau / Ontario"
+    },
+    "53223": {
+      "code": "53223",
+      "name": "Viau / de Rouen"
+    },
+    "53166": {
+      "code": "53166",
+      "name": "Viau / Hochelaga"
+    },
+    "53753": {
+      "code": "53753",
+      "name": "Station Viau"
+    }
+  }
+}

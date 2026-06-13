@@ -170,7 +170,8 @@ def annotate_events(rows, events):
             )
         for a in e.get("arrets_ajoutes", []):
             name = a if isinstance(a, str) else a.get("nom", "")
-            added.append({"name": name, "label": label, "effectif": effectif})
+            added.append({"name": name, "label": label, "effectif": effectif,
+                          "evenement_id": e.get("evenement_id", "")})
 
     for r in rows:
         sid = r.get("stop_id")
@@ -290,6 +291,7 @@ def apply_gd_detours(rows: list, events: list) -> list:
                 "cancelled": [],
                 "detour_added": True,
                 "detour_label": label if i == 0 else "",
+                "evenement_id": event.get("evenement_id", ""),
             }
             for i, instr in enumerate(instructions)
         ]
@@ -341,10 +343,16 @@ def insert_added_stops_inline(rows: list, added: list) -> tuple:
             still_added.append(stop_info)
             continue
 
-        # Candidats : indices des lignes detour_added dont la rue ≈ main_street
+        # Candidats : lignes detour_added du MÊME événement dont la rue ≈ main_street.
+        # Restreindre à l'événement d'origine évite qu'un arrêt ajouté atterrisse
+        # dans le détour d'un autre événement (deux détours peuvent partager un nom
+        # de rue, ex. « Gauche Ste-Catherine »).
+        ev_id = stop_info.get("evenement_id", "")
         candidates = []
         for i, r in enumerate(rows):
             if not r.get("detour_added") or not r.get("gd"):
+                continue
+            if ev_id and r.get("evenement_id", "") != ev_id:
                 continue
             instr_street = normalize_street(extract_street(r["gd"]))
             if main_street in instr_street or instr_street in main_street:
@@ -354,11 +362,16 @@ def insert_added_stops_inline(rows: list, added: list) -> tuple:
         if candidates:
             if cross_street:
                 # Préfère le candidat suivi d'une instruction sur la rue transversale
+                # (du même événement).
                 for idx in candidates:
                     j = idx + 1
-                    while j < len(rows) and rows[j].get("detour_added") and not rows[j].get("gd"):
+                    while (j < len(rows) and rows[j].get("detour_added")
+                           and rows[j].get("evenement_id", "") == rows[idx].get("evenement_id", "")
+                           and not rows[j].get("gd")):
                         j += 1
-                    if j < len(rows) and rows[j].get("detour_added") and rows[j].get("gd"):
+                    if (j < len(rows) and rows[j].get("detour_added")
+                            and rows[j].get("evenement_id", "") == rows[idx].get("evenement_id", "")
+                            and rows[j].get("gd")):
                         next_street = normalize_street(extract_street(rows[j]["gd"]))
                         if cross_street in next_street or next_street in cross_street:
                             best_idx = idx
