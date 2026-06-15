@@ -422,6 +422,7 @@ def render_md(rows, added, args, parcours, shift_start=None, shift_end=None, orp
         effectif_str = ""
         if cancelled:
             seen_eff = set()
+            eff_ordered = []          # ordre stable (déduplication via seen_eff)
             ev_parts = []
             precision_parts = []
             for ev in cancelled:
@@ -429,12 +430,13 @@ def render_md(rows, added, args, parcours, shift_start=None, shift_end=None, orp
                 eff = ev.get("effectif", "")
                 if eff and eff not in seen_eff:
                     seen_eff.add(eff)
+                    eff_ordered.append(eff)
                 nom_evt = ev.get("nom_evt", "")
                 if nom_evt and nom_evt != name:
                     precision_parts.append(f"📍 {nom_evt}")
             precision = " ".join(precision_parts)
             name = f"~~{name}~~ {precision} ❌ " + " / ".join(ev_parts)
-            effectif_str = " / ".join(seen_eff)
+            effectif_str = " / ".join(eff_ordered)
 
         lines.append(f"| {seq} | {gd} | {code} | {name} | {effectif_str} |")
 

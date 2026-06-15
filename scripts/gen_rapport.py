@@ -237,11 +237,14 @@ def page2_detours(data):
     ))
     story.append(HRFlowable(width='100%', thickness=2, color=BLUE, spaceAfter=5))
 
+    # NB : '⚠' (U+26A0) ne se rend pas avec la police Helvetica de reportlab
+    # (carré noir) — on utilise '▲', qui se rend correctement. Les autres
+    # symboles (✗ ! • → ← ↑ ●) passent bien.
     TYPE_SYMBOL = {
         "annulation d'arrêts"            : '✗',
         "arrêt déplacé"                  : '!',
-        "détour avec annulation d'arrêt" : '⚠',
-        "détour"                         : '⚠',
+        "détour avec annulation d'arrêt" : '▲',
+        "détour"                         : '▲',
     }
 
     def _symbol(titre):
