@@ -171,12 +171,23 @@ def get_time_range_for_direction(
     if not gd_endpoints:
         return None
 
+    # Phase 1 : match complet (départ ≈ gd_s ET arrivée ≈ gd_e).
     matching: list[dict] = []
     for seg in segments:
         for (gd_s, gd_e) in gd_endpoints:
             if _stops_match(seg["debut_stop"], gd_s) and _stops_match(seg["fin_stop"], gd_e):
                 matching.append(seg)
                 break
+
+    # Phase 2 : si aucun match complet, repli sur la destination seule (fin_stop ≈ gd_e).
+    # Gère les trajets débutant en cours de parcours (point de relève ou accès partiel),
+    # ex. 777 Est — G-D : Casino → Jean-Drapeau, carte agent : Gauchetière → Jean-Drapeau.
+    if not matching:
+        for seg in segments:
+            for (_, gd_e) in gd_endpoints:
+                if _stops_match(seg["fin_stop"], gd_e):
+                    matching.append(seg)
+                    break
 
     if not matching:
         return None
