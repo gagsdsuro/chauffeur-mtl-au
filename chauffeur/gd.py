@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 
-from .matching import normalize_street
+from .matching import normalize_street, stops_match
 
 
 def _select_parcours(all_parcours, hint):
@@ -232,11 +232,94 @@ def parse_description_gd(desc: str):
     return instructions if instructions else None
 
 
+def _regular_steps(rows: list) -> list:
+    """Indices des étapes G-D régulières (avec une rue), hors étapes de détour."""
+    return [i for i, r in enumerate(rows)
+            if r.get("gd") and not r.get("detour_added")]
+
+
+def _anchor_detour_span(rows: list, instructions: list, max_gap: int = 2):
+    """
+    Détour sans arrêt annulé : on ne peut pas ancrer sur un arrêt contourné.
+    On ancre sur les rues d'entrée et de rejointe lues dans la description_gd :
+
+      - rue d'entrée   = 1re instruction du détour ;
+      - rue de rejointe = dernière instruction *avant* le « R.R. » final.
+
+    Règle :
+      1. ancre = dernière étape G-D régulière matchant la rue d'entrée et située
+         avant la 1re étape matchant la rue de rejointe (gère les parcours qui
+         passent 2× la même rue, ex. Bonaventure) ;
+      2. fin du contournement = dernier match de la rue de rejointe dans la
+         *grappe contiguë* qui suit (tolérance de `max_gap` étapes « connecteur »
+         non-matchantes, ex. « carrefour giratoire »), pour ne pas avaler une
+         réapparition lointaine de la même rue ;
+      3. le détour s'insère APRÈS l'ancre et barre les étapes (ancre, fin].
+
+    Retourne (insert_pos, bypass_end). bypass_end == -1 si rien n'est barré
+    (ancre seule, comportement conservateur). Faute d'ancre exploitable,
+    retombe sur (0, -1) — insertion en tête, ancien comportement.
+    """
+    if not instructions:
+        return 0, -1
+    entry_street = extract_street(instructions[0])
+    reg = _regular_steps(rows)
+    if not reg or not entry_street:
+        return 0, -1
+
+    # Rue de rejointe = dernière instruction nommée avant le « R.R. » final.
+    exit_street = ""
+    for instr in reversed(instructions):
+        st = extract_street(instr)
+        if _RR_RE.match(st.upper()):
+            continue
+        exit_street = st
+        break
+
+    def matches(i, street):
+        return bool(street) and stops_match(extract_street(rows[i]["gd"]), street)
+
+    first_exit = next((i for i in reg if matches(i, exit_street)), None)
+
+    entry_hits = [i for i in reg if matches(i, entry_street)]
+    if not entry_hits:
+        return 0, -1
+    if first_exit is not None:
+        before = [i for i in entry_hits if i < first_exit]
+        anchor = before[-1] if before else entry_hits[0]
+    else:
+        anchor = entry_hits[0]
+
+    insert_pos = anchor + 1
+
+    # Pas de rejointe exploitable → insertion seule, rien barré.
+    if first_exit is None or first_exit <= anchor:
+        return insert_pos, -1
+
+    # Grappe contiguë de la rue de rejointe après l'ancre.
+    reg_after = [i for i in reg if i >= first_exit]
+    bypass_end = first_exit
+    gap = 0
+    for i in reg_after[1:]:
+        if matches(i, exit_street):
+            bypass_end = i
+            gap = 0
+        else:
+            gap += 1
+            if gap > max_gap:
+                break
+    return insert_pos, bypass_end
+
+
 def apply_gd_detours(rows: list, events: list) -> list:
     """
     Pour chaque événement avec une description_gd parseable :
     - Insère les étapes du détour avant le premier arrêt annulé (detour_added=True)
     - Marque les instructions G-D régulières contournées (detour_removed=True)
+
+    Détour SANS arrêt annulé : ancrage par rues d'entrée/rejointe via
+    _anchor_detour_span (le détour se place après l'étape correspondant à sa
+    1re instruction et barre les étapes contournées jusqu'à la rejointe).
     """
     for event in events:
         desc = event.get("description_gd") or ""
@@ -254,16 +337,12 @@ def apply_gd_detours(rows: list, events: list) -> list:
         if cancelled_positions:
             first_pos = cancelled_positions[0]
             last_pos  = cancelled_positions[-1]
-        else:
-            first_pos = 0
-            last_pos  = -1
 
-        # Étendre last_pos pour inclure les instructions G-D sans arrêt GTFS
-        # qui suivent immédiatement le dernier arrêt annulé.
-        # Ex. : "Gauche - Clément" dont le stop a été consommé par une
-        # instruction précédente ("Droite - Clément") et qui se retrouve
-        # sans stop_code → tombe en dehors de la plage sans cette extension.
-        if last_pos >= 0:
+            # Étendre last_pos pour inclure les instructions G-D sans arrêt GTFS
+            # qui suivent immédiatement le dernier arrêt annulé.
+            # Ex. : "Gauche - Clément" dont le stop a été consommé par une
+            # instruction précédente ("Droite - Clément") et qui se retrouve
+            # sans stop_code → tombe en dehors de la plage sans cette extension.
             i = last_pos + 1
             while i < len(rows):
                 sc = rows[i].get("stop_code", "")
@@ -271,6 +350,8 @@ def apply_gd_detours(rows: list, events: list) -> list:
                     break  # premier arrêt régulier non annulé : fin de la zone
                 last_pos = i
                 i += 1
+        else:
+            first_pos, last_pos = _anchor_detour_span(rows, instructions)
 
         # Toutes les instructions G-D dans la plage sont contournées,
         # y compris celles associées à un arrêt annulé.
