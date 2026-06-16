@@ -231,18 +231,40 @@ class GDParser:
         print("="*60 + "\n")
 
 def split_sections(raw_data: str) -> List[str]:
-    """Decoupe l'entree en sections, une par en-tete Gauche-Droite."""
-    pattern = re.compile(r'Gauche-Droite\s*/\s*\d+e?\s+(?:est|ouest|nord|sud)',
+    """Decoupe l'entree en sections, une par couple (ligne, direction).
+
+    L'export STM repete l'en-tete 'Gauche-Droite / <ligne> <direction>' devant
+    chaque parcours, meme quand plusieurs parcours appartiennent a la meme
+    ligne/direction (ex. Parcours principal + Parcours secondaire colles l'un
+    apres l'autre). Les sections partageant le meme couple sont donc fusionnees
+    en une seule, pour que tous leurs parcours atterrissent dans le meme
+    fichier au lieu de s'ecraser les uns les autres.
+    """
+    pattern = re.compile(r'Gauche-Droite\s*/\s*(\d+e?)\s+(est|ouest|nord|sud)',
                          re.IGNORECASE)
     matches = list(pattern.finditer(raw_data))
     if not matches:
         return []
-    sections = []
+    parcours_re = re.compile(r'^Parcours\s', re.MULTILINE)
+    groups: Dict[tuple, List[str]] = {}
+    order: List[tuple] = []
     for i, match in enumerate(matches):
         start = match.start()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(raw_data)
-        sections.append(raw_data[start:end])
-    return sections
+        text = raw_data[start:end]
+        key = (match.group(1).lower(), match.group(2).lower())
+        if key not in groups:
+            groups[key] = [text]
+            order.append(key)
+        else:
+            # Sections suivantes du meme groupe : retirer l'en-tete repete
+            # (Gauche-Droite / ..., Imprimer, Date de mise a jour) avant de
+            # fusionner, sinon ce texte se fait mal interpreter comme une
+            # instruction G-D (ex. "Gauche-Droite / 24 Est" matche le pattern
+            # "Gauche - <rue>").
+            pm = parcours_re.search(text)
+            groups[key].append(text[pm.start():] if pm else text)
+    return ["\n".join(groups[key]) for key in order]
 
 def main():
     arg_parser = argparse.ArgumentParser(
