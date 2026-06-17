@@ -58,8 +58,12 @@
       "cancelled": [
         {
           "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
           "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
-          "nom_evt": "Station Papineau (Dorion / Sainte-Catherine)"
+          "nom_evt": "Station Papineau (Dorion / Sainte-Catherine)",
+          "evenement_id": "11205733",
+          "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "type_evenement": "détour avec annulation d'arrêt"
         }
       ],
       "detour_removed": true
@@ -73,8 +77,12 @@
       "cancelled": [
         {
           "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
           "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
-          "nom_evt": "Sainte-Catherine / De Lorimier"
+          "nom_evt": "Sainte-Catherine / De Lorimier",
+          "evenement_id": "11205733",
+          "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "type_evenement": "détour avec annulation d'arrêt"
         }
       ],
       "detour_removed": true
@@ -88,8 +96,12 @@
       "cancelled": [
         {
           "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
           "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
-          "nom_evt": "Sainte-Catherine / Parthenais"
+          "nom_evt": "Sainte-Catherine / Parthenais",
+          "evenement_id": "11205733",
+          "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "type_evenement": "détour avec annulation d'arrêt"
         }
       ]
     },
@@ -102,8 +114,12 @@
       "cancelled": [
         {
           "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
           "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
-          "nom_evt": "Sainte-Catherine / Fullum"
+          "nom_evt": "Sainte-Catherine / Fullum",
+          "evenement_id": "11205733",
+          "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "type_evenement": "détour avec annulation d'arrêt"
         }
       ]
     },
@@ -116,8 +132,12 @@
       "cancelled": [
         {
           "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
           "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
-          "nom_evt": "Sainte-Catherine / Dufresne"
+          "nom_evt": "Sainte-Catherine / Dufresne",
+          "evenement_id": "11205733",
+          "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "type_evenement": "détour avec annulation d'arrêt"
         }
       ]
     },
@@ -130,8 +150,12 @@
       "cancelled": [
         {
           "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
           "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
-          "nom_evt": "Sainte-Catherine / D'Iberville"
+          "nom_evt": "Sainte-Catherine / D'Iberville",
+          "evenement_id": "11205733",
+          "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "type_evenement": "détour avec annulation d'arrêt"
         }
       ]
     },
@@ -144,8 +168,12 @@
       "cancelled": [
         {
           "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
           "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
-          "nom_evt": "Sainte-Catherine / du Havre"
+          "nom_evt": "Sainte-Catherine / du Havre",
+          "evenement_id": "11205733",
+          "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "type_evenement": "détour avec annulation d'arrêt"
         }
       ]
     },
@@ -280,8 +308,12 @@
       "cancelled": [
         {
           "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA SAINTE-CATHERINE G BOURBONNIÈRE D ADAM D DE LA SALLE G STE-CATHERINE VIA RR",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
           "effectif": "En tout temps",
-          "nom_evt": "Sainte-Catherine / Jeanne-d'Arc"
+          "nom_evt": "Sainte-Catherine / Jeanne-d'Arc",
+          "evenement_id": "11218486",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
         }
       ]
     },
@@ -294,8 +326,12 @@
       "cancelled": [
         {
           "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA SAINTE-CATHERINE G BOURBONNIÈRE D ADAM D DE LA SALLE G STE-CATHERINE VIA RR",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
           "effectif": "En tout temps",
-          "nom_evt": "Sainte-Catherine / Pie-IX"
+          "nom_evt": "Sainte-Catherine / Pie-IX",
+          "evenement_id": "11218486",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
         }
       ]
     },

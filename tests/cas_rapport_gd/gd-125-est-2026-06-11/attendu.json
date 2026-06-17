@@ -38,8 +38,12 @@
       "cancelled": [
         {
           "label": "Annulation d'arrêts (Situation Incontrôlable) — ***ARRÊT # 52517 PRÉSIDENT-KENNEDY/DE BLEUR ANNULÉ A/C OBILAGATION DE TOURNER À DROITE***",
+          "short_label": "Annulation d'arrêts (Situation Incontrôlable)",
           "effectif": "En tout temps",
-          "nom_evt": "Station Place-des-Arts (Pr.-Kennedy/Bleury)"
+          "nom_evt": "Station Place-des-Arts (Pr.-Kennedy/Bleury)",
+          "evenement_id": "10700602",
+          "commentaire": "***ARRÊT # 52517 PRÉSIDENT-KENNEDY/DE BLEUR ANNULÉ A/C OBILAGATION DE TOURNER À DROITE***",
+          "type_evenement": "annulation d'arrêts"
         }
       ]
     },
@@ -100,8 +104,12 @@
       "cancelled": [
         {
           "label": "Arrêt déplacé (Travaux)",
+          "short_label": "Arrêt déplacé (Travaux)",
           "effectif": "En tout temps",
-          "nom_evt": "Ontario / Saint-Hubert (10 mètres avant)"
+          "nom_evt": "Ontario / Saint-Hubert (10 mètres avant)",
+          "evenement_id": "11154688",
+          "commentaire": "",
+          "type_evenement": "arrêt déplacé"
         }
       ]
     },
@@ -114,8 +122,12 @@
       "cancelled": [
         {
           "label": "Arrêt déplacé (Travaux)",
+          "short_label": "Arrêt déplacé (Travaux)",
           "effectif": "En tout temps",
-          "nom_evt": "Ontario / Atateken (50 mètres après)"
+          "nom_evt": "Ontario / Atateken (50 mètres après)",
+          "evenement_id": "11191753",
+          "commentaire": "",
+          "type_evenement": "arrêt déplacé"
         }
       ]
     },
@@ -264,8 +276,12 @@
       "cancelled": [
         {
           "label": "Annulation d'arrêts (Situation Incontrôlable)",
+          "short_label": "Annulation d'arrêts (Situation Incontrôlable)",
           "effectif": "En tout temps",
-          "nom_evt": "Ontario / De Chambly"
+          "nom_evt": "Ontario / De Chambly",
+          "evenement_id": "11188805",
+          "commentaire": "",
+          "type_evenement": "annulation d'arrêts"
         }
       ]
     },

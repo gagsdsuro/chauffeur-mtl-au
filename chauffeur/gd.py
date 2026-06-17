@@ -165,9 +165,15 @@ def annotate_events(rows, events):
             label += f" — {commentaire}"
 
         for a in e.get("arrets_annules", []):
-            cancelled_ids.setdefault(a["id"], []).append(
-                {"label": label, "effectif": effectif, "nom_evt": a.get("nom", "")}
-            )
+            cancelled_ids.setdefault(a["id"], []).append({
+                "label":          label,
+                "short_label":    f"{titre} ({motif})",
+                "effectif":       effectif,
+                "nom_evt":        a.get("nom", ""),
+                "evenement_id":   e.get("evenement_id", ""),
+                "commentaire":    commentaire,
+                "type_evenement": titre.lower(),
+            })
         for a in e.get("arrets_ajoutes", []):
             name = a if isinstance(a, str) else a.get("nom", "")
             added.append({"name": name, "label": label, "effectif": effectif,
@@ -230,6 +236,57 @@ def parse_description_gd(desc: str):
         instructions.append(f"Via - {part}")
 
     return instructions if instructions else None
+
+
+def event_applicable_to_parcours(event: dict, stop_ids_in_rows: set,
+                                  gd_instructions: list) -> bool:
+    """Détermine si un évènement est applicable à un parcours spécifique.
+
+    Règle 1 — avec arrets_annules :
+      Au moins un arrêt annulé doit figurer dans les stops GTFS de ce parcours.
+
+    Règle 2 — détour sans arrêt annulé :
+      Les deux bornes du détour doivent chacune figurer dans les instructions G-D :
+      • 2a : première instruction Via (rue empruntée par le détour).
+      • 2b : instruction juste avant R.R. (rue de rejointe au parcours normal).
+      Si une borne est absente de la description (cas indécidable), on inclut
+      l'évènement par prudence. Les deux bornes connues doivent toutes deux matcher.
+    """
+    cancelled = event.get("arrets_annules", [])
+    if cancelled:
+        return any(a["id"] in stop_ids_in_rows for a in cancelled)
+
+    desc = (event.get("description_gd") or "").strip()
+    if not desc:
+        return True
+
+    parsed = parse_description_gd(desc)
+    if not parsed:
+        return True
+
+    gd_streets = {normalize_street(extract_street(i)) for i in gd_instructions}
+
+    # 2a : première Via non-R.R.
+    via_norm = None
+    for instr in parsed:
+        street = extract_street(instr)
+        if instr.lower().startswith("via") and not _RR_RE.match(street):
+            via_norm = normalize_street(street)
+            break
+
+    # 2b : instruction juste avant R.R.
+    before_rr_norm = None
+    for i, instr in enumerate(parsed):
+        if _RR_RE.match(extract_street(instr)):
+            if i > 0:
+                before_rr_norm = normalize_street(extract_street(parsed[i - 1]))
+            break
+
+    # Les deux bornes connues doivent figurer dans les instructions G-D.
+    for norm in (via_norm, before_rr_norm):
+        if norm is not None and norm not in gd_streets:
+            return False
+    return True
 
 
 def _regular_steps(rows: list) -> list:

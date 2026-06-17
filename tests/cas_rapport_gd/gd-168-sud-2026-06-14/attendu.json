@@ -158,8 +158,12 @@
       "cancelled": [
         {
           "label": "Arrêt déplacé (Travaux)",
+          "short_label": "Arrêt déplacé (Travaux)",
           "effectif": "En tout temps",
-          "nom_evt": "Campus Bell (100 mètres avant)"
+          "nom_evt": "Campus Bell (100 mètres avant)",
+          "evenement_id": "11202851",
+          "commentaire": "",
+          "type_evenement": "arrêt déplacé"
         }
       ]
     },

@@ -174,8 +174,12 @@
       "cancelled": [
         {
           "label": "Arrêt déplacé (Situation Incontrôlable) — RAISON CSR",
+          "short_label": "Arrêt déplacé (Situation Incontrôlable)",
           "effectif": "En tout temps",
-          "nom_evt": "Ontario / Lespérance (25 mètres après)"
+          "nom_evt": "Ontario / Lespérance (25 mètres après)",
+          "evenement_id": "10570801",
+          "commentaire": "RAISON CSR",
+          "type_evenement": "arrêt déplacé"
         }
       ]
     },
@@ -358,13 +362,21 @@
       "cancelled": [
         {
           "label": "Annulation d'arrêts (Travaux)",
+          "short_label": "Annulation d'arrêts (Travaux)",
           "effectif": "En tout temps",
-          "nom_evt": "Ontario / Saint-Hubert"
+          "nom_evt": "Ontario / Saint-Hubert",
+          "evenement_id": "11208333",
+          "commentaire": "",
+          "type_evenement": "annulation d'arrêts"
         },
         {
           "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA ONTARIO G ST-ANDRÉ D MAISONNEUVE D ST-HUBERT G ONTARIO VIA RR — TRAVAUX DE7H00 À 19H00",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
           "effectif": "Seulement entre 07:00 et 19:00 chaque jour",
-          "nom_evt": "Ontario / Saint-Hubert"
+          "nom_evt": "Ontario / Saint-Hubert",
+          "evenement_id": "11255025",
+          "commentaire": "TRAVAUX DE7H00 À 19H00",
+          "type_evenement": "détour avec annulation d'arrêt"
         }
       ]
     },
@@ -417,8 +429,12 @@
       "cancelled": [
         {
           "label": "Annulation d'arrêts (Travaux)",
+          "short_label": "Annulation d'arrêts (Travaux)",
           "effectif": "En tout temps",
-          "nom_evt": "Station Place-des-Arts"
+          "nom_evt": "Station Place-des-Arts",
+          "evenement_id": "11253616",
+          "commentaire": "",
+          "type_evenement": "annulation d'arrêts"
         }
       ]
     },

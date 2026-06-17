@@ -31,15 +31,26 @@ def direction_id(gtfs_dir: Path, route_id: str, direction: str) -> str:
     raise ValueError(f"Direction '{direction}' introuvable. Disponibles: {seen}")
 
 
-def stops_for_line(gtfs_dir: Path, route_id: str, dir_id: str) -> list:
+def stops_for_line(gtfs_dir: Path, route_id: str, dir_id: str,
+                   shape_hint: str | None = None) -> list:
+    """Retourne la séquence d'arrêts du trip le plus long pour la ligne/direction.
+
+    Si shape_hint est fourni (ex. '24_3'), filtre d'abord les trips de cette
+    shape. Repli sur tous les trips si aucun trip ne correspond au shape_hint.
+    """
     gtfs_dir = Path(gtfs_dir)
-    trip_ids = set()
+    trip_ids: set[str] = set()
     with open(gtfs_dir / "trips.txt") as f:
         for r in csv.DictReader(f):
             if r["route_id"] == route_id and r["direction_id"] == dir_id:
-                trip_ids.add(r["trip_id"])
+                if shape_hint is None or r["shape_id"] == shape_hint:
+                    trip_ids.add(r["trip_id"])
 
-    trip_stops = {}
+    # Repli : aucun trip pour ce shape (variante inactive) → tous les trips
+    if not trip_ids and shape_hint:
+        return stops_for_line(gtfs_dir, route_id, dir_id, shape_hint=None)
+
+    trip_stops: dict = {}
     with open(gtfs_dir / "stop_times.txt") as f:
         for r in csv.DictReader(f):
             if r["trip_id"] in trip_ids:
