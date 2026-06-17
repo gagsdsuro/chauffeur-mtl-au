@@ -1,0 +1,27 @@
+{
+  "ligne": "34",
+  "direction": "est",
+  "routes": [
+    {
+      "line_number": "34",
+      "direction": "Est",
+      "parcours": [
+        {
+          "id": 2,
+          "name": "Parcours principal",
+          "start": "Station Papineau (Dorion / Sainte-Catherine)",
+          "start_code": 54188,
+          "end": "Station Viau",
+          "end_code": 53753,
+          "direction": [
+            "Via - Dorion",
+            "Gauche - Sainte-Catherine",
+            "Droite - Notre-Dame",
+            "Droite - Viau",
+            "Gauche - Pierre-De Coubertin"
+          ]
+        }
+      ]
+    }
+  ]
+}

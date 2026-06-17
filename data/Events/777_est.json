@@ -6,36 +6,34 @@
       "evenement_id": "10291048",
       "titre": "Arrêt déplacé",
       "motif": "Situation Incontrôlable",
-      "date_heure_debut": "2024-03-01T06:05",
+      "date_heure_debut": "2024-03-01T06:05:00",
       "date_heure_fin": null,
       "effectif": "En tout temps",
-      "description_gd": null,
-      "commentaire": "ARRÊT RECULÉ POUR FACILITÉ L'INTÉGRATION À LA CIRCULATION, NE PAS MODIFIER SANS PARLER À CO MASSE",
       "arrets_annules": [
         {
           "id": "62148",
           "nom": "Station Bonaventure (Gauchetière / Mansfield) (20 mètres avant)"
         }
       ],
+      "description_gd": null,
+      "commentaire": "ARRÊT RECULÉ POUR FACILITÉ L'INTÉGRATION À LA CIRCULATION, NE PAS MODIFIER SANS PARLER À CO MASSE",
       "arrets_ajoutes": []
     },
     {
       "evenement_id": "11185389",
-      "titre": "Détour avec annulation d'arrêt",
+      "titre": "Détour sans annulation",
       "motif": "Travaux",
-      "date_heure_debut": "2026-04-08T06:06",
+      "date_heure_debut": "2026-06-12T18:01:00",
       "date_heure_fin": null,
       "effectif": "En tout temps",
-      "description_gd": "VIA TERMINUS DE LA GAUCHETIERE/ MANSFIELD D/MANSFIELD D/RENE-LEVESQUE D/ROBERT-BOURASSA VIA R.R",
+      "arrets_annules": [],
+      "description_gd": "VIA GAUCHETIERE D/MANSFIELD D/RENE-LEVESQUE D/ROBERT-BOURASSA VIA R.R",
       "commentaire": null,
-      "arrets_annules": [
-        {
-          "id": "62148",
-          "nom": "Station Bonaventure (Gauchetière / Mansfield)"
-        }
-      ],
       "arrets_ajoutes": [
-        "62750 - Terminus Centre-Ville"
+        {
+          "id": "62750",
+          "nom": "Terminus Centre-Ville"
+        }
       ]
     }
   ]

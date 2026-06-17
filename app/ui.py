@@ -21,6 +21,7 @@ CA_DIR       = DATA_DIR / "ca"
 RAPPORTS_DIR = DATA_DIR / "rapports"
 GD_DIR       = DATA_DIR / "Gauche-Droite"
 EVENTS_DIR   = DATA_DIR / "Events"
+JOURNEES_DIR = DATA_DIR / "journees"
 APP_DIR      = Path(__file__).resolve().parent
 
 sys.path.insert(0, str(SCRIPTS_DIR))
@@ -41,6 +42,7 @@ tabs = st.tabs([
     "📊 Rapports",
     "🗂️ Fichiers",
     "📡 GTFS",
+    "📅 Journées",
 ])
 
 
@@ -821,3 +823,167 @@ with tabs[4]:
                 st.success("GTFS-RT récupéré.")
             else:
                 st.error("Erreur lors du téléchargement.")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Tab 6 — Journées
+# ═══════════════════════════════════════════════════════════════════════════════
+with tabs[5]:
+    st.header("Journées de travail")
+
+    j_tabs = st.tabs(["📥 Importer", "📋 Consulter"])
+
+    # ── 6a — Importer ─────────────────────────────────────────────────────────
+    with j_tabs[0]:
+        st.markdown(
+            "Collez le texte brut du **Détail de ma journée** (copié depuis l'interface STM). "
+            "Le fichier `journee-YYYY-MM-DD.json` sera créé dans `data/journees/`."
+        )
+
+        col_jd, _ = st.columns([1, 3])
+        with col_jd:
+            j_imp_date = st.date_input("Date de la journée", value=date.today(), key="j_imp_date")
+
+        j_text = st.text_area(
+            "Texte brut",
+            height=400,
+            placeholder=(
+                "Détail de ma journée\n"
+                "Hier59200 - Frontenac\n"
+                "Journée439\n"
+                "Temps travaillé7:30\n"
+                "Temps supplémentaire0:00\n"
+                "Mis à jour le 17 juin 2026 00:32\n"
+                "Sommaire24 - 1538013--3:18Horaire\n..."
+            ),
+            key="j_text",
+        )
+
+        if st.button("Importer", type="primary", key="j_imp_btn"):
+            if not j_text.strip():
+                st.warning("Le champ est vide.")
+            else:
+                from parse_journee import JourneeParser
+
+                parser = JourneeParser(j_text, date_str=str(j_imp_date))
+                result_j = parser.parse()
+
+                if result_j:
+                    saved_j = parser.save(result_j)
+                    st.success(f"Journée du {j_imp_date} importée.")
+                    st.code(parser.get_summary(result_j, saved_j))
+                    st.balloons()
+                else:
+                    st.error("Échec du parsing.")
+                    st.code(parser.get_summary())
+
+    # ── 6b — Consulter ────────────────────────────────────────────────────────
+    with j_tabs[1]:
+        journee_files = (
+            sorted(JOURNEES_DIR.glob("journee-*.json"), reverse=True)
+            if JOURNEES_DIR.exists() else []
+        )
+
+        if not journee_files:
+            st.info("Aucune journée enregistrée. Utilisez l'onglet **Importer**.")
+        else:
+            j_labels = [p.stem.replace("journee-", "") for p in journee_files]
+            sel_j    = st.selectbox(
+                "Journée", range(len(j_labels)),
+                format_func=lambda i: j_labels[i], key="j_sel"
+            )
+            j_path = journee_files[sel_j]
+            j_date_key = j_labels[sel_j]
+
+            try:
+                j_data = json.loads(j_path.read_text(encoding="utf-8"))
+            except Exception as e:
+                st.error(f"Erreur lecture : {e}")
+                st.stop()
+
+            # ── Résumé ────────────────────────────────────────────────────────
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Journée n°",      j_data.get("journee_numero", "–"))
+            c2.metric("Temps travaillé", j_data.get("temps_travaille", "–"))
+            c3.metric("Supplémentaire",  j_data.get("temps_supplementaire", "–"))
+            c4.metric("Garage",          j_data.get("garage", "–"))
+
+            st.divider()
+
+            # ── Pièces ────────────────────────────────────────────────────────
+            pieces = j_data.get("pieces", [])
+            updated_pieces = json.loads(json.dumps(pieces))  # copie profonde
+
+            for idx, piece in enumerate(pieces):
+                pid = piece.get("id", f"piece-{idx + 1}")
+                with st.expander(
+                    f"Pièce {pid}  —  {piece.get('debut', '?')} → {piece.get('fin', '?')}  "
+                    f"({piece.get('duree', '?')})",
+                    expanded=True,
+                ):
+                    pc1, pc2, pc3 = st.columns([2, 2, 2])
+
+                    with pc1:
+                        st.markdown(f"**Lieu prise :** `{piece.get('lieu_prise', '–')}`")
+                        st.markdown(f"**Lieu fin :** `{piece.get('lieu_fin', '–')}`")
+
+                    with pc2:
+                        bus_key = f"j_bus_{j_date_key}_{idx}"
+                        st.text_input(
+                            "Numéro d'autobus",
+                            value=piece.get("numero_autobus") or "",
+                            placeholder="ex : 38013",
+                            key=bus_key,
+                        )
+
+                    with pc3:
+                        releve = piece.get("releve") or {}
+                        if releve.get("je_releve"):
+                            r = releve["je_releve"]
+                            st.caption(f"Relève : {r['nom']} ({r['matricule']})")
+                        if releve.get("je_suis_releve_par"):
+                            r = releve["je_suis_releve_par"]
+                            st.caption(f"Relevé par : {r['nom']} ({r['matricule']})")
+
+                    # Trajets
+                    trajets = piece.get("trajets", [])
+                    if trajets:
+                        st.markdown("**Trajets :**")
+                        for t in trajets:
+                            dep = t.get("depart", {})
+                            arr = t.get("arrivee", {})
+                            if t["type"] == "haut_le_pied":
+                                st.markdown(
+                                    f"&nbsp;&nbsp;🚶 *Haut-le-pied* &ensp;"
+                                    f"`{dep.get('heure', '?')}` {dep.get('arret', '?')} → "
+                                    f"`{arr.get('heure', '?')}` {arr.get('arret', '?')}"
+                                )
+                            else:
+                                det  = " 🔀" if t.get("detour") else ""
+                                notes = t.get("notes_voyage", [])
+                                note_txt = (
+                                    f"  *(note : {', '.join(notes)})*" if notes else ""
+                                )
+                                st.markdown(
+                                    f"&nbsp;&nbsp;🚌 **{t.get('ligne')} "
+                                    f"{(t.get('direction') or '').capitalize()}** "
+                                    f"ID {t.get('id_parcours', '?')}{det} &ensp; "
+                                    f"`{dep.get('heure', '?')}` {dep.get('arret', '?')} → "
+                                    f"`{arr.get('heure', '?')}` {arr.get('arret', '?')}"
+                                    f"{note_txt}"
+                                )
+
+            # ── Sauvegarde des numéros d'autobus ──────────────────────────────
+            st.divider()
+            if st.button("💾 Enregistrer les numéros d'autobus", key="j_save"):
+                for idx in range(len(pieces)):
+                    bus_key = f"j_bus_{j_date_key}_{idx}"
+                    val = st.session_state.get(bus_key, "").strip()
+                    updated_pieces[idx]["numero_autobus"] = val or None
+                j_data["pieces"] = updated_pieces
+                j_path.write_text(
+                    json.dumps(j_data, indent=2, ensure_ascii=False) + "\n",
+                    encoding="utf-8",
+                )
+                st.success("Numéros d'autobus sauvegardés.")
+                st.rerun()

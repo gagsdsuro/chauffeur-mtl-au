@@ -7,22 +7,8 @@
       "direction": "Ouest",
       "parcours": [
         {
-          "id": 5,
-          "name": "Parcours principal",
-          "start": "Station Jean-Drapeau",
-          "start_code": 50117,
-          "end": "Casino de Montréal",
-          "end_code": 54330,
-          "direction": [
-            "Via - Terminus Jean-Drapeau",
-            "Droite - McDonald (île-Sainte-Hélène)",
-            "Droite - Pierre-Dupuy",
-            "Droite - du Casino"
-          ]
-        },
-        {
           "id": 2,
-          "name": "Parcours secondaire",
+          "name": "Parcours principal",
           "start": "Station Jean-Drapeau",
           "start_code": 50117,
           "end": "Station Bonaventure (Gauchetière / Mansfield)",

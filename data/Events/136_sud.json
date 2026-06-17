@@ -1,0 +1,40 @@
+{
+  "ligne": "136",
+  "direction": "sud",
+  "detours": [
+    {
+      "evenement_id": "10796521",
+      "titre": "Arrêt déplacé",
+      "motif": "Travaux",
+      "date_heure_debut": "2025-06-11T07:04:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "54947",
+          "nom": "Viau / Jean-Talon (100 mètres avant)"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "10968634",
+      "titre": "Information chauffeur",
+      "motif": "Travaux",
+      "date_heure_debut": "2025-10-27T12:41:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "50105",
+          "nom": "Station Viau"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": "RELÈVE SE FAIT AU POINT DE DÉBARQUEMENT DU 136 À L'ARRIÈRE DE L'ARRÊT DU 125.",
+      "arrets_ajoutes": []
+    }
+  ]
+}

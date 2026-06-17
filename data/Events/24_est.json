@@ -73,6 +73,27 @@
       "description_gd": null,
       "commentaire": null,
       "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11261822",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-06-16T09:30:00",
+      "date_heure_fin": "2026-06-19T15:00:00",
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "51372",
+          "nom": "Décarie / Côte-Saint-Antoine"
+        },
+        {
+          "id": "51462",
+          "nom": "Décarie / Sherbrooke"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_ajoutes": []
     }
   ]
 }

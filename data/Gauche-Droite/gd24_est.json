@@ -24,6 +24,22 @@
             "Droite - Rachel",
             "Droite - Montgomery"
           ]
+        },
+        {
+          "id": 4,
+          "name": "Parcours secondaire",
+          "start": "Station Sherbrooke (Édicule Est )",
+          "start_code": 52508,
+          "end": "Montgomery / Sherbrooke",
+          "end_code": 52819,
+          "direction": [
+            "Via - Berri (desserte)",
+            "Droite - Cherrier",
+            "Gauche - Sherbrooke",
+            "Gauche - Hogan",
+            "Droite - Rachel",
+            "Droite - Montgomery"
+          ]
         }
       ]
     }
