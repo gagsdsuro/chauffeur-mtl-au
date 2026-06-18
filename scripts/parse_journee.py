@@ -12,7 +12,7 @@ import argparse
 import json
 import re
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 
@@ -39,6 +39,14 @@ def _date_from_text(text: str) -> str | None:
     return f"{annee}-{mois_num}-{int(jour):02d}" if mois_num else None
 
 
+def _day_offset_from_text(text: str) -> int:
+    """Retourne +1 si 'Demain', -1 si 'Hier', 0 sinon (la journée affichée ≠ date de mise à jour)."""
+    m = re.search(r'(Hier|Demain)\d{4,6}', text)
+    if not m:
+        return 0
+    return -1 if m.group(1) == "Hier" else 1
+
+
 def _split_stop_time(line: str) -> tuple[str, str | None]:
     """Sépare 'Montgomery / Sherbrooke13:49' → ('Montgomery / Sherbrooke', '13:49')."""
     m = re.search(r'(\d{1,2}:\d{2})$', line)
@@ -56,7 +64,18 @@ class JourneeParser:
     def __init__(self, raw_text: str, date_str: str | None = None):
         self.raw_text = raw_text.replace('\r\n', '\n').replace('\r', '\n')
         self.errors   = []
-        self.date_str = date_str or _date_from_text(raw_text) or datetime.now().strftime("%Y-%m-%d")
+        if date_str:
+            self.date_str = date_str
+        else:
+            base = _date_from_text(self.raw_text)
+            if base:
+                offset = _day_offset_from_text(self.raw_text)
+                self.date_str = (
+                    (datetime.fromisoformat(base) + timedelta(days=offset)).strftime("%Y-%m-%d")
+                    if offset else base
+                )
+            else:
+                self.date_str = datetime.now().strftime("%Y-%m-%d")
 
     # ── En-tête ────────────────────────────────────────────────────────────────
 
@@ -109,7 +128,7 @@ class JourneeParser:
             # \d{1,3} pour le numéro de pièce (01, 02, … 15, etc.)
             # (\d{5})? pour le numéro d'autobus (5 chiffres, optionnel)
             m = re.match(
-                r'^Sommaire(\d+\s*-\s*\d{1,3})(\d{5})?-{1,3}(\d+:\d{2})Horaire$',
+                r'^Sommaire(\d+\s*-\s*\d{1,3})(\d{5})?-+(\d+:\d{2})Horaire$',
                 line
             )
             if not m:
@@ -182,10 +201,17 @@ class JourneeParser:
                     i += 1
                 continue
 
-            # ── Haut-le-pied ─────────────────────────────────────────────────
+            # ── Haut-le-pied / Sortie (garage→service) / Entrée (service→garage) ──
+            hlp_type = None
             if line.startswith("Haut-le-pied"):
+                hlp_type = "haut_le_pied"
+            elif line.startswith("Sortie"):
+                hlp_type = "sortie"
+            elif line.startswith("Entrée"):
+                hlp_type = "entree"
+            if hlp_type is not None:
                 trajet: dict = {
-                    "type": "haut_le_pied", "ligne": None,
+                    "type": hlp_type, "ligne": None,
                     "direction": None, "id_parcours": None, "detour": False,
                 }
                 i += 1
