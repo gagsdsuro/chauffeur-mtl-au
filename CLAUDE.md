@@ -22,12 +22,28 @@ python3 scripts/parse_event.py < data/raw/new-events.txt
 python3 scripts/parse_event.py --json < data/raw/new-events.txt
 ```
 
-**Rapport journalier** — PDF recto-verso prêt à imprimer (G-D + détours filtrés) :
+**Import Journée** — lit depuis stdin le texte brut « Détail de ma journée », écrit dans `data/journees/` :
+```bash
+python3 scripts/parse_journee.py --date 2026-06-18 < raw.txt   # date explicite
+python3 scripts/parse_journee.py --json < raw.txt              # idem + JSON complet sur stdout
+```
+La date est auto-détectée depuis le champ « Mis à jour le » si `--date` est absent.
+
+**Rapport journalier v1** — PDF recto-verso prêt à imprimer (G-D + détours filtrés) :
 ```bash
 python3 scripts/gen_rapport.py                          # rapport du jour
 python3 scripts/gen_rapport.py --date 2026-06-05        # date spécifique
 python3 scripts/gen_rapport.py --output /tmp/out.pdf    # chemin de sortie
 ```
+
+**Rapport journalier v2** — rapport depuis journée JSON (HTML ou PDF, filtrable par groupe) :
+```bash
+python3 scripts/gen_rapport_v2.py --journee data/journees/journee-2026-06-18.json
+python3 scripts/gen_rapport_v2.py --journee data/journees/journee-2026-06-18.json --format html --niveau standard
+python3 scripts/gen_rapport_v2.py --journee data/journees/journee-2026-06-18.json \
+    --filtre-ligne 24 --filtre-direction est --filtre-id-parcours 3   # mono-groupe
+```
+Niveaux : `détaillé` (défaut) | `standard` | `compact`. Sortie par défaut : `data/rapports/rapport-v2-DATE.EXT`.
 
 **Annotation carte agent** — annote le PDF de carte agent avec les horaires GTFS (requiert `PyMuPDF`) :
 ```bash
@@ -60,13 +76,24 @@ python3 tests/test_rapport_gd.py
 python3 tests/creer_cas_rapport_gd.py --ligne 125 --direction ouest --date 2026-06-11   # figer un nouveau cas (vérifier attendu.json)
 ```
 
+**Tests de régression parseurs** — rejoue des collages bruts figés dans `tests/cas_event/` et `tests/cas_gd/` :
+```bash
+python3 tests/test_parse_event.py   # régression parse_event.py (cas : détour sans annulation, arrêts vides)
+python3 tests/test_parse_gd.py      # régression parse_gd.py (cas : multi-parcours même ligne/direction)
+```
+
+**Tests unitaires appariement** — couvre `chauffeur.matching` (stations vs rues, parenthèses, REM, troncature) :
+```bash
+python3 tests/test_matching.py
+```
+
 **Téléchargement GTFS** — données statiques (hebdomadaire) et temps-réel (requiert `requests`) :
 ```bash
 python3 scripts/fetch_gtfs.py
 python3 scripts/fetch_gtfs_rt.py
 ```
 
-- `parse_gd.py` et `parse_event.py` n'ont aucune dépendance externe (stdlib uniquement). Les autres scripts requièrent `requests` et/ou `PyMuPDF (fitz)`.
+- `parse_gd.py`, `parse_event.py` et `parse_journee.py` n'ont aucune dépendance externe (stdlib uniquement). Les autres scripts requièrent `requests` et/ou `PyMuPDF (fitz)`.
 - Tous les scripts résolvent les chemins via `Path(__file__).parent.parent` ; ils fonctionnent peu importe le répertoire courant.
 - Code de sortie : `0` si tout réussit, `1` si une section échoue (erreurs sur stderr).
 
@@ -75,12 +102,16 @@ python3 scripts/fetch_gtfs_rt.py
 ### Flux de données
 
 ```
-data/raw/*.txt  ──(parse_gd.py)────►  data/Gauche-Droite/gd<ligne>_<direction>.json
-                ──(parse_event.py)──►  data/Events/<ligne>_<direction>.json
-data/gtfs/      ──(fetch_gtfs.py)──►  data/gtfs/gtfs_stm/   (données statiques)
+data/raw/*.txt  ──(parse_gd.py)────────►  data/Gauche-Droite/gd<ligne>_<direction>.json
+                ──(parse_event.py)──────►  data/Events/<ligne>_<direction>.json
+                ──(parse_journee.py)────►  data/journees/journee-YYYY-MM-DD.json
+data/gtfs/      ──(fetch_gtfs.py)──────►  data/gtfs/gtfs_stm/   (données statiques)
 data/ca/*.pdf   ──(carte_agent_stm.py + GTFS)──►  PDF annoté
-                ──(gen_rapport.py)──►  data/rapports/rapport-<date>.pdf
+                ──(gen_rapport.py)──────►  data/rapports/rapport-YYYY-MM-DD.pdf
+data/journees/  ──(gen_rapport_v2.py)──►  data/rapports/rapport-v2-YYYY-MM-DD.{html,pdf}
 ```
+
+Le package **`chauffeur/`** centralise le noyau de domaine partagé entre les scripts et l'app Streamlit : `matching` (appariement noms d'arrêts), `modeles` (dataclasses), `carte_agent` (lecture PDF), `effectif` (horaires), `evenements` (filtrage par quart/arrêt), `gd` (build_rows, détours, applicabilité), `gtfs` (lookup arrêts GTFS).
 
 1. **`split_sections()`** découpe l'entrée brute en sections, une par en-tête `Gauche-Droite / <ligne> <direction>`. Un seul collage peut donc contenir plusieurs lignes/directions.
 2. **`GDParser`** traite une section :
@@ -104,7 +135,9 @@ Racine : `{ ligne, direction, routes: [ { line_number, direction, parcours: [...
 
 - **Gauche-Droite** : `gd<ligne>_<direction>.json` (avec préfixe `gd`), direction en minuscule (`est|ouest|nord|sud`), ligne avec `e` minuscule si applicable (`85e`). Un fichier par direction.
 - **Événements** : `<ligne>_<direction>.json` (sans préfixe), même convention de direction/ligne.
+- **Journées** : `data/journees/journee-YYYY-MM-DD.json` (sortie de `parse_journee.py`).
 - **Cartes agent** : `data/ca/carte-agent-YYYY-MM-DD.pdf` (PDF source), rapports annotés dans le même dossier.
-- **Rapports journaliers** : `data/rapports/rapport-YYYY-MM-DD.pdf`.
+- **Rapports journaliers v1** : `data/rapports/rapport-YYYY-MM-DD.pdf`.
+- **Rapports journaliers v2** : `data/rapports/rapport-v2-YYYY-MM-DD.{html,pdf}` (ou `rapport-v2-DATE-LIGNE-DIR-idN.html` pour un rapport mono-groupe).
 - JSON écrit avec indentation 2 espaces et accents préservés (`ensure_ascii=False`).
 - Préférer l'import via les scripts à l'édition manuelle, pour garantir la normalisation et le rapport de changements.
