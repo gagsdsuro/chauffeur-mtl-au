@@ -711,6 +711,13 @@ def main():
     code_grp.add_argument("--nocodearret", dest="show_code", action="store_false",
                           help="Cache la colonne 'Code arrêt' (défaut)")
 
+    ap.add_argument("--filtre-ligne",        default=None,
+                    help="Restreindre le rapport à cette ligne (ex: 24)")
+    ap.add_argument("--filtre-direction",    default=None,
+                    help="Restreindre le rapport à cette direction (ex: ouest)")
+    ap.add_argument("--filtre-id-parcours",  type=int, default=None,
+                    help="Restreindre le rapport à cet ID parcours (ex: 3)")
+
     args = ap.parse_args()
 
     if not args.journee.exists():
@@ -724,6 +731,21 @@ def main():
     if not groupes:
         print("Aucun trajet de service dans le fichier journée.", file=sys.stderr)
         sys.exit(1)
+
+    # Filtrage mono-groupe (depuis tableau de bord ou CLI)
+    if args.filtre_ligne or args.filtre_direction or args.filtre_id_parcours is not None:
+        groupes = [
+            g for g in groupes
+            if (args.filtre_ligne is None
+                or g["ligne"] == args.filtre_ligne)
+            and (args.filtre_direction is None
+                 or g["direction"] == args.filtre_direction)
+            and (args.filtre_id_parcours is None
+                 or g["id_parcours"] == args.filtre_id_parcours)
+        ]
+        if not groupes:
+            print("Aucun groupe ne correspond aux filtres spécifiés.", file=sys.stderr)
+            sys.exit(1)
 
     ev_cache: dict = {}
     groupes_data = [process_groupe(g, date_str, ev_cache) for g in groupes]

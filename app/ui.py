@@ -27,6 +27,48 @@ APP_DIR      = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 sys.path.insert(0, str(APP_DIR))
 
+
+# ── Utilitaires parcours / événements ────────────────────────────────────────
+
+@st.cache_data(show_spinner=False)
+def _cached_stop_ids_for_parcours(
+    gtfs_dir_str: str, ligne: str, direction: str, id_parcours
+) -> frozenset:
+    """Ensemble des stop_ids GTFS pour un parcours (mis en cache par session).
+
+    Retourne frozenset() si le GTFS est absent ou si la ligne est inconnue.
+    """
+    try:
+        from chauffeur.gtfs import (
+            route_id as _rid, direction_id as _did, stops_for_line as _sfl,
+        )
+        gtfs  = Path(gtfs_dir_str)
+        r     = _rid(gtfs, ligne)
+        d     = _did(gtfs, r, direction)
+        shape = f"{ligne}_{id_parcours}" if id_parcours is not None else None
+        stops = _sfl(gtfs, r, d, shape_hint=shape)
+        return frozenset(sid for _, sid in stops)
+    except Exception:
+        return frozenset()
+
+
+def _ev_applicable_parcours_tb(
+    evt: dict, stop_ids, gd_instr: list
+) -> bool:
+    """Applicabilité d'un évènement à un parcours depuis le tableau de bord.
+
+    stop_ids=None = GTFS non disponible → présumer applicable pour les
+    évènements avec arrêts annulés (fail-safe).
+    """
+    from chauffeur.gd import event_applicable_to_parcours as _eap
+    cancelled = evt.get("arrets_annules", [])
+    if cancelled:
+        if stop_ids is None:
+            return True
+        return any(a["id"] in stop_ids for a in cancelled)
+    return _eap(evt, frozenset(), gd_instr)
+
+
 # ── Config page ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Chauffeur STM",
@@ -41,8 +83,6 @@ tabs = st.tabs([
     "📥 Importation",
     "📊 Rapports",
     "🗂️ Fichiers",
-    "📡 GTFS",
-    "📅 Journées",
 ])
 
 
@@ -99,127 +139,148 @@ def _event_applies(event: dict, date_str: str, tr) -> bool:
 # ═══════════════════════════════════════════════════════════════════════════════
 with tabs[0]:
     from dashboard import (
-        get_available_ca_pdfs, extract_pieces_from_pdf,
-        get_gd_files_for_ligne, get_event_file_mtime,
         get_gtfs_info, parse_vehicle_positions, find_vehicle,
-        get_time_range_for_direction,
     )
 
     st.header("Tableau de bord")
 
-    ca_pdfs = get_available_ca_pdfs(CA_DIR)
+    db_j_files = (
+        sorted(JOURNEES_DIR.glob("journee-*.json"), reverse=True)
+        if JOURNEES_DIR.exists() else []
+    )
 
-    if not ca_pdfs:
-        st.info("Aucune carte agent disponible. Chargez-en une dans l'onglet **Importation**.")
-    else:
-        ca_labels = [p["name"] for p in ca_pdfs]
-        sel_idx   = st.selectbox(
-            "Carte agent",
-            range(len(ca_labels)),
-            format_func=lambda i: ca_labels[i],
-            key="db_ca_select",
+    if not db_j_files:
+        st.info(
+            "Aucune journée enregistrée. "
+            "Importez-en une dans l'onglet **Journées**."
         )
-        sel_ca      = ca_pdfs[sel_idx]
-        ca_date_str = sel_ca["date_str"]
+    else:
+        db_j_labels = [p.stem.replace("journee-", "") for p in db_j_files]
+        db_sel = st.selectbox(
+            "Journée",
+            range(len(db_j_labels)),
+            format_func=lambda i: db_j_labels[i],
+            key="db_j_sel",
+        )
+        db_j_path   = db_j_files[db_sel]
+        db_date_str = db_j_labels[db_sel]
 
-        # ── Téléchargements carte agent ────────────────────────────────────────
-        annotee_path  = CA_DIR / f"carte-agent-{ca_date_str}-annotee.pdf"
-        surligné_path = CA_DIR / f"carte-agent-{ca_date_str}-surligné.pdf"
-        annotee_avail = annotee_path.exists() or surligné_path.exists()
-        annotee_file  = annotee_path if annotee_path.exists() else surligné_path
+        try:
+            db_j_data = json.loads(db_j_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            st.error(f"Erreur lecture journée : {e}")
+            st.stop()
 
-        dl1, dl2, dl3 = st.columns(3)
+        # ── Métriques résumé ──────────────────────────────────────────────────
+        db_pieces = db_j_data.get("pieces", [])
+        db_debut_all = [
+            t.get("depart",  {}).get("heure", "")
+            for p in db_pieces for t in p.get("trajets", [])
+            if t.get("type") == "service" and t.get("depart", {}).get("heure")
+        ]
+        db_fin_all = [
+            t.get("arrivee", {}).get("heure", "")
+            for p in db_pieces for t in p.get("trajets", [])
+            if t.get("type") == "service" and t.get("arrivee", {}).get("heure")
+        ]
+
+        mc1, mc2, mc3, mc4, mc5 = st.columns(5)
+        mc1.metric("Journée n°",      db_j_data.get("journee_numero", "–"))
+        mc2.metric("Garage",          db_j_data.get("garage",         "–"))
+        mc3.metric("Temps travaillé", db_j_data.get("temps_travaille","–"))
+        mc4.metric("Début",           min(db_debut_all) if db_debut_all else "–")
+        mc5.metric("Fin",             max(db_fin_all)   if db_fin_all   else "–")
+
+        # ── Téléchargements ──────────────────────────────────────────────────
+        annotee_path  = CA_DIR / f"carte-agent-{db_date_str}-annotee.pdf"
+        surligné_path = CA_DIR / f"carte-agent-{db_date_str}-surligné.pdf"
+        annotee_file  = (
+            annotee_path  if annotee_path.exists()  else
+            surligné_path if surligné_path.exists() else None
+        )
+        rapport_v2_paths = sorted(
+            RAPPORTS_DIR.glob(f"rapport-v2-{db_date_str}-*.pdf"),
+            key=lambda p: p.stat().st_mtime, reverse=True,
+        ) if RAPPORTS_DIR.exists() else []
+
+        dl1, dl2 = st.columns(2)
         with dl1:
-            st.download_button(
-                "⬇️ Carte agent source",
-                data=sel_ca["path"].read_bytes(),
-                file_name=sel_ca["path"].name,
-                mime="application/pdf",
-                key="db_ca_dl_src",
-            )
-        with dl2:
-            if annotee_avail:
+            if annotee_file:
                 st.download_button(
                     "⬇️ Carte annotée",
                     data=annotee_file.read_bytes(),
                     file_name=annotee_file.name,
                     mime="application/pdf",
-                    key="db_ca_dl_ann",
+                    key="db_ca_dl",
                 )
             else:
-                st.button("⬇️ Carte annotée (non disponible)", disabled=True, key="db_ca_dl_ann_dis")
-        with dl3:
-            rapport_path = RAPPORTS_DIR / f"rapport-{ca_date_str}.pdf"
-            if rapport_path.exists():
+                st.button("⬇️ Carte annotée (non disponible)", disabled=True,
+                          key="db_ca_dl_dis")
+        with dl2:
+            if rapport_v2_paths:
+                latest_rpt = rapport_v2_paths[0]
                 st.download_button(
-                    "⬇️ Rapport journalier",
-                    data=rapport_path.read_bytes(),
-                    file_name=rapport_path.name,
+                    f"⬇️ Rapport v2 ({latest_rpt.stem.split('-')[-1]})",
+                    data=latest_rpt.read_bytes(),
+                    file_name=latest_rpt.name,
                     mime="application/pdf",
-                    key="db_rj_dl",
+                    key="db_rpt_v2_dl",
                 )
             else:
-                st.button("⬇️ Rapport journalier (non disponible)", disabled=True, key="db_rj_dl_dis")
+                st.button("⬇️ Rapport v2 (non généré)", disabled=True,
+                          key="db_rpt_v2_dis")
 
-        ca_data = extract_pieces_from_pdf(sel_ca["path"])
+        st.divider()
 
-        if ca_data is None:
-            st.error("Impossible de lire la carte agent (PyMuPDF requis).")
-        else:
-            # ── Sommaire de la journée ─────────────────────────────────────────
-            st.subheader(f"Carte {ca_data['carte']} — {ca_date_str}")
+        # ── Pièces de travail ─────────────────────────────────────────────────
+        st.subheader("Pièces de travail")
 
-            pieces = ca_data["pieces"]
+        gtfs_info = get_gtfs_info(DATA_DIR)
+        RAPPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-            def _to_min(t: str) -> int:
-                h, m = map(int, t.split(":"))
-                return h * 60 + m
+        db_rpt_niveau = st.radio(
+            "Niveau des rapports G-D",
+            ["standard", "détaillé", "compact"],
+            index=0,
+            horizontal=True,
+            key="db_rpt_niveau",
+        )
 
-            if pieces:
-                debut_global = min(pieces, key=lambda p: _to_min(p["debut"]))["debut"]
-                fin_global   = max(pieces, key=lambda p: _to_min(p["fin"]))["fin"]
-                c1, c2, c3 = st.columns(3)
-                c1.metric("Heure de début", debut_global)
-                c2.metric("Heure de fin",   fin_global)
-                c3.metric("Nombre de pièces", len(pieces))
+        for idx, piece in enumerate(db_pieces):
+            pid = piece.get("id", f"pièce-{idx + 1}")
+            with st.expander(
+                f"Pièce {pid}  —  {piece.get('debut', '?')} → {piece.get('fin', '?')}"
+                f"  ({piece.get('duree', '?')})",
+                expanded=True,
+            ):
+                pc1, pc2, pc3 = st.columns([2, 2, 2])
 
-            st.divider()
+                with pc1:
+                    st.markdown(f"**Lieu prise :** `{piece.get('lieu_prise', '–')}`")
+                    st.markdown(f"**Lieu fin :** `{piece.get('lieu_fin', '–')}`")
 
-            # ── Pièces de travail ──────────────────────────────────────────────
-            st.subheader("Pièces de travail")
-
-            gtfs_info = get_gtfs_info(DATA_DIR)
-
-            for i, piece in enumerate(pieces):
-                with st.expander(
-                    f"Pièce {i + 1} — Prise {piece['debut']} → {piece['fin']}",
-                    expanded=True,
-                ):
-                    col_t, col_bus, col_geo = st.columns([2, 3, 2])
-
-                    with col_t:
-                        st.markdown(f"**Début :** `{piece['debut']}`")
-                        st.markdown(f"**Fin :** `{piece['fin']}`")
-
-                    with col_bus:
-                        bus_num = st.text_input(
-                            "Numéro d'autobus",
-                            placeholder="12-345",
-                            key=f"db_bus_{i}",
-                        )
-
-                    with col_geo:
-                        st.write("")
-                        geo_clicked = st.button(
-                            "📍 Géolocaliser",
-                            key=f"db_geo_btn_{i}",
-                            disabled=not gtfs_info["rt_avail"],
-                            help="Requiert vehiclePositions.pb (onglet GTFS)." if not gtfs_info["rt_avail"] else "",
-                        )
-
-                    geo_key = f"db_geo_result_{i}"
+                with pc2:
+                    bus_edit_key = f"db_bus_edit_{db_date_str}_{idx}"
+                    st.text_input(
+                        "Numéro d'autobus",
+                        value=piece.get("numero_autobus") or "",
+                        placeholder="ex : 38013",
+                        key=bus_edit_key,
+                    )
+                    current_bus = (
+                        st.session_state.get(bus_edit_key, "").strip()
+                        or piece.get("numero_autobus") or ""
+                    )
+                    geo_key = f"db_geo_r_{idx}"
+                    geo_clicked = st.button(
+                        "📍 Géolocaliser",
+                        key=f"db_geo_{idx}",
+                        disabled=not gtfs_info["rt_avail"],
+                        help="Requiert vehiclePositions.pb (onglet GTFS)."
+                             if not gtfs_info["rt_avail"] else "",
+                    )
                     if geo_clicked:
-                        if not bus_num.strip():
+                        if not current_bus:
                             st.warning("Entrez un numéro d'autobus avant de géolocaliser.")
                         else:
                             with st.spinner("Recherche du véhicule…"):
@@ -227,197 +288,272 @@ with tabs[0]:
                                     vehicles = parse_vehicle_positions(
                                         gtfs_info["rt_pb"].read_bytes()
                                     )
-                                    st.session_state[geo_key] = find_vehicle(bus_num.strip(), vehicles)
+                                    st.session_state[geo_key] = find_vehicle(
+                                        current_bus, vehicles
+                                    )
                                 except Exception as e:
-                                    st.error(f"Erreur parsing GTFS-RT : {e}")
+                                    st.error(f"Erreur GTFS-RT : {e}")
                                     st.session_state[geo_key] = None
-
                     if geo_key in st.session_state:
                         v = st.session_state[geo_key]
                         if v:
                             st.success(
-                                f"🚌 Bus `{v.get('v_label') or v.get('v_id')}` — "
+                                f"Bus `{v.get('v_label') or v.get('v_id')}` — "
                                 f"Lat {v['lat']:.5f}, Lon {v['lon']:.5f}"
-                                + (f" — Ligne {v['route_id']}" if v.get("route_id") else "")
+                                + (f" — Ligne {v['route_id']}"
+                                   if v.get("route_id") else "")
                             )
                             try:
                                 import pandas as pd
-                                st.map(pd.DataFrame([{"lat": v["lat"], "lon": v["lon"]}]), zoom=15)
+                                st.map(
+                                    pd.DataFrame([{"lat": v["lat"], "lon": v["lon"]}]),
+                                    zoom=15,
+                                )
                             except Exception:
-                                st.markdown(f"[Voir sur Google Maps](https://www.google.com/maps?q={v['lat']},{v['lon']})")
+                                st.markdown(
+                                    f"[Voir sur Google Maps]"
+                                    f"(https://www.google.com/maps?q={v['lat']},{v['lon']})"
+                                )
                         else:
-                            st.warning(f"Bus `{bus_num.strip()}` introuvable dans les données GTFS-RT.")
+                            st.warning(
+                                f"Bus `{current_bus}` introuvable dans les données GTFS-RT."
+                            )
 
-            st.divider()
+                with pc3:
+                    releve = piece.get("releve") or {}
+                    if releve.get("je_releve"):
+                        r = releve["je_releve"]
+                        st.caption(f"Relève : {r['nom']} ({r['matricule']})")
+                    if releve.get("je_suis_releve_par"):
+                        r = releve["je_suis_releve_par"]
+                        st.caption(f"Relevé par : {r['nom']} ({r['matricule']})")
 
-            # ── Lignes du jour ─────────────────────────────────────────────────
-            st.subheader("Lignes du jour")
+                # ── Trajets ───────────────────────────────────────────────────
+                for ti, trajet in enumerate(piece.get("trajets", [])):
+                    if trajet.get("type") == "haut_le_pied":
+                        dep_t = trajet.get("depart",  {})
+                        arr_t = trajet.get("arrivee", {})
+                        st.markdown(
+                            f"&nbsp;&nbsp;🚶 *Haut-le-pied* &ensp;"
+                            f"`{dep_t.get('heure', '?')}` {dep_t.get('arret', '?')}"
+                            f" → `{arr_t.get('heure', '?')}` {arr_t.get('arret', '?')}"
+                        )
+                        continue
 
-            lignes = ca_data["lignes"]
-            if not lignes:
-                st.info("Aucun numéro de ligne détecté dans la carte agent.")
-            else:
-                line_tr = ca_data.get("line_time_ranges", {})
+                    if trajet.get("type") != "service":
+                        continue
 
-                for ligne in lignes:
-                    gd_files = get_gd_files_for_ligne(ligne, DATA_DIR)
+                    tl    = trajet.get("ligne", "?")
+                    td    = (trajet.get("direction") or "").lower()
+                    tid   = trajet.get("id_parcours")
+                    dep_t = trajet.get("depart",  {})
+                    arr_t = trajet.get("arrivee", {})
+                    det_mark = " 🔀" if trajet.get("detour") else ""
+                    notes    = trajet.get("notes_voyage", [])
+                    note_txt = f"  *(note : {', '.join(notes)})*" if notes else ""
 
-                    with st.expander(f"Ligne {ligne}", expanded=True):
-                        if not gd_files:
-                            st.caption(f"Aucun fichier G-D pour la ligne {ligne}.")
-                            continue
+                    st.markdown(
+                        f"&nbsp;&nbsp;🚌 **{tl} {td.capitalize()} ID {tid}**{det_mark}"
+                        f" &ensp; `{dep_t.get('heure', '?')}` {dep_t.get('arret', '?')}"
+                        f" → `{arr_t.get('heure', '?')}` {arr_t.get('arret', '?')}"
+                        f"{note_txt}"
+                    )
 
-                        segments = line_tr.get(ligne, [])
-                        # N'afficher que les directions réellement travaillées ce
-                        # jour-là : un trajet de la carte agent doit correspondre au
-                        # parcours G-D (tr non None). Repli : si aucune direction
-                        # n'est appariée (ligne sans horaire exploitable ou noms
-                        # divergents), tout afficher pour ne rien masquer à tort.
-                        gd_tr = [(gd, get_time_range_for_direction(gd["path"], segments))
-                                 for gd in gd_files]
-                        travaillees = [(gd, tr) for gd, tr in gd_tr if tr is not None] or gd_tr
+                    t_key = f"db_t_{idx}_{ti}"
+                    tb1, tb2 = st.columns(2)
+                    with tb1:
+                        if st.button("🗺️ Rapport G-D", key=f"{t_key}_rpt"):
+                            st.session_state[f"{t_key}_rpt_run"] = True
+                    with tb2:
+                        if st.button("⚠️ Évènements", key=f"{t_key}_ev"):
+                            ev_k = f"{t_key}_ev_open"
+                            st.session_state[ev_k] = not st.session_state.get(ev_k, False)
 
-                        for gd, tr in travaillees:
-                            direction = gd["direction"]
-                            evt_path  = EVENTS_DIR / f"{ligne}_{direction}.json"
-                            evt_mtime = get_event_file_mtime(ligne, direction, DATA_DIR)
+                    # Rapport G-D pour ce trajet
+                    if st.session_state.get(f"{t_key}_rpt_run"):
+                        if not (DATA_DIR / "gtfs" / "gtfs_stm").exists():
+                            st.warning("Données GTFS introuvables.")
+                        else:
+                            out_rpt = (
+                                RAPPORTS_DIR
+                                / f"rapport-v2-{db_date_str}-{tl}-{td}-id{tid}.html"
+                            )
+                            cmd = [
+                                sys.executable,
+                                str(SCRIPTS_DIR / "gen_rapport_v2.py"),
+                                "--journee",          str(db_j_path),
+                                "--filtre-ligne",     tl,
+                                "--filtre-direction", td,
+                                "--niveau",           db_rpt_niveau,
+                                "--format",           "html",
+                                "--output",           str(out_rpt),
+                            ]
+                            if tid is not None:
+                                cmd += ["--filtre-id-parcours", str(tid)]
+                            with st.spinner(
+                                f"Génération rapport {tl} {td.capitalize()} ID {tid}…"
+                            ):
+                                rpt_res = subprocess.run(
+                                    cmd, capture_output=True, text=True
+                                )
+                            if rpt_res.returncode == 0 and out_rpt.exists():
+                                rpt_html = out_rpt.read_bytes()
+                                st.download_button(
+                                    f"⬇️ Rapport {tl} {td.capitalize()} ID {tid}",
+                                    data=rpt_html,
+                                    file_name=out_rpt.name,
+                                    mime="text/html",
+                                    key=f"{t_key}_rpt_dl",
+                                )
+                                with st.expander(
+                                    f"Aperçu — {tl} {td.capitalize()} ID {tid}",
+                                    expanded=True,
+                                ):
+                                    components.html(
+                                        rpt_html.decode("utf-8"),
+                                        height=600, scrolling=True,
+                                    )
+                            else:
+                                st.error("Erreur lors de la génération.")
+                                st.code(rpt_res.stderr or rpt_res.stdout)
 
-                            # ── Ligne d'info ───────────────────────────────────
-                            ci1, ci2, ci3, ci4 = st.columns([1, 3, 3, 2])
-                            ci1.markdown(f"**{direction.capitalize()}**")
-                            ci2.caption(f"G-D : {gd['mtime']}")
-                            ci3.caption(f"Évènements : {evt_mtime}")
-                            with ci4:
-                                if tr:
-                                    st.caption(f"⏱ {tr[0]} → {tr[1]}")
+                    # Évènements pour ce trajet
+                    if st.session_state.get(f"{t_key}_ev_open"):
+                        evt_path_t = EVENTS_DIR / f"{tl}_{td}.json"
+                        if not evt_path_t.exists():
+                            st.info(f"Aucun fichier d'évènements pour {tl} {td}.")
+                        else:
+                            try:
+                                evt_data_t = json.loads(
+                                    evt_path_t.read_text(encoding="utf-8")
+                                )
+                                events_t = evt_data_t.get("detours", [])
+                                tr_t = (
+                                    (dep_t.get("heure"), arr_t.get("heure"))
+                                    if dep_t.get("heure") and arr_t.get("heure")
+                                    else None
+                                )
 
-                            # ── Boutons d'action ───────────────────────────────
-                            cb1, cb2, cb3 = st.columns(3)
-                            with cb1:
-                                if st.button("📄 Voir G-D", key=f"db_gd_btn_{ligne}_{direction}"):
-                                    k = f"db_gd_open_{ligne}_{direction}"
-                                    st.session_state[k] = not st.session_state.get(k, False)
-                            with cb2:
-                                if st.button("⚠️ Évènements", key=f"db_ev_btn_{ligne}_{direction}"):
-                                    k = f"db_ev_open_{ligne}_{direction}"
-                                    st.session_state[k] = not st.session_state.get(k, False)
-                            with cb3:
-                                if st.button("🗺️ Rapport G-D", key=f"db_rpt_{ligne}_{direction}"):
-                                    st.session_state[f"db_rpt_run_{ligne}_{direction}"] = True
-
-                            # ── Visualisation G-D ──────────────────────────────
-                            if st.session_state.get(f"db_gd_open_{ligne}_{direction}"):
-                                try:
-                                    gd_data = json.loads(gd["path"].read_text(encoding="utf-8"))
-                                    with st.expander(f"G-D — {ligne} {direction}", expanded=True):
-                                        for route in gd_data.get("routes", []):
-                                            for parcours in route.get("parcours", []):
-                                                st.markdown(
-                                                    f"**{parcours.get('name', '?')}** "
-                                                    f"— {parcours.get('start', '')} `{parcours.get('start_code', '')}` "
-                                                    f"→ {parcours.get('end', '')} `{parcours.get('end_code', '')}`"
-                                                )
-                                                for instr in parcours.get("direction", []):
-                                                    st.text(f"   {instr}")
-                                                st.divider()
-                                except Exception as e:
-                                    st.error(f"Erreur lecture G-D : {e}")
-
-                            # ── Visualisation évènements ───────────────────────
-                            if st.session_state.get(f"db_ev_open_{ligne}_{direction}"):
-                                if not evt_path.exists():
-                                    st.info(f"Aucun fichier d'évènements pour {ligne} {direction}.")
-                                else:
+                                # Instructions G-D du parcours (pour filtrage rues)
+                                _ev_gd_instr: list = []
+                                _ev_gd_file = GD_DIR / f"gd{tl}_{td}.json"
+                                if _ev_gd_file.exists():
                                     try:
-                                        evt_data = json.loads(evt_path.read_text(encoding="utf-8"))
-                                        events   = evt_data.get("detours", [])
-                                        with st.expander(f"Évènements — {ligne} {direction}", expanded=True):
-                                            if not events:
-                                                st.caption("Aucun évènement enregistré.")
-                                            for evt in events:
-                                                applies = _event_applies(evt, ca_date_str, tr)
-                                                eid   = evt.get("evenement_id", "?")
-                                                titre = evt.get("titre", "(sans titre)")
-                                                eff   = evt.get("effectif", "")
-                                                d_deb = (evt.get("date_heure_debut") or "")[:10]
-                                                d_fin = (evt.get("date_heure_fin")   or "")[:10]
-                                                label = f"{'✅' if applies else '⬜'} #{eid} — {titre}"
-                                                with st.expander(label, expanded=applies):
-                                                    if not applies:
-                                                        st.caption("⚠️ Non applicable à ce quart (plage de validité ou d'effectif).")
-                                                    if eff:
-                                                        st.caption(f"Effectif : {eff}")
-                                                    if d_deb:
-                                                        st.caption(f"Période : {d_deb} → {d_fin or '?'}")
-                                                    ann = evt.get("arrets_annules", [])
-                                                    ajt = evt.get("arrets_ajoutes", [])
-                                                    if ann:
-                                                        st.markdown("**Arrêts annulés :**")
-                                                        for a in ann:
-                                                            if isinstance(a, str):
-                                                                st.text(f"  ✖ {a}")
-                                                            else:
-                                                                nm = a.get("nom", a.get("code", "?"))
-                                                                cd = a.get("code", "")
-                                                                st.text(f"  ✖ {nm}" + (f" ({cd})" if cd else ""))
-                                                    if ajt:
-                                                        st.markdown("**Arrêts ajoutés :**")
-                                                        for a in ajt:
-                                                            if isinstance(a, str):
-                                                                st.text(f"  ✚ {a}")
-                                                            else:
-                                                                nm = a.get("nom", a.get("code", "?"))
-                                                                cd = a.get("code", "")
-                                                                st.text(f"  ✚ {nm}" + (f" ({cd})" if cd else ""))
-                                    except Exception as e:
-                                        st.error(f"Erreur lecture évènements : {e}")
-
-                            # ── Génération rapport G-D ─────────────────────────
-                            if st.session_state.get(f"db_rpt_run_{ligne}_{direction}"):
-                                gtfs_path = DATA_DIR / "gtfs" / "gtfs_stm"
-                                if not gtfs_path.exists():
-                                    st.warning("Données GTFS introuvables.")
-                                else:
-                                    out_path = DATA_DIR / "rapports" / f"rapport_{ligne}_{direction}_{ca_date_str}.html"
-                                    cmd = [
-                                        sys.executable, str(SCRIPTS_DIR / "rapport_gd.py"),
-                                        "--ligne", ligne,
-                                        "--direction", direction,
-                                        "--date", ca_date_str,
-                                        "--format", "html",
-                                        "--base", str(PROJECT_ROOT),
-                                        "--output", str(out_path),
-                                    ]
-                                    if tr:
-                                        cmd += ["--heure-debut", tr[0], "--heure-fin", tr[1]]
-                                    with st.spinner(f"Génération rapport {ligne} {direction}…"):
-                                        rpt_result = subprocess.run(cmd, capture_output=True, text=True)
-                                    if rpt_result.returncode == 0 and out_path.exists():
-                                        rpt_html = out_path.read_bytes()
-                                        st.download_button(
-                                            f"⬇️ Rapport {ligne} {direction} (HTML)",
-                                            data=rpt_html,
-                                            file_name=out_path.name,
-                                            mime="text/html",
-                                            key=f"db_rpt_dl_{ligne}_{direction}",
+                                        _ev_raw  = json.loads(
+                                            _ev_gd_file.read_text(encoding="utf-8")
                                         )
-                                        with st.expander(f"Aperçu — {ligne} {direction}", expanded=True):
-                                            components.html(
-                                                rpt_html.decode("utf-8"), height=600, scrolling=True
-                                            )
-                                    else:
-                                        st.error("Erreur lors de la génération du rapport.")
-                                        st.code(rpt_result.stderr or rpt_result.stdout)
+                                        _ev_all_p = (
+                                            _ev_raw.get("routes") or [{}]
+                                        )[0].get("parcours", [])
+                                        _ev_parc = next(
+                                            (p for p in _ev_all_p
+                                             if p.get("id") == tid),
+                                            _ev_all_p[0] if _ev_all_p else {},
+                                        )
+                                        _ev_gd_instr = _ev_parc.get("direction", [])
+                                    except Exception:
+                                        pass
 
-                            st.markdown("---")
+                                # Stop IDs GTFS du parcours (mis en cache)
+                                _ev_gtfs_dir = DATA_DIR / "gtfs" / "gtfs_stm"
+                                _ev_stop_ids = (
+                                    _cached_stop_ids_for_parcours(
+                                        str(_ev_gtfs_dir), tl, td, tid
+                                    )
+                                    if _ev_gtfs_dir.exists() else None
+                                )
 
-            st.divider()
+                                with st.expander(
+                                    f"Évènements — {tl} {td.capitalize()} ID {tid}",
+                                    expanded=True,
+                                ):
+                                    if not events_t:
+                                        st.caption("Aucun évènement enregistré.")
+                                    for evt in events_t:
+                                        applies_quart = _event_applies(
+                                            evt, db_date_str, tr_t
+                                        )
+                                        applies_parc = _ev_applicable_parcours_tb(
+                                            evt, _ev_stop_ids, _ev_gd_instr
+                                        )
+                                        applies = applies_quart and applies_parc
+                                        eid   = evt.get("evenement_id", "?")
+                                        titre = evt.get("titre", "(sans titre)")
+                                        eff   = evt.get("effectif", "")
+                                        d_deb = (evt.get("date_heure_debut") or "")[:10]
+                                        d_fin = (evt.get("date_heure_fin")   or "")[:10]
+                                        label = (
+                                            f"{'✅' if applies else '⬜'}"
+                                            f" #{eid} — {titre}"
+                                        )
+                                        with st.expander(label, expanded=applies):
+                                            if not applies_quart:
+                                                st.caption(
+                                                    "⚠️ Non applicable à ce trajet "
+                                                    "(plage de validité ou d'effectif)."
+                                                )
+                                            elif not applies_parc:
+                                                st.caption(
+                                                    "⚠️ Non applicable à ce parcours "
+                                                    "(arrêts ou rues ne correspondent pas)."
+                                                )
+                                            if eff:
+                                                st.caption(f"Effectif : {eff}")
+                                            if d_deb:
+                                                st.caption(
+                                                    f"Période : {d_deb} → {d_fin or '?'}"
+                                                )
+                                            ann = evt.get("arrets_annules", [])
+                                            ajt = evt.get("arrets_ajoutes", [])
+                                            if ann:
+                                                st.markdown("**Arrêts annulés :**")
+                                                for a in ann:
+                                                    if isinstance(a, str):
+                                                        st.text(f"  ✖ {a}")
+                                                    else:
+                                                        nm = a.get("nom", a.get("code", "?"))
+                                                        cd = a.get("code", "")
+                                                        st.text(
+                                                            f"  ✖ {nm}"
+                                                            + (f" ({cd})" if cd else "")
+                                                        )
+                                            if ajt:
+                                                st.markdown("**Arrêts ajoutés :**")
+                                                for a in ajt:
+                                                    if isinstance(a, str):
+                                                        st.text(f"  ✚ {a}")
+                                                    else:
+                                                        nm = a.get("nom", a.get("code", "?"))
+                                                        cd = a.get("code", "")
+                                                        st.text(
+                                                            f"  ✚ {nm}"
+                                                            + (f" ({cd})" if cd else "")
+                                                        )
+                            except Exception as e:
+                                st.error(f"Erreur lecture évènements : {e}")
 
-            # ── Données GTFS ───────────────────────────────────────────────────
-            st.subheader("Données GTFS")
-            c1, c2 = st.columns(2)
-            c1.metric("GTFS statique", gtfs_info["static_ts"])
-            c2.metric("GTFS temps réel", gtfs_info["rt_ts"])
+        # ── Sauvegarde des numéros d'autobus ─────────────────────────────────
+        st.divider()
+        if st.button("💾 Enregistrer les numéros d'autobus", key="db_bus_save"):
+            db_pieces_save = json.loads(json.dumps(db_j_data.get("pieces", [])))
+            for save_idx in range(len(db_pieces_save)):
+                bus_save_key = f"db_bus_edit_{db_date_str}_{save_idx}"
+                val = st.session_state.get(bus_save_key, "").strip()
+                db_pieces_save[save_idx]["numero_autobus"] = val or None
+            db_j_data["pieces"] = db_pieces_save
+            db_j_path.write_text(
+                json.dumps(db_j_data, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            st.success("Numéros d'autobus sauvegardés.")
+            st.rerun()
+
+        # ── Données GTFS ──────────────────────────────────────────────────────
+        st.divider()
+        st.subheader("Données GTFS")
+        c1, c2 = st.columns(2)
+        c1.metric("GTFS statique",   gtfs_info["static_ts"])
+        c2.metric("GTFS temps réel", gtfs_info["rt_ts"])
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -425,7 +561,7 @@ with tabs[0]:
 # ═══════════════════════════════════════════════════════════════════════════════
 with tabs[1]:
     st.header("Importation")
-    imp_tabs = st.tabs(["📋 Carte Agent", "↔️ Gauche-Droite", "⚠️ Évènements"])
+    imp_tabs = st.tabs(["📋 Carte Agent", "📅 Journée", "↔️ Gauche-Droite", "⚠️ Évènements", "📡 GTFS"])
 
     # ── 2a — Carte Agent ──────────────────────────────────────────────────────
     with imp_tabs[0]:
@@ -477,8 +613,53 @@ with tabs[1]:
                 st.error("Erreur lors de l'annotation.")
                 st.code(result.stderr or result.stdout)
 
-    # ── 2b — Gauche-Droite ───────────────────────────────────────────────────
+    # ── 2b — Journée ─────────────────────────────────────────────────────────
     with imp_tabs[1]:
+        st.markdown(
+            "Collez le texte brut du **Détail de ma journée** (copié depuis l'interface STM). "
+            "Le fichier `journee-YYYY-MM-DD.json` sera créé dans `data/journees/`. "
+            "La journée importée apparaît ensuite dans le **Tableau de bord**."
+        )
+
+        col_jd, _ = st.columns([1, 3])
+        with col_jd:
+            j_imp_date = st.date_input("Date de la journée", value=date.today(), key="j_imp_date")
+
+        j_text = st.text_area(
+            "Texte brut",
+            height=400,
+            placeholder=(
+                "Détail de ma journée\n"
+                "Hier59200 - Frontenac\n"
+                "Journée439\n"
+                "Temps travaillé7:30\n"
+                "Temps supplémentaire0:00\n"
+                "Mis à jour le 17 juin 2026 00:32\n"
+                "Sommaire24 - 1538013--3:18Horaire\n..."
+            ),
+            key="j_text",
+        )
+
+        if st.button("Importer", type="primary", key="j_imp_btn"):
+            if not j_text.strip():
+                st.warning("Le champ est vide.")
+            else:
+                from parse_journee import JourneeParser
+
+                parser = JourneeParser(j_text, date_str=str(j_imp_date))
+                result_j = parser.parse()
+
+                if result_j:
+                    saved_j = parser.save(result_j)
+                    st.success(f"Journée du {j_imp_date} importée.")
+                    st.code(parser.get_summary(result_j, saved_j))
+                    st.balloons()
+                else:
+                    st.error("Échec du parsing.")
+                    st.code(parser.get_summary())
+
+    # ── 2c — Gauche-Droite ───────────────────────────────────────────────────
+    with imp_tabs[2]:
         st.markdown("Collez le texte brut copié depuis l'interface STM. Le fichier `gd<ligne>_<direction>.json` sera créé ou mis à jour.")
 
         gd_text = st.text_area(
@@ -516,8 +697,8 @@ with tabs[1]:
                 if all_ok:
                     st.balloons()
 
-    # ── 2c — Évènements ──────────────────────────────────────────────────────
-    with imp_tabs[2]:
+    # ── 2d — Évènements ──────────────────────────────────────────────────────
+    with imp_tabs[3]:
         st.markdown("Collez le texte brut des évènements / détours STM. Le fichier `<ligne>_<direction>.json` sera créé ou mis à jour.")
 
         ev_text = st.text_area(
@@ -553,13 +734,75 @@ with tabs[1]:
                 if all_ok:
                     st.balloons()
 
+    # ── 2e — GTFS ────────────────────────────────────────────────────────────
+    with imp_tabs[4]:
+        from dashboard import get_gtfs_info as _imp_get_gtfs_info
+
+        _imp_gtfs_path     = DATA_DIR / "gtfs" / "gtfs_stm"
+        _imp_gtfs_manifest = DATA_DIR / "gtfs" / "gtfs_manifest.json"
+        _imp_gtfs_info     = _imp_get_gtfs_info(DATA_DIR)
+
+        if _imp_gtfs_manifest.exists():
+            st.info(
+                f"GTFS statique présent — dernier téléchargement le "
+                f"{_imp_gtfs_info['static_ts']}"
+            )
+        else:
+            st.warning(
+                "Aucune donnée GTFS statique. Cliquez sur **Télécharger** pour initialiser."
+            )
+
+        gc1, gc2 = st.columns(2)
+        gc1.metric("GTFS statique — dernier téléchargement", _imp_gtfs_info["static_ts"])
+        gc2.metric("GTFS temps réel — dernier téléchargement", _imp_gtfs_info["rt_ts"])
+
+        gcol1, gcol2 = st.columns(2)
+        with gcol1:
+            st.subheader("GTFS statique")
+            st.caption("Données de lignes, arrêts et horaires (mis à jour hebdomadairement).")
+            if st.button("Télécharger GTFS statique", key="gtfs_static_btn"):
+                with st.spinner("Téléchargement en cours…"):
+                    _res_static = subprocess.run(
+                        [sys.executable, str(SCRIPTS_DIR / "fetch_gtfs.py")],
+                        capture_output=True, text=True,
+                    )
+                st.code(
+                    _res_static.stdout
+                    + ("\n" + _res_static.stderr if _res_static.stderr else "")
+                )
+                if _res_static.returncode == 0:
+                    st.success("GTFS statique mis à jour.")
+                else:
+                    st.error("Erreur lors du téléchargement.")
+
+        with gcol2:
+            st.subheader("GTFS temps réel")
+            st.caption(
+                "Positions et retards en temps réel "
+                "(nécessite une clé API STM dans `Installation/config/secrets.json`)."
+            )
+            if st.button("Télécharger GTFS-RT", key="gtfs_rt_btn"):
+                with st.spinner("Téléchargement en cours…"):
+                    _res_rt = subprocess.run(
+                        [sys.executable, str(SCRIPTS_DIR / "fetch_gtfs_rt.py")],
+                        capture_output=True, text=True,
+                    )
+                st.code(
+                    _res_rt.stdout
+                    + ("\n" + _res_rt.stderr if _res_rt.stderr else "")
+                )
+                if _res_rt.returncode == 0:
+                    st.success("GTFS-RT récupéré.")
+                else:
+                    st.error("Erreur lors du téléchargement.")
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Tab 3 — Rapports
 # ═══════════════════════════════════════════════════════════════════════════════
 with tabs[2]:
     st.header("Rapports")
-    rpt_tabs = st.tabs(["📄 Rapport journalier", "🗺️ Rapport G-D détaillé"])
+    rpt_tabs = st.tabs(["📄 Rapport journalier", "📊 Rapport v2 (journée)"])
 
     # ── 3a — Rapport journalier ───────────────────────────────────────────────
     with rpt_tabs[0]:
@@ -595,108 +838,140 @@ with tabs[2]:
             else:
                 st.error("Erreur lors de la génération. Vérifiez qu'une carte agent existe pour cette date dans `data/ca/`.")
 
-    # ── 3b — Rapport G-D détaillé ─────────────────────────────────────────────
+    # ── 3b — Rapport v2 (journée) ────────────────────────────────────────────────
     with rpt_tabs[1]:
-        st.markdown("Croise les arrêts GTFS, les instructions G-D et les évènements actifs pour une ligne et une date.")
+        st.markdown(
+            "Génère un rapport G-D à partir d'une journée importée (`journee-YYYY-MM-DD.json`). "
+            "Chaque groupe (ligne · direction · ID parcours) est traité séparément."
+        )
 
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            gdr_ligne = st.text_input("Ligne", placeholder="195  ou  24e", key="gdr_ligne",
-                                      help="Ajoutez 'e' pour les variantes école (ex: 24e, 168e).")
-        with col2:
-            gdr_dir = st.selectbox("Direction", ["est", "ouest", "nord", "sud"], key="gdr_dir")
-        with col3:
-            gdr_date = st.date_input("Date", value=date.today(), key="gdr_date")
+        v2_journee_files = (
+            sorted(JOURNEES_DIR.glob("journee-*.json"), reverse=True)
+            if JOURNEES_DIR.exists() else []
+        )
 
-        st.markdown("**Parcours**")
-        _parcours_options = []
-        if gdr_ligne.strip():
-            from rapport_gd import list_parcours as _list_parcours
-            _parcours_options = _list_parcours(gdr_ligne.strip(), gdr_dir, PROJECT_ROOT)
-
-        if _parcours_options:
-            _labels = [f"[{p['id']}] {p['name']}  ({p['start_code']} → {p['end_code']})"
-                       for p in _parcours_options]
-            _sel_idx = st.selectbox("Parcours disponibles", range(len(_labels)),
-                                    format_func=lambda i: _labels[i], key="gdr_parcours_idx")
-            gdr_parcours_hint = _parcours_options[_sel_idx]["name"]
+        if not v2_journee_files:
+            st.info("Aucune journée disponible. Importez-en une dans l'onglet **Journées**.")
         else:
-            st.caption("Entrez un numéro de ligne valide pour voir les parcours disponibles.")
-            gdr_parcours_hint = st.text_input(
-                "Mot-clé parcours (optionnel)", placeholder="principal, secondaire, école, weekend",
-                key="gdr_parcours_hint",
+            v2_j_labels = [p.stem.replace("journee-", "") for p in v2_journee_files]
+            v2_sel = st.selectbox(
+                "Journée",
+                range(len(v2_j_labels)),
+                format_func=lambda i: v2_j_labels[i],
+                key="rpt_v2_sel",
             )
+            v2_j_path = v2_journee_files[v2_sel]
 
-        st.markdown("**Plage d'arrêts effective** *(optionnel)*")
-        col_s1, col_s2 = st.columns(2)
-        with col_s1:
-            gdr_arret_debut = st.text_input("Code arrêt de départ", placeholder="54112", key="gdr_arret_debut")
-        with col_s2:
-            gdr_arret_fin = st.text_input("Code arrêt de fin", placeholder="57365", key="gdr_arret_fin")
+            try:
+                v2_j_data = json.loads(v2_j_path.read_text(encoding="utf-8"))
+            except Exception as e:
+                st.error(f"Erreur lecture journée : {e}")
+                st.stop()
 
-        st.markdown("**Plage horaire du quart** *(optionnel)*")
-        col_a, col_b = st.columns(2)
-        with col_a:
-            gdr_heure_debut = st.text_input("Heure de début", placeholder="22:00  ou  06:30", key="gdr_heure_debut")
-        with col_b:
-            gdr_heure_fin = st.text_input("Heure de fin", placeholder="06:30  ou  28:00", key="gdr_heure_fin")
+            # ── Résumé journée et plage horaire ───────────────────────────────
+            v2_pieces = v2_j_data.get("pieces", [])
+            v2_debuts = [
+                t.get("depart",  {}).get("heure", "")
+                for p in v2_pieces for t in p.get("trajets", [])
+                if t.get("type") == "service" and t.get("depart", {}).get("heure")
+            ]
+            v2_fins = [
+                t.get("arrivee", {}).get("heure", "")
+                for p in v2_pieces for t in p.get("trajets", [])
+                if t.get("type") == "service" and t.get("arrivee", {}).get("heure")
+            ]
+            if v2_debuts and v2_fins:
+                st.caption(
+                    f"Plage du quart : **{min(v2_debuts)} → {max(v2_fins)}**"
+                    f"  ·  Garage {v2_j_data.get('garage', '–')}"
+                    f"  ·  Journée #{v2_j_data.get('journee_numero', '–')}"
+                    f"  ·  Temps travaillé {v2_j_data.get('temps_travaille', '–')}"
+                )
 
-        gdr_format = st.radio("Format de sortie", ["html", "md"], horizontal=True, key="gdr_fmt")
+            # ── Groupes détectés (lecture inline) ─────────────────────────────
+            v2_groupes = []
+            v2_seen_g: dict = {}
+            for _p in v2_pieces:
+                for _t in _p.get("trajets", []):
+                    if _t.get("type") != "service":
+                        continue
+                    _lg = _t.get("ligne") or ""
+                    _dr = (_t.get("direction") or "").lower()
+                    _ip = _t.get("id_parcours")
+                    if not _lg or not _dr:
+                        continue
+                    _key = (_lg, _dr, _ip)
+                    if _key not in v2_seen_g:
+                        v2_seen_g[_key] = len(v2_groupes)
+                        v2_groupes.append({
+                            "ligne": _lg, "direction": _dr,
+                            "id_parcours": _ip, "detour": _t.get("detour", False),
+                        })
+                    elif _t.get("detour"):
+                        v2_groupes[v2_seen_g[_key]]["detour"] = True
 
-        if st.button("Générer", type="primary", key="gdr_btn"):
-            if not gdr_ligne.strip():
-                st.warning("Entrez un numéro de ligne.")
-            elif bool(gdr_heure_debut.strip()) != bool(gdr_heure_fin.strip()):
-                st.warning("Veuillez renseigner les deux heures (début ET fin) ou laisser les deux vides.")
-            else:
-                gtfs_path = DATA_DIR / "gtfs" / "gtfs_stm"
-                if not gtfs_path.exists():
-                    st.error("Données GTFS introuvables. Lancez d'abord le téléchargement GTFS.")
+            if v2_groupes:
+                grp_txt = "  ·  ".join(
+                    f"{g['ligne']} {g['direction'].capitalize()} ID {g['id_parcours']}"
+                    + (" 🔀" if g.get("detour") else "")
+                    for g in v2_groupes
+                )
+                st.caption(f"Groupes : {grp_txt}")
+
+            st.divider()
+
+            # ── Options ───────────────────────────────────────────────────────
+            v2_col_n, v2_col_f, v2_col_c = st.columns(3)
+            with v2_col_n:
+                v2_niveau = st.selectbox(
+                    "Niveau",
+                    ["détaillé", "standard", "compact"],
+                    key="rpt_v2_niveau",
+                )
+            with v2_col_f:
+                v2_fmt = st.radio("Format", ["pdf", "html"], horizontal=True, key="rpt_v2_fmt")
+            with v2_col_c:
+                v2_code = st.checkbox("Codes arrêts", value=False, key="rpt_v2_code")
+
+            if st.button("Générer", type="primary", key="rpt_v2_btn"):
+                RAPPORTS_DIR.mkdir(parents=True, exist_ok=True)
+                v2_date_str = v2_j_data.get("date", v2_j_labels[v2_sel])
+                v2_out = RAPPORTS_DIR / f"rapport-v2-{v2_date_str}-{v2_niveau}.{v2_fmt}"
+
+                cmd = [
+                    sys.executable, str(SCRIPTS_DIR / "gen_rapport_v2.py"),
+                    "--journee", str(v2_j_path),
+                    "--niveau",  v2_niveau,
+                    "--format",  v2_fmt,
+                    "--output",  str(v2_out),
+                ]
+                if v2_code:
+                    cmd.append("--codearret")
+
+                with st.spinner("Génération en cours…"):
+                    v2_result = subprocess.run(cmd, capture_output=True, text=True)
+
+                v2_out_txt = v2_result.stdout + ("\n" + v2_result.stderr if v2_result.stderr else "")
+                st.code(v2_out_txt)
+
+                if v2_result.returncode == 0 and v2_out.exists():
+                    st.success("Rapport généré.")
+                    v2_mime = "text/html" if v2_fmt == "html" else "application/pdf"
+                    st.download_button(
+                        f"⬇️ Télécharger ({v2_fmt.upper()})",
+                        data=v2_out.read_bytes(),
+                        file_name=v2_out.name,
+                        mime=v2_mime,
+                        key="rpt_v2_dl",
+                    )
+                    if v2_fmt == "html":
+                        with st.expander("Aperçu HTML"):
+                            components.html(
+                                v2_out.read_text(encoding="utf-8"),
+                                height=600, scrolling=True,
+                            )
                 else:
-                    expected_out = DATA_DIR / "rapports" / f"rapport_{gdr_ligne.strip()}_{gdr_dir}_{gdr_date}.{gdr_format}"
-
-                    cmd = [
-                        sys.executable, str(SCRIPTS_DIR / "rapport_gd.py"),
-                        "--ligne", gdr_ligne.strip(),
-                        "--direction", gdr_dir,
-                        "--date", str(gdr_date),
-                        "--format", gdr_format,
-                        "--base", str(PROJECT_ROOT),
-                        "--output", str(expected_out),
-                    ]
-                    hint = gdr_parcours_hint if not _parcours_options else gdr_parcours_hint
-                    if hint and hint.strip():
-                        cmd += ["--parcours", hint.strip()]
-                    if gdr_arret_debut.strip():
-                        cmd += ["--arret-debut", gdr_arret_debut.strip()]
-                    if gdr_arret_fin.strip():
-                        cmd += ["--arret-fin", gdr_arret_fin.strip()]
-                    if gdr_heure_debut.strip() and gdr_heure_fin.strip():
-                        cmd += ["--heure-debut", gdr_heure_debut.strip(),
-                                "--heure-fin",   gdr_heure_fin.strip()]
-
-                    with st.spinner("Génération en cours…"):
-                        result = subprocess.run(cmd, capture_output=True, text=True)
-
-                    output_text = result.stdout + ("\n" + result.stderr if result.stderr else "")
-                    st.code(output_text)
-
-                    if result.returncode == 0 and expected_out.exists():
-                        st.success("Rapport généré.")
-                        content = expected_out.read_bytes()
-                        mime = "text/html" if gdr_format == "html" else "text/markdown"
-                        st.download_button(
-                            f"⬇️ Télécharger le rapport ({gdr_format.upper()})",
-                            data=content,
-                            file_name=expected_out.name,
-                            mime=mime,
-                            key="gdr_dl",
-                        )
-                        if gdr_format == "html":
-                            with st.expander("Aperçu HTML"):
-                                components.html(content.decode("utf-8"), height=600, scrolling=True)
-                    else:
-                        st.error("Erreur lors de la génération.")
+                    st.error("Erreur lors de la génération.")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -769,221 +1044,3 @@ with tabs[3]:
         rp_all = sorted(RAPPORTS_DIR.glob("rapport-*.pdf"), reverse=True) if RAPPORTS_DIR.exists() else []
         st.caption(f"{len(rp_all)} fichier(s) dans `data/rapports/`")
         _file_manager("rp", rp_all, mime="application/pdf")
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Tab 5 — GTFS
-# ═══════════════════════════════════════════════════════════════════════════════
-with tabs[4]:
-    st.header("Données GTFS")
-
-    from dashboard import get_gtfs_info
-
-    gtfs_path     = DATA_DIR / "gtfs" / "gtfs_stm"
-    gtfs_manifest = DATA_DIR / "gtfs" / "gtfs_manifest.json"
-    gtfs_info     = get_gtfs_info(DATA_DIR)
-
-    if gtfs_manifest.exists():
-        st.info(f"GTFS statique présent — dernier téléchargement le {gtfs_info['static_ts']}")
-    else:
-        st.warning("Aucune donnée GTFS statique. Cliquez sur **Télécharger** pour initialiser.")
-
-    c1, c2 = st.columns(2)
-    c1.metric("GTFS statique — dernier téléchargement", gtfs_info["static_ts"])
-    c2.metric("GTFS temps réel — dernier téléchargement", gtfs_info["rt_ts"])
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("GTFS statique")
-        st.caption("Données de lignes, arrêts et horaires (mis à jour hebdomadairement).")
-        if st.button("Télécharger GTFS statique", key="gtfs_static_btn"):
-            with st.spinner("Téléchargement en cours…"):
-                result = subprocess.run(
-                    [sys.executable, str(SCRIPTS_DIR / "fetch_gtfs.py")],
-                    capture_output=True, text=True,
-                )
-            st.code(result.stdout + ("\n" + result.stderr if result.stderr else ""))
-            if result.returncode == 0:
-                st.success("GTFS statique mis à jour.")
-            else:
-                st.error("Erreur lors du téléchargement.")
-
-    with col2:
-        st.subheader("GTFS temps réel")
-        st.caption("Positions et retards en temps réel (nécessite une clé API STM dans `Installation/config/secrets.json`).")
-        if st.button("Télécharger GTFS-RT", key="gtfs_rt_btn"):
-            with st.spinner("Téléchargement en cours…"):
-                result = subprocess.run(
-                    [sys.executable, str(SCRIPTS_DIR / "fetch_gtfs_rt.py")],
-                    capture_output=True, text=True,
-                )
-            st.code(result.stdout + ("\n" + result.stderr if result.stderr else ""))
-            if result.returncode == 0:
-                st.success("GTFS-RT récupéré.")
-            else:
-                st.error("Erreur lors du téléchargement.")
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Tab 6 — Journées
-# ═══════════════════════════════════════════════════════════════════════════════
-with tabs[5]:
-    st.header("Journées de travail")
-
-    j_tabs = st.tabs(["📥 Importer", "📋 Consulter"])
-
-    # ── 6a — Importer ─────────────────────────────────────────────────────────
-    with j_tabs[0]:
-        st.markdown(
-            "Collez le texte brut du **Détail de ma journée** (copié depuis l'interface STM). "
-            "Le fichier `journee-YYYY-MM-DD.json` sera créé dans `data/journees/`."
-        )
-
-        col_jd, _ = st.columns([1, 3])
-        with col_jd:
-            j_imp_date = st.date_input("Date de la journée", value=date.today(), key="j_imp_date")
-
-        j_text = st.text_area(
-            "Texte brut",
-            height=400,
-            placeholder=(
-                "Détail de ma journée\n"
-                "Hier59200 - Frontenac\n"
-                "Journée439\n"
-                "Temps travaillé7:30\n"
-                "Temps supplémentaire0:00\n"
-                "Mis à jour le 17 juin 2026 00:32\n"
-                "Sommaire24 - 1538013--3:18Horaire\n..."
-            ),
-            key="j_text",
-        )
-
-        if st.button("Importer", type="primary", key="j_imp_btn"):
-            if not j_text.strip():
-                st.warning("Le champ est vide.")
-            else:
-                from parse_journee import JourneeParser
-
-                parser = JourneeParser(j_text, date_str=str(j_imp_date))
-                result_j = parser.parse()
-
-                if result_j:
-                    saved_j = parser.save(result_j)
-                    st.success(f"Journée du {j_imp_date} importée.")
-                    st.code(parser.get_summary(result_j, saved_j))
-                    st.balloons()
-                else:
-                    st.error("Échec du parsing.")
-                    st.code(parser.get_summary())
-
-    # ── 6b — Consulter ────────────────────────────────────────────────────────
-    with j_tabs[1]:
-        journee_files = (
-            sorted(JOURNEES_DIR.glob("journee-*.json"), reverse=True)
-            if JOURNEES_DIR.exists() else []
-        )
-
-        if not journee_files:
-            st.info("Aucune journée enregistrée. Utilisez l'onglet **Importer**.")
-        else:
-            j_labels = [p.stem.replace("journee-", "") for p in journee_files]
-            sel_j    = st.selectbox(
-                "Journée", range(len(j_labels)),
-                format_func=lambda i: j_labels[i], key="j_sel"
-            )
-            j_path = journee_files[sel_j]
-            j_date_key = j_labels[sel_j]
-
-            try:
-                j_data = json.loads(j_path.read_text(encoding="utf-8"))
-            except Exception as e:
-                st.error(f"Erreur lecture : {e}")
-                st.stop()
-
-            # ── Résumé ────────────────────────────────────────────────────────
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Journée n°",      j_data.get("journee_numero", "–"))
-            c2.metric("Temps travaillé", j_data.get("temps_travaille", "–"))
-            c3.metric("Supplémentaire",  j_data.get("temps_supplementaire", "–"))
-            c4.metric("Garage",          j_data.get("garage", "–"))
-
-            st.divider()
-
-            # ── Pièces ────────────────────────────────────────────────────────
-            pieces = j_data.get("pieces", [])
-            updated_pieces = json.loads(json.dumps(pieces))  # copie profonde
-
-            for idx, piece in enumerate(pieces):
-                pid = piece.get("id", f"piece-{idx + 1}")
-                with st.expander(
-                    f"Pièce {pid}  —  {piece.get('debut', '?')} → {piece.get('fin', '?')}  "
-                    f"({piece.get('duree', '?')})",
-                    expanded=True,
-                ):
-                    pc1, pc2, pc3 = st.columns([2, 2, 2])
-
-                    with pc1:
-                        st.markdown(f"**Lieu prise :** `{piece.get('lieu_prise', '–')}`")
-                        st.markdown(f"**Lieu fin :** `{piece.get('lieu_fin', '–')}`")
-
-                    with pc2:
-                        bus_key = f"j_bus_{j_date_key}_{idx}"
-                        st.text_input(
-                            "Numéro d'autobus",
-                            value=piece.get("numero_autobus") or "",
-                            placeholder="ex : 38013",
-                            key=bus_key,
-                        )
-
-                    with pc3:
-                        releve = piece.get("releve") or {}
-                        if releve.get("je_releve"):
-                            r = releve["je_releve"]
-                            st.caption(f"Relève : {r['nom']} ({r['matricule']})")
-                        if releve.get("je_suis_releve_par"):
-                            r = releve["je_suis_releve_par"]
-                            st.caption(f"Relevé par : {r['nom']} ({r['matricule']})")
-
-                    # Trajets
-                    trajets = piece.get("trajets", [])
-                    if trajets:
-                        st.markdown("**Trajets :**")
-                        for t in trajets:
-                            dep = t.get("depart", {})
-                            arr = t.get("arrivee", {})
-                            if t["type"] == "haut_le_pied":
-                                st.markdown(
-                                    f"&nbsp;&nbsp;🚶 *Haut-le-pied* &ensp;"
-                                    f"`{dep.get('heure', '?')}` {dep.get('arret', '?')} → "
-                                    f"`{arr.get('heure', '?')}` {arr.get('arret', '?')}"
-                                )
-                            else:
-                                det  = " 🔀" if t.get("detour") else ""
-                                notes = t.get("notes_voyage", [])
-                                note_txt = (
-                                    f"  *(note : {', '.join(notes)})*" if notes else ""
-                                )
-                                st.markdown(
-                                    f"&nbsp;&nbsp;🚌 **{t.get('ligne')} "
-                                    f"{(t.get('direction') or '').capitalize()}** "
-                                    f"ID {t.get('id_parcours', '?')}{det} &ensp; "
-                                    f"`{dep.get('heure', '?')}` {dep.get('arret', '?')} → "
-                                    f"`{arr.get('heure', '?')}` {arr.get('arret', '?')}"
-                                    f"{note_txt}"
-                                )
-
-            # ── Sauvegarde des numéros d'autobus ──────────────────────────────
-            st.divider()
-            if st.button("💾 Enregistrer les numéros d'autobus", key="j_save"):
-                for idx in range(len(pieces)):
-                    bus_key = f"j_bus_{j_date_key}_{idx}"
-                    val = st.session_state.get(bus_key, "").strip()
-                    updated_pieces[idx]["numero_autobus"] = val or None
-                j_data["pieces"] = updated_pieces
-                j_path.write_text(
-                    json.dumps(j_data, indent=2, ensure_ascii=False) + "\n",
-                    encoding="utf-8",
-                )
-                st.success("Numéros d'autobus sauvegardés.")
-                st.rerun()
