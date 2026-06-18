@@ -1,5 +1,8 @@
 .claude
 
+# 🏗️ DÉPLOIEMENT (spécifique à l'environnement hôte)
+compose.yml
+
 # 🔐 SECRETS & CONFIGURATION
 Installation/config/secrets.json
 Installation/config/secrets.*.json
