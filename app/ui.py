@@ -1019,6 +1019,7 @@ with tabs[3]:
         "↔️ Gauche-Droite",
         "⚠️ Évènements",
         "📄 Rapports journaliers",
+        "📅 Journées",
     ])
 
     # ── Cartes agent ──────────────────────────────────────────────────────────
@@ -1044,3 +1045,48 @@ with tabs[3]:
         rp_all = sorted(RAPPORTS_DIR.glob("rapport-*.pdf"), reverse=True) if RAPPORTS_DIR.exists() else []
         st.caption(f"{len(rp_all)} fichier(s) dans `data/rapports/`")
         _file_manager("rp", rp_all, mime="application/pdf")
+
+    # ── Journées ──────────────────────────────────────────────────────────────
+    with fm_tabs[4]:
+        j_all = sorted(JOURNEES_DIR.glob("journee-*.json"), reverse=True) if JOURNEES_DIR.exists() else []
+        st.caption(f"{len(j_all)} fichier(s) dans `data/journees/`")
+        _file_manager("journee", j_all, mime="application/json")
+
+        if j_all:
+            st.divider()
+            st.subheader("Aperçu")
+            j_preview_labels = [p.stem.replace("journee-", "") for p in j_all]
+            j_prev_sel = st.selectbox(
+                "Journée à prévisualiser",
+                range(len(j_all)),
+                format_func=lambda i: j_preview_labels[i],
+                key="fm_j_preview_sel",
+            )
+            try:
+                j_prev_data = json.loads(j_all[j_prev_sel].read_text(encoding="utf-8"))
+                j_pieces = j_prev_data.get("pieces", [])
+                j_trajets = [
+                    t for p in j_pieces for t in p.get("trajets", [])
+                    if t.get("type") == "service"
+                ]
+                mc1, mc2, mc3 = st.columns(3)
+                mc1.metric("Journée n°",      j_prev_data.get("journee_numero", "–"))
+                mc2.metric("Garage",          j_prev_data.get("garage", "–"))
+                mc3.metric("Temps travaillé", j_prev_data.get("temps_travaille", "–"))
+                if j_trajets:
+                    for t in j_trajets:
+                        tl = t.get("ligne", "?")
+                        td = (t.get("direction") or "").lower().capitalize()
+                        tid = t.get("id_parcours", "?")
+                        dep = t.get("depart",  {})
+                        arr = t.get("arrivee", {})
+                        det = " 🔀" if t.get("detour") else ""
+                        st.markdown(
+                            f"🚌 **{tl} {td} ID {tid}**{det}"
+                            f" &ensp; `{dep.get('heure', '?')}` {dep.get('arret', '?')}"
+                            f" → `{arr.get('heure', '?')}` {arr.get('arret', '?')}"
+                        )
+                with st.expander("JSON brut"):
+                    st.json(j_prev_data)
+            except Exception as e:
+                st.error(f"Erreur lecture : {e}")

@@ -37,19 +37,35 @@
       "arrets_ajoutes": []
     },
     {
-      "evenement_id": "11248445",
-      "titre": "Annulation d'arrêts",
+      "evenement_id": "11200132",
+      "titre": "Détour avec annulation d'arrêt",
       "motif": "Travaux",
-      "date_heure_debut": "2026-06-08T09:30:00",
-      "date_heure_fin": "2026-06-16T19:00:00",
+      "date_heure_debut": "2026-06-19T07:00:00",
+      "date_heure_fin": "2026-06-19T19:00:00",
       "effectif": "En tout temps",
       "arrets_annules": [
         {
-          "id": "53347",
-          "nom": "Honoré-Beaugrand / Pierre-De Coubertin"
+          "id": "52999",
+          "nom": "Hochelaga / Saint-Germain"
+        },
+        {
+          "id": "53011",
+          "nom": "Hochelaga / Davidson"
+        },
+        {
+          "id": "53038",
+          "nom": "Station Joliette (Hochelaga / Aylwin)"
+        },
+        {
+          "id": "53052",
+          "nom": "Hochelaga / Nicolet"
+        },
+        {
+          "id": "53071",
+          "nom": "Hochelaga / d'Orléans"
         }
       ],
-      "description_gd": null,
+      "description_gd": "VIA HOCHELAGA G D'ORLÉANS D DE ROUEN D SAINT-GERMAIN G HOCHELAGA VIA RR",
       "commentaire": null,
       "arrets_ajoutes": []
     },
@@ -66,15 +82,15 @@
           "nom": "du Havre / Hochelaga"
         }
       ],
-      "description_gd": "VIA HOCHELAGA G/ DU HAVRE VIA R.R",
-      "commentaire": "RETOUR À LA ROUTE RÉGULIÈRE DURANT LES TRAVAUX SUR IBERVILLE\nARRET TEMPORAIRE HAVRE/DE ROUEN (52946)",
+      "description_gd": "VIA HOCHELAGA G/ DU HAVRE VIA R.R RETOUR À LA ROUTE RÉGULIÈRE DURANT LES TRAVAUX SUR IBERVILLE ARRET TEMPORAIRE HAVRE/DE ROUEN (52946)",
+      "commentaire": null,
       "arrets_ajoutes": []
     },
     {
       "evenement_id": "11259519",
       "titre": "Arrêt déplacé",
       "motif": "Travaux",
-      "date_heure_debut": "2026-06-17T00:01:00",
+      "date_heure_debut": "2026-06-19T00:01:00",
       "date_heure_fin": "2026-06-26T23:59:00",
       "effectif": "En tout temps",
       "arrets_annules": [
@@ -92,6 +108,40 @@
       "titre": "Détour avec annulation d'arrêt",
       "motif": "Travaux",
       "date_heure_debut": "2026-06-15T06:11:00",
+      "date_heure_fin": "2026-06-19T06:59:00",
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "53011",
+          "nom": "Hochelaga / Davidson"
+        },
+        {
+          "id": "53038",
+          "nom": "Station Joliette (Hochelaga / Aylwin)"
+        },
+        {
+          "id": "53052",
+          "nom": "Hochelaga / Nicolet"
+        }
+      ],
+      "description_gd": "VIA HOCHELAGA G D'ORLÉANS D DE ROUEN D DAVIDSON G HOCHELAGA VIA R.R.",
+      "commentaire": null,
+      "arrets_ajoutes": [
+        {
+          "id": "",
+          "nom": "Temp. - De Rouen /Bourbonnière (N/E)"
+        },
+        {
+          "id": "",
+          "nom": "Temp. - De Rouen /Joliette (N/E)"
+        }
+      ]
+    },
+    {
+      "evenement_id": "11261581",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-06-19T19:01:00",
       "date_heure_fin": null,
       "effectif": "En tout temps",
       "arrets_annules": [
