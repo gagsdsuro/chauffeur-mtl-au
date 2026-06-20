@@ -6,6 +6,7 @@ Onglets : Tableau de bord · Importation · Rapports · Fichiers · GTFS
 
 import base64
 import json
+import re
 import subprocess
 import sys
 from datetime import date, datetime
@@ -124,11 +125,24 @@ def _fmt_size(path: Path) -> str:
 
 
 def _pdf_embed_html(pdf_bytes: bytes, height: int = 800) -> str:
+    """Embarque un PDF via un Blob URL (data: URLs bloquées par Chrome pour les PDF)."""
+    import uuid
     b64 = base64.b64encode(pdf_bytes).decode()
-    return (
-        f'<embed src="data:application/pdf;base64,{b64}" '
-        f'type="application/pdf" width="100%" height="{height}px">'
-    )
+    frame_id = f"pdf_{uuid.uuid4().hex}"
+    return f"""
+<iframe id="{frame_id}" width="100%" height="{height}px" style="border:none;"></iframe>
+<script>
+(function(){{
+    var b64="{b64}", s=atob(b64), i, arr=[];
+    for(i=0;i<s.length;i+=512){{
+        var sl=s.slice(i,i+512), n=new Array(sl.length);
+        for(var j=0;j<sl.length;j++) n[j]=sl.charCodeAt(j);
+        arr.push(new Uint8Array(n));
+    }}
+    var url=URL.createObjectURL(new Blob(arr,{{type:"application/pdf"}}));
+    document.getElementById("{frame_id}").src=url;
+}})();
+</script>"""
 
 
 def _event_applies_to_date(event: dict, date_str: str) -> bool:
@@ -237,8 +251,14 @@ with tabs[0]:
             key=lambda p: p.stat().st_mtime, reverse=True,
         ) if RAPPORTS_DIR.exists() else []
         latest_rpt = (_v2_html + _v2_pdf)[0] if (_v2_html or _v2_pdf) else None
+        # Rapport complet (journée entière) — exclut les rapports per-trajet (-idN)
+        _v2_html_jour = [p for p in _v2_html if not re.search(r"-id\d+", p.stem)]
+        latest_html_jour = _v2_html_jour[0] if _v2_html_jour else None
 
-        dl1, dl2 = st.columns(2)
+        rj_file = RAPPORTS_DIR / f"rapport-{db_date_str}.pdf" if RAPPORTS_DIR else None
+        rj_file = rj_file if (rj_file and rj_file.exists()) else None
+
+        dl1, dl2, dl3 = st.columns(3)
         with dl1:
             if annotee_file:
                 st.download_button(
@@ -252,6 +272,18 @@ with tabs[0]:
                 st.button("⬇️ Carte annotée (non disponible)", disabled=True,
                           key="db_ca_dl_dis")
         with dl2:
+            if rj_file:
+                st.download_button(
+                    "⬇️ Rapport journalier",
+                    data=rj_file.read_bytes(),
+                    file_name=rj_file.name,
+                    mime="application/pdf",
+                    key="db_rj_dl",
+                )
+            else:
+                st.button("⬇️ Rapport journalier (non généré)", disabled=True,
+                          key="db_rj_dl_dis")
+        with dl3:
             if latest_rpt:
                 _rpt_mime = "text/html" if latest_rpt.suffix == ".html" else "application/pdf"
                 _rpt_label = latest_rpt.stem[len(f"rapport-v2-{db_date_str}-"):]
@@ -266,24 +298,12 @@ with tabs[0]:
                 st.button("⬇️ Rapport v2 (non généré)", disabled=True,
                           key="db_rpt_v2_dis")
 
-        if annotee_file:
-            with st.expander("📄 Carte annotée — Aperçu"):
+        if latest_html_jour:
+            with st.expander(f"📊 Rapport v2 — Aperçu  ({latest_html_jour.name})"):
                 components.html(
-                    _pdf_embed_html(annotee_file.read_bytes(), height=800),
-                    height=820,
+                    latest_html_jour.read_text(encoding="utf-8"),
+                    height=600, scrolling=True,
                 )
-        if latest_rpt:
-            with st.expander(f"📊 Rapport v2 — Aperçu  ({latest_rpt.name})"):
-                if latest_rpt.suffix == ".html":
-                    components.html(
-                        latest_rpt.read_text(encoding="utf-8"),
-                        height=600, scrolling=True,
-                    )
-                else:
-                    components.html(
-                        _pdf_embed_html(latest_rpt.read_bytes(), height=800),
-                        height=820,
-                    )
 
         st.divider()
 
