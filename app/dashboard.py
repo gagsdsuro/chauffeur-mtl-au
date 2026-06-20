@@ -331,17 +331,19 @@ def _parse_vehicle_desc(data: bytes) -> tuple[str | None, str | None]:
     return v_id, v_label
 
 
-def _parse_vp(data: bytes) -> dict | None:
-    route_id = None; lat = lon = None; v_id = v_label = None
+def _parse_vp(data: bytes, entity_id: str | None = None) -> dict | None:
+    # STM encode la position au field 2 (pas field 3 du standard GTFS-RT)
+    # et n'envoie pas de VehicleDescriptor ; l'ID du bus est FeedEntity.id
+    route_id = None; lat = lon = None; v_label = None
     for fnum, wtype, val in _iter_fields(data):
         if fnum == 1 and wtype == 2:
             route_id = _parse_trip_desc(val)
-        elif fnum == 3 and wtype == 2:
+        elif fnum == 2 and wtype == 2:   # Position (field 2 dans les données STM)
             lat, lon = _parse_position(val)
-        elif fnum == 4 and wtype == 2:
-            v_id, v_label = _parse_vehicle_desc(val)
+        elif fnum == 7 and wtype == 2:   # label interne STM
+            v_label = _str(val)
     if lat is not None and lon is not None:
-        return {"v_id": v_id, "v_label": v_label, "lat": lat, "lon": lon, "route_id": route_id}
+        return {"v_id": entity_id, "v_label": v_label, "lat": lat, "lon": lon, "route_id": route_id}
     return None
 
 
@@ -350,11 +352,17 @@ def parse_vehicle_positions(pb_data: bytes) -> list[dict]:
     vehicles = []
     for fnum, wtype, val in _iter_fields(pb_data):
         if fnum == 2 and wtype == 2:   # FeedEntity
+            entity_id = None
+            vp_data = None
             for f2, w2, v2 in _iter_fields(val):
-                if f2 == 4 and w2 == 2:   # VehiclePosition
-                    vp = _parse_vp(v2)
-                    if vp:
-                        vehicles.append(vp)
+                if f2 == 1 and w2 == 2:
+                    entity_id = _str(v2)
+                elif f2 == 4 and w2 == 2:   # VehiclePosition
+                    vp_data = v2
+            if vp_data is not None:
+                vp = _parse_vp(vp_data, entity_id)
+                if vp:
+                    vehicles.append(vp)
     return vehicles
 
 

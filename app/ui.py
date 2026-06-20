@@ -4,6 +4,7 @@ Interface Streamlit — Chauffeur STM
 Onglets : Tableau de bord · Importation · Rapports · Fichiers · GTFS
 """
 
+import base64
 import json
 import subprocess
 import sys
@@ -76,6 +77,27 @@ st.set_page_config(
     layout="wide",
 )
 
+st.markdown(
+    """
+    <style>
+    /* Réduire les marges supérieure et latérales */
+    .block-container,
+    [data-testid="stMainBlockContainer"] {
+        padding-top: 2rem !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+    }
+    /* Compresser le bandeau d'en-tête Streamlit */
+    [data-testid="stHeader"],
+    header[data-testid="stHeader"] {
+        height: 2.25rem !important;
+        min-height: 2.25rem !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.title("🚌 Chauffeur STM")
 
 tabs = st.tabs([
@@ -99,6 +121,14 @@ def _fmt_size(path: Path) -> str:
         return ""
     b = path.stat().st_size
     return f"{b/1024:.0f} KB" if b < 1_048_576 else f"{b/1_048_576:.1f} MB"
+
+
+def _pdf_embed_html(pdf_bytes: bytes, height: int = 800) -> str:
+    b64 = base64.b64encode(pdf_bytes).decode()
+    return (
+        f'<embed src="data:application/pdf;base64,{b64}" '
+        f'type="application/pdf" width="100%" height="{height}px">'
+    )
 
 
 def _event_applies_to_date(event: dict, date_str: str) -> bool:
@@ -198,10 +228,15 @@ with tabs[0]:
             annotee_path  if annotee_path.exists()  else
             surligné_path if surligné_path.exists() else None
         )
-        rapport_v2_paths = sorted(
+        _v2_html = sorted(
+            RAPPORTS_DIR.glob(f"rapport-v2-{db_date_str}-*.html"),
+            key=lambda p: p.stat().st_mtime, reverse=True,
+        ) if RAPPORTS_DIR.exists() else []
+        _v2_pdf = sorted(
             RAPPORTS_DIR.glob(f"rapport-v2-{db_date_str}-*.pdf"),
             key=lambda p: p.stat().st_mtime, reverse=True,
         ) if RAPPORTS_DIR.exists() else []
+        latest_rpt = (_v2_html + _v2_pdf)[0] if (_v2_html or _v2_pdf) else None
 
         dl1, dl2 = st.columns(2)
         with dl1:
@@ -217,18 +252,38 @@ with tabs[0]:
                 st.button("⬇️ Carte annotée (non disponible)", disabled=True,
                           key="db_ca_dl_dis")
         with dl2:
-            if rapport_v2_paths:
-                latest_rpt = rapport_v2_paths[0]
+            if latest_rpt:
+                _rpt_mime = "text/html" if latest_rpt.suffix == ".html" else "application/pdf"
+                _rpt_label = latest_rpt.stem[len(f"rapport-v2-{db_date_str}-"):]
                 st.download_button(
-                    f"⬇️ Rapport v2 ({latest_rpt.stem.split('-')[-1]})",
+                    f"⬇️ Rapport v2 ({_rpt_label})",
                     data=latest_rpt.read_bytes(),
                     file_name=latest_rpt.name,
-                    mime="application/pdf",
+                    mime=_rpt_mime,
                     key="db_rpt_v2_dl",
                 )
             else:
                 st.button("⬇️ Rapport v2 (non généré)", disabled=True,
                           key="db_rpt_v2_dis")
+
+        if annotee_file:
+            with st.expander("📄 Carte annotée — Aperçu"):
+                components.html(
+                    _pdf_embed_html(annotee_file.read_bytes(), height=800),
+                    height=820,
+                )
+        if latest_rpt:
+            with st.expander(f"📊 Rapport v2 — Aperçu  ({latest_rpt.name})"):
+                if latest_rpt.suffix == ".html":
+                    components.html(
+                        latest_rpt.read_text(encoding="utf-8"),
+                        height=600, scrolling=True,
+                    )
+                else:
+                    components.html(
+                        _pdf_embed_html(latest_rpt.read_bytes(), height=800),
+                        height=820,
+                    )
 
         st.divider()
 
@@ -272,13 +327,32 @@ with tabs[0]:
                         or piece.get("numero_autobus") or ""
                     )
                     geo_key = f"db_geo_r_{idx}"
-                    geo_clicked = st.button(
-                        "📍 Géolocaliser",
-                        key=f"db_geo_{idx}",
-                        disabled=not gtfs_info["rt_avail"],
-                        help="Requiert vehiclePositions.pb (onglet GTFS)."
-                             if not gtfs_info["rt_avail"] else "",
-                    )
+                    _gcol, _rcol = st.columns([4, 1])
+                    with _gcol:
+                        geo_clicked = st.button(
+                            "📍 Géolocaliser",
+                            key=f"db_geo_{idx}",
+                            disabled=not gtfs_info["rt_avail"],
+                            help="Requiert vehiclePositions.pb (onglet GTFS)."
+                                 if not gtfs_info["rt_avail"] else "",
+                        )
+                    with _rcol:
+                        rt_refresh = st.button(
+                            "🔄",
+                            key=f"db_rt_refresh_{idx}",
+                            help="Rafraîchir les données GTFS-RT",
+                        )
+                    if rt_refresh:
+                        with st.spinner("Rafraîchissement GTFS-RT…"):
+                            _rt_res = subprocess.run(
+                                [sys.executable, str(SCRIPTS_DIR / "fetch_gtfs_rt.py")],
+                                capture_output=True, text=True,
+                            )
+                        if _rt_res.returncode == 0:
+                            st.success("Données GTFS-RT mises à jour.")
+                        else:
+                            st.error("Erreur lors du rafraîchissement GTFS-RT.")
+                            st.code(_rt_res.stderr)
                     if geo_clicked:
                         if not current_bus:
                             st.warning("Entrez un numéro d'autobus avant de géolocaliser.")
@@ -360,24 +434,27 @@ with tabs[0]:
                     )
 
                     t_key = f"db_t_{idx}_{ti}"
+                    out_rpt = (
+                        RAPPORTS_DIR
+                        / f"rapport-v2-{db_date_str}-{tl}-{td}-id{tid}.html"
+                    )
                     tb1, tb2 = st.columns(2)
                     with tb1:
-                        if st.button("🗺️ Rapport G-D", key=f"{t_key}_rpt"):
+                        _rpt_btn = "🔄 Regénérer G-D" if out_rpt.exists() else "🗺️ Rapport G-D"
+                        if st.button(_rpt_btn, key=f"{t_key}_rpt"):
                             st.session_state[f"{t_key}_rpt_run"] = True
                     with tb2:
                         if st.button("⚠️ Évènements", key=f"{t_key}_ev"):
                             ev_k = f"{t_key}_ev_open"
                             st.session_state[ev_k] = not st.session_state.get(ev_k, False)
 
-                    # Rapport G-D pour ce trajet
+                    # Rapport G-D pour ce trajet — génération si demandée
+                    rpt_just_generated = False
                     if st.session_state.get(f"{t_key}_rpt_run"):
                         if not (DATA_DIR / "gtfs" / "gtfs_stm").exists():
                             st.warning("Données GTFS introuvables.")
+                            st.session_state[f"{t_key}_rpt_run"] = False
                         else:
-                            out_rpt = (
-                                RAPPORTS_DIR
-                                / f"rapport-v2-{db_date_str}-{tl}-{td}-id{tid}.html"
-                            )
                             cmd = [
                                 sys.executable,
                                 str(SCRIPTS_DIR / "gen_rapport_v2.py"),
@@ -397,25 +474,27 @@ with tabs[0]:
                                     cmd, capture_output=True, text=True
                                 )
                             if rpt_res.returncode == 0 and out_rpt.exists():
-                                rpt_html = out_rpt.read_bytes()
-                                st.download_button(
-                                    f"⬇️ Rapport {tl} {td.capitalize()} ID {tid}",
-                                    data=rpt_html,
-                                    file_name=out_rpt.name,
-                                    mime="text/html",
-                                    key=f"{t_key}_rpt_dl",
-                                )
-                                with st.expander(
-                                    f"Aperçu — {tl} {td.capitalize()} ID {tid}",
-                                    expanded=True,
-                                ):
-                                    components.html(
-                                        rpt_html.decode("utf-8"),
-                                        height=600, scrolling=True,
-                                    )
+                                rpt_just_generated = True
                             else:
                                 st.error("Erreur lors de la génération.")
                                 st.code(rpt_res.stderr or rpt_res.stdout)
+                            st.session_state[f"{t_key}_rpt_run"] = False
+
+                    # Aperçu persistant : affiché dès que le fichier existe
+                    if out_rpt.exists():
+                        if rpt_just_generated:
+                            st.success(
+                                f"Rapport {tl} {td.capitalize()} ID {tid} généré."
+                            )
+                        rpt_html = out_rpt.read_bytes()
+                        with st.expander(
+                            f"Aperçu — {tl} {td.capitalize()} ID {tid}",
+                            expanded=rpt_just_generated,
+                        ):
+                            components.html(
+                                rpt_html.decode("utf-8"),
+                                height=600, scrolling=True,
+                            )
 
                     # Évènements pour ce trajet
                     if st.session_state.get(f"{t_key}_ev_open"):
@@ -806,37 +885,46 @@ with tabs[2]:
 
     # ── 3a — Rapport journalier ───────────────────────────────────────────────
     with rpt_tabs[0]:
-        st.markdown("Génère le PDF recto-verso (G-D + détours) à partir de la carte agent du jour.")
+        st.markdown("Génère le PDF recto-verso (G-D + détours) à partir de la journée du jour.")
 
         rj_date = st.date_input("Date du rapport", value=date.today(), key="rj_date")
+        rj_out = RAPPORTS_DIR / f"rapport-{rj_date}.pdf"
 
+        rj_generated = False
         if st.button("Générer le rapport", type="primary", key="rj_btn"):
             RAPPORTS_DIR.mkdir(parents=True, exist_ok=True)
-            out_path = RAPPORTS_DIR / f"rapport-{rj_date}.pdf"
-
             cmd = [
                 sys.executable, str(SCRIPTS_DIR / "gen_rapport.py"),
                 "--date", str(rj_date),
-                "--output", str(out_path),
+                "--output", str(rj_out),
             ]
-
             with st.spinner("Génération en cours…"):
                 result = subprocess.run(cmd, capture_output=True, text=True)
-
             output_text = result.stdout + ("\n" + result.stderr if result.stderr else "")
             st.code(output_text)
-
-            if result.returncode == 0 and out_path.exists():
-                st.success("Rapport généré.")
-                st.download_button(
-                    "⬇️ Télécharger le rapport",
-                    data=out_path.read_bytes(),
-                    file_name=out_path.name,
-                    mime="application/pdf",
-                    key="rj_dl",
-                )
+            if result.returncode == 0 and rj_out.exists():
+                rj_generated = True
             else:
-                st.error("Erreur lors de la génération. Vérifiez qu'une carte agent existe pour cette date dans `data/ca/`.")
+                st.error(
+                    "Erreur lors de la génération. "
+                    "Vérifiez qu'une journée JSON existe pour cette date dans `data/journees/`."
+                )
+
+        if rj_out.exists():
+            if rj_generated:
+                st.success("Rapport généré.")
+            st.download_button(
+                "⬇️ Télécharger le rapport",
+                data=rj_out.read_bytes(),
+                file_name=rj_out.name,
+                mime="application/pdf",
+                key="rj_dl",
+            )
+            with st.expander("📄 Aperçu PDF", expanded=rj_generated):
+                components.html(
+                    _pdf_embed_html(rj_out.read_bytes(), height=800),
+                    height=820,
+                )
 
     # ── 3b — Rapport v2 (journée) ────────────────────────────────────────────────
     with rpt_tabs[1]:
