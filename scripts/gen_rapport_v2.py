@@ -688,6 +688,14 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
     doc.build(story)
 
 
+# ── Worker parallèle ─────────────────────────────────────────────────────────
+
+def _process_groupe_worker(args):
+    """Wrapper sans cache partagé — chaque processus gère son propre cache."""
+    groupe, date_str = args
+    return process_groupe(groupe, date_str, {})
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -747,8 +755,16 @@ def main():
             print("Aucun groupe ne correspond aux filtres spécifiés.", file=sys.stderr)
             sys.exit(1)
 
-    ev_cache: dict = {}
-    groupes_data = [process_groupe(g, date_str, ev_cache) for g in groupes]
+    if len(groupes) > 1:
+        import os
+        from concurrent.futures import ProcessPoolExecutor
+        workers = min(len(groupes), os.cpu_count() or 4)
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            groupes_data = list(pool.map(
+                _process_groupe_worker, [(g, date_str) for g in groupes]
+            ))
+    else:
+        groupes_data = [process_groupe(groupes[0], date_str, {})]
 
     ext    = args.fmt
     output = args.output or (OUTPUT_DIR / f"rapport-v2-{date_str}.{ext}")
