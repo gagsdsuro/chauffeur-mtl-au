@@ -1,0 +1,23 @@
+{
+  "ligne": "185",
+  "direction": "est",
+  "detours": [
+    {
+      "evenement_id": "11256352",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-06-10T08:54:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "53061",
+          "nom": "Sherbrooke / No 5600"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_ajoutes": []
+    }
+  ]
+}

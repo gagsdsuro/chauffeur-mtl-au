@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
-gen_rapport.py — Générateur de rapport journalier STM (autonome)
+gen_rapport.py — Générateur de rapport journalier STM (recto-verso)
+
+Source : data/journees/journee-YYYY-MM-DD.json
 
 Usage:
-  python gen_rapport.py                         # carte agent du jour
-  python gen_rapport.py --date 2026-06-05       # date spécifique
-  python gen_rapport.py --output /tmp/out.pdf   # chemin de sortie custom
-  python gen_rapport.py --data rapport.json     # JSON pré-assemblé (override)
+  python gen_rapport.py                              # journée du jour
+  python gen_rapport.py --date 2026-06-05            # date spécifique
+  python gen_rapport.py --journee data/journees/journee-2026-06-05.json
+  python gen_rapport.py --output /tmp/out.pdf
+  python gen_rapport.py --data rapport.json          # JSON pré-assemblé (override)
 """
 
 import argparse
@@ -21,15 +24,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR     = PROJECT_ROOT / "data"
 GD_DIR       = DATA_DIR / "Gauche-Droite"
 EVENTS_DIR   = DATA_DIR / "Events"
-DOCS_DIR     = DATA_DIR / "ca"
+JOURNEES_DIR = DATA_DIR / "journees"
 OUTPUT_DIR   = DATA_DIR / "rapports"
 
-# Noyau de domaine partagé (appariement d'arrêts) — cf. chauffeur/matching.py
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
-from chauffeur.matching import stops_match as _stops_match  # noqa: E402
-from chauffeur.carte_agent import parse_carte as _parse_carte  # noqa: E402
-from chauffeur.effectif import parse_shift_time  # noqa: E402
+from chauffeur.effectif import parse_shift_time          # noqa: E402
 from chauffeur.evenements import applicable_au_quart, raison_exclusion  # noqa: E402
 
 try:
@@ -409,7 +409,7 @@ def generate(data: dict, output_path: str):
     return output_path
 
 
-# ─── Lecture carte agent PDF ─────────────────────────────────────────────────
+# ─── Journée JSON ────────────────────────────────────────────────────────────
 
 JOURS_FR = {
     0: 'Lundi', 1: 'Mardi', 2: 'Mercredi', 3: 'Jeudi',
@@ -417,176 +417,114 @@ JOURS_FR = {
 }
 
 
-def find_carte_agent(target_date: date) -> Path:
-    """Retourne la carte agent PDF pour la date donnée, ou la plus récente disponible."""
+def find_journee(target_date: date) -> Path:
+    """Retourne le fichier journée JSON pour la date donnée, ou le plus récent disponible."""
     date_str = target_date.strftime('%Y-%m-%d')
-    exact = DOCS_DIR / f"carte-agent-{date_str}.pdf"
+    exact = JOURNEES_DIR / f"journee-{date_str}.json"
     if exact.exists():
         return exact
-    # Fallback : carte la plus récente (exclut les versions surlignées)
-    candidates = sorted(
-        (p for p in DOCS_DIR.glob("carte-agent-*.pdf") if 'surligné' not in p.name),
-        reverse=True
-    )
+    candidates = sorted(JOURNEES_DIR.glob("journee-*.json"), reverse=True)
     if candidates:
-        print(f"⚠️  Carte agent du {date_str} introuvable — utilisation de : {candidates[0].name}")
+        print(f"⚠️  Journée du {date_str} introuvable — utilisation de : {candidates[0].name}")
         return candidates[0]
     raise FileNotFoundError(
-        f"Aucune carte agent trouvée dans {DOCS_DIR}\n"
-        f"  Fichier attendu : carte-agent-{date_str}.pdf"
+        f"Aucune journée trouvée dans {JOURNEES_DIR}\n"
+        f"  Fichier attendu : journee-{date_str}.json"
     )
 
 
-def parse_carte_agent(pdf_path: Path) -> dict:
-    """Adapte le modèle CarteAgent (chauffeur.carte_agent) au dict historique.
-
-    Le parsing texte est désormais centralisé dans chauffeur/carte_agent.py ;
-    cette fonction conserve la forme de retour attendue par build_rapport_data().
+def extract_groupes(journee: dict) -> list:
     """
-    try:
-        ca = _parse_carte(pdf_path)
-    except ImportError as e:
-        print(e)
-        sys.exit(1)
-    return {
-        'assignation': ca.assignation,
-        'date':        ca.date,
-        'voiture':     ca.voiture,
-        'heure_debut': ca.heure_debut,
-        'lieu_debut':  ca.lieu_debut,
-        'heure_fin':   ca.heure_fin,
-        'garage':      ca.garage,
-        'lignes':      ca.lignes,
-        'segments':    ca.segments_par_ligne(),
-        'time_ranges': ca.time_ranges_par_ligne(),
-        'hlp':         [{'id': h.id, 'instructions': h.instructions} for h in ca.hlp],
-    }
-
-
-def parcours_matches_segments(parcours: dict, segments: list) -> bool:
+    Retourne les groupes (ligne, direction, id_parcours) en ordre chronologique,
+    sans répétition. Chaque groupe accumule ses trajets de service.
     """
-    Vérifie si un parcours G-D correspond à au moins un segment de la carte agent.
-    Appariement par jetons distinctifs (cf. _stop_tokens) — insensible à la casse,
-    aux accents, et capable de relier un nom de station à son nom de rue (parenthèses).
-    """
-    gd_start = parcours.get('start', '')
-    gd_end   = parcours.get('end', '')
+    seen: dict = {}
+    groupes: list = []
 
-    for (dep, arr) in segments:
-        if _stops_match(gd_start, dep) and _stops_match(gd_end, arr):
-            return True
-    return False
+    for piece in journee.get("pieces", []):
+        for trajet in piece.get("trajets", []):
+            if trajet.get("type") != "service":
+                continue
+            ligne     = trajet.get("ligne") or ""
+            direction = (trajet.get("direction") or "").lower()
+            id_p      = trajet.get("id_parcours")
+            if not ligne or not direction:
+                continue
+
+            key = (ligne, direction, id_p)
+            if key not in seen:
+                seen[key] = len(groupes)
+                groupes.append({
+                    "ligne":       ligne,
+                    "direction":   direction,
+                    "id_parcours": id_p,
+                    "trips":       [],
+                })
+            g = groupes[seen[key]]
+            g["trips"].append({
+                "depart_heure":  trajet.get("depart",  {}).get("heure", ""),
+                "arrivee_heure": trajet.get("arrivee", {}).get("heure", ""),
+            })
+
+    return groupes
 
 
 # ─── Lecture des données G-D ─────────────────────────────────────────────────
 
-def load_gd_directions(numero: str, segments: list) -> list:
+def load_gd_direction_by_id(ligne: str, direction: str, id_parcours) -> dict | None:
     """
-    Charge les directions G-D d'une ligne filtrées selon les segments de la carte agent.
-    segments : liste de (départ, arrivée) issus de CarteAgent.segments_par_ligne().
-    Retourne une liste de directions au format attendu par page1_gd().
+    Charge une direction G-D depuis son fichier, identifiée par id_parcours.
+    Retourne un dict {sens, parcours_nom, instructions} ou None si fichier absent.
     """
-    directions = []
-    for gd_file in sorted(GD_DIR.glob(f"gd{numero}_*.json")):
-        try:
-            data = json.loads(gd_file.read_text(encoding='utf-8'))
-        except Exception as e:
-            print(f"⚠️  Erreur lecture {gd_file.name}: {e}", file=sys.stderr)
+    gd_file = GD_DIR / f"gd{ligne}_{direction}.json"
+    if not gd_file.exists():
+        return None
+    try:
+        data = json.loads(gd_file.read_text(encoding='utf-8'))
+    except Exception as e:
+        print(f"⚠️  Erreur lecture {gd_file.name}: {e}", file=sys.stderr)
+        return None
+
+    for route in data.get('routes', []):
+        all_p = route.get('parcours', [])
+        if not all_p:
             continue
+        parcours = next((p for p in all_p if p.get('id') == id_parcours), all_p[0])
+        sens = route.get('direction', '')
 
-        for route in data.get('routes', []):
-            sens = route.get('direction', '')
-            for parcours in route.get('parcours', []):
-                # Filtrer : ne garder que les parcours présents dans la carte agent
-                if segments and not parcours_matches_segments(parcours, segments):
-                    continue
-
-                instructions = []
-
-                # Terminus de départ
+        instructions = []
+        instructions.append({
+            'type': 'terminus',
+            'texte': parcours.get('start', ''),
+            'arret': str(parcours.get('start_code', '')),
+        })
+        for instr in parcours.get('direction', []):
+            m = re.match(r'^(Via|Gauche|Droite)\s+-\s+(.+)$', instr, re.IGNORECASE)
+            if m:
                 instructions.append({
-                    'type': 'terminus',
-                    'texte': parcours.get('start', ''),
-                    'arret': str(parcours.get('start_code', '')),
+                    'type': m.group(1).lower(),
+                    'texte': m.group(2),
                 })
+        instructions.append({
+            'type': 'terminus',
+            'texte': parcours.get('end', ''),
+            'arret': str(parcours.get('end_code', '')),
+        })
 
-                # Instructions virage-par-virage
-                for instr in parcours.get('direction', []):
-                    m = re.match(r'^(Via|Gauche|Droite)\s+-\s+(.+)$', instr, re.IGNORECASE)
-                    if m:
-                        instructions.append({
-                            'type': m.group(1).lower(),
-                            'texte': m.group(2),
-                        })
-
-                # Terminus d'arrivée
-                instructions.append({
-                    'type': 'terminus',
-                    'texte': parcours.get('end', ''),
-                    'arret': str(parcours.get('end_code', '')),
-                })
-
-                directions.append({
-                    'sens': sens,
-                    'parcours_nom': parcours.get('name', ''),
-                    'instructions': instructions,
-                })
-
-    return directions
+        return {
+            'sens': sens,
+            'parcours_nom': parcours.get('name', ''),
+            'instructions': instructions,
+        }
+    return None
 
 
 # ─── Filtrage des événements ─────────────────────────────────────────────────
 
-# Mapping mots-clés effectif → jours de la semaine (0=lundi … 6=dimanche)
-EFFECTIF_JOURS = {
-    'lundi':          [0],
-    'mardi':          [1],
-    'mercredi':       [2],
-    'jeudi':          [3],
-    'vendredi':       [4],
-    'samedi':         [5],
-    'dimanche':       [6],
-    'en semaine':     [0, 1, 2, 3, 4],
-    'fin de semaine': [5, 6],
-}
-
-
-def is_event_applicable(event: dict, target_date: date):
-    """
-    Détermine si un événement est applicable à la date cible.
-    Retourne (True, '') ou (False, raison_exclusion).
-    """
-    debut_str = event.get('date_heure_debut')
-    fin_str   = event.get('date_heure_fin')
-
-    if debut_str:
-        debut = datetime.fromisoformat(debut_str).date()
-        if target_date < debut:
-            return False, f"Pas encore actif (début {debut})"
-
-    if fin_str:
-        fin = datetime.fromisoformat(fin_str).date()
-        if target_date > fin:
-            return False, f"Expiré (fin {fin})"
-
-    # Filtre jour de semaine selon effectif
-    effectif = (event.get('effectif') or '').lower().strip()
-    if effectif not in ('en tout temps', ''):
-        dow = target_date.weekday()
-        for key, jours in EFFECTIF_JOURS.items():
-            if key in effectif:
-                if dow not in jours:
-                    return False, f"Effectif : {event.get('effectif')}"
-                break
-
-    return True, ''
-
-
 def _shift_range_pour_ligne(time_ranges: list, target_date: date):
-    """Plage de quart [début, fin] (datetimes) pour une ligne, depuis ses trajets.
+    """Plage [début, fin] (datetimes) depuis une liste de {debut, fin} horaires.
 
-    Retourne (None, None) si aucune heure exploitable — on retombe alors sur le
-    filtrage date-seule (is_event_applicable)."""
+    Retourne (None, None) si aucune heure exploitable."""
     if not time_ranges:
         return None, None
     debuts = [parse_shift_time(tr['debut'], target_date) for tr in time_ranges]
@@ -597,11 +535,11 @@ def _shift_range_pour_ligne(time_ranges: list, target_date: date):
 def load_events_for_ligne(numero: str, target_date: date,
                           shift_start=None, shift_end=None):
     """
-    Charge et filtre les événements d'une ligne.
+    Charge et filtre les événements d'une ligne (toutes directions).
 
-    Si la plage de quart est connue (shift_start/shift_end), l'applicabilité tient
-    compte de la plage horaire d'effectif vs les heures réellement travaillées sur
-    la ligne (chauffeur.evenements). Sinon, repli sur le filtrage date-seule.
+    Quand shift_start/shift_end sont fournis, délègue à chauffeur.evenements
+    (chevauchement de plage, jour de semaine, plage horaire journalière).
+    Sans plage de quart, repli sur filtrage par date seulement.
     Retourne (applicables, non_applicables).
     """
     applicables     = []
@@ -615,62 +553,120 @@ def load_events_for_ligne(numero: str, target_date: date,
             print(f"⚠️  Erreur lecture {ev_file.name}: {e}", file=sys.stderr)
             continue
 
-        direction = data.get('direction', '').capitalize()  # 'est' → 'Est'
+        direction = data.get('direction', '').capitalize()
         for event in data.get('detours', []):
-            if par_quart:
-                ok = applicable_au_quart(event, shift_start, shift_end)
-                raison = '' if ok else raison_exclusion(event, shift_start, shift_end)
-            else:
-                ok, raison = is_event_applicable(event, target_date)
             ev = dict(event)
             ev['direction'] = direction
-            if ok:
-                applicables.append(ev)
+            if par_quart:
+                ok = applicable_au_quart(event, shift_start, shift_end)
+                if ok:
+                    applicables.append(ev)
+                else:
+                    ev['raison_exclusion'] = raison_exclusion(event, shift_start, shift_end)
+                    non_applicables.append(ev)
             else:
-                ev['raison_exclusion'] = raison
-                non_applicables.append(ev)
+                debut_str = event.get('date_heure_debut')
+                fin_str   = event.get('date_heure_fin')
+                ok = True
+                if debut_str and datetime.fromisoformat(debut_str).date() > target_date:
+                    ok = False
+                    ev['raison_exclusion'] = f"Pas encore actif (début {datetime.fromisoformat(debut_str).date()})"
+                elif fin_str and datetime.fromisoformat(fin_str).date() < target_date:
+                    ok = False
+                    ev['raison_exclusion'] = f"Expiré (fin {datetime.fromisoformat(fin_str).date()})"
+                if ok:
+                    applicables.append(ev)
+                else:
+                    non_applicables.append(ev)
 
     return applicables, non_applicables
 
 
 # ─── Assemblage des données ───────────────────────────────────────────────────
 
-def build_rapport_data(carte: dict, target_date: date) -> dict:
-    """Construit le dictionnaire de données complet à partir de la carte agent."""
-    jour_str = JOURS_FR.get(target_date.weekday(), '')
+def build_rapport_data(journee: dict, target_date: date) -> dict:
+    """Construit le dictionnaire de données complet à partir de la journée JSON."""
+    pieces = journee.get('pieces', [])
 
-    all_segments    = carte.get('segments', {})
-    all_time_ranges = carte.get('time_ranges', {})
-    lignes = []
-    for numero in carte['lignes']:
-        segments = all_segments.get(numero, [])
-        directions = load_gd_directions(numero, segments)
-        shift_start, shift_end = _shift_range_pour_ligne(
-            all_time_ranges.get(numero, []), target_date)
-        app, non_app = load_events_for_ligne(numero, target_date, shift_start, shift_end)
-        lignes.append({
-            'numero':                 numero,
-            'nom':                    '',
-            'type':                   'Régulier',
-            'directions':             directions,
-            'detours_applicables':    app,
-            'detours_non_applicables': non_app,
-        })
+    heure_prise = pieces[0].get('prise', '')      if pieces else ''
+    lieu_prise  = pieces[0].get('lieu_prise', '') if pieces else ''
+    heure_fin   = pieces[-1].get('fin', '')       if pieces else ''
+    voiture     = pieces[0].get('numero_autobus', '') if pieces else ''
+
+    groupes = extract_groupes(journee)
+
+    lignes_dict  = {}
+    dirs_seen    = {}   # {num: set of (direction, id_parcours)}
+    trips_by_num = {}   # {num: list of {depart_heure, arrivee_heure}}
+
+    for g in groupes:
+        num  = g['ligne']
+        dir_ = g['direction']
+        id_p = g['id_parcours']
+
+        if num not in lignes_dict:
+            lignes_dict[num] = {
+                'numero':                  num,
+                'nom':                     '',
+                'type':                    'Régulier',
+                'directions':              [],
+                'detours_applicables':     [],
+                'detours_non_applicables': [],
+            }
+            dirs_seen[num]    = set()
+            trips_by_num[num] = []
+
+        trips_by_num[num].extend(g['trips'])
+
+        # G-D : une entrée par (direction, id_parcours) unique
+        if (dir_, id_p) not in dirs_seen[num]:
+            dirs_seen[num].add((dir_, id_p))
+            gd_dir = load_gd_direction_by_id(num, dir_, id_p)
+            if gd_dir:
+                lignes_dict[num]['directions'].append(gd_dir)
+
+    # Événements : une passe par ligne, plage de quart couvrant tous ses trajets
+    for num, l in lignes_dict.items():
+        time_ranges = [
+            {'debut': t['depart_heure'], 'fin': t['arrivee_heure']}
+            for t in trips_by_num[num]
+            if t.get('depart_heure') and t.get('arrivee_heure')
+        ]
+        shift_start, shift_end = _shift_range_pour_ligne(time_ranges, target_date)
+        app, non_app = load_events_for_ligne(num, target_date, shift_start, shift_end)
+        l['detours_applicables']     = app
+        l['detours_non_applicables'] = non_app
+
+    # HLP : trajets haut_le_pied de toutes les pièces
+    hlp = []
+    for piece in pieces:
+        for trajet in piece.get('trajets', []):
+            if trajet.get('type') != 'haut_le_pied':
+                continue
+            dep = trajet.get('depart',  {})
+            arr = trajet.get('arrivee', {})
+            hlp.append({
+                'id': piece.get('id', ''),
+                'instructions': (
+                    f"{dep.get('heure', '')} {dep.get('arret', '')}"
+                    f" → {arr.get('heure', '')} {arr.get('arret', '')}"
+                ),
+            })
 
     return {
         'date_travail': target_date.isoformat(),
-        'jour_semaine': jour_str,
+        'jour_semaine': JOURS_FR.get(target_date.weekday(), ''),
         'agent': {
-            'assignation': carte['assignation'],
+            'assignation': journee.get('employe_id', ''),
             'nom':         '',
-            'garage':      carte['garage'],
+            'garage':      journee.get('garage', ''),
         },
-        'heure_prise': carte['heure_debut'],
-        'lieu_prise':  carte['lieu_debut'],
-        'heure_fin':   carte['heure_fin'],
-        'voiture':     carte['voiture'],
-        'lignes':      lignes,
-        'hlp':         carte['hlp'],
+        'heure_prise': heure_prise,
+        'lieu_prise':  lieu_prise,
+        'heure_fin':   heure_fin,
+        'voiture':     voiture,
+        'lignes':      list(lignes_dict.values()),
+        'hlp':         hlp,
     }
 
 
@@ -678,38 +674,46 @@ def build_rapport_data(carte: dict, target_date: date) -> dict:
 
 def main():
     arg_parser = argparse.ArgumentParser(description='Générateur de rapport journalier STM')
-    arg_parser.add_argument('--date',   default=None,
-                            help='Date cible YYYY-MM-DD (défaut: aujourd\'hui)')
-    arg_parser.add_argument('--output', default=None,
+    arg_parser.add_argument('--date',    default=None,
+                            help="Date cible YYYY-MM-DD (défaut : aujourd'hui)")
+    arg_parser.add_argument('--journee', default=None,
+                            help='Chemin vers journee-YYYY-MM-DD.json (override auto-detect)')
+    arg_parser.add_argument('--output',  default=None,
                             help='Chemin du PDF de sortie (défaut: data/rapports/rapport-DATE.pdf)')
-    arg_parser.add_argument('--data',   default=None,
-                            help='Override: fichier JSON pré-assemblé (bypass carte agent)')
+    arg_parser.add_argument('--data',    default=None,
+                            help='Override: fichier JSON pré-assemblé (bypass journée)')
     args = arg_parser.parse_args()
 
     target_date = date.fromisoformat(args.date) if args.date else date.today()
 
     if args.data:
-        # Mode override : JSON fourni manuellement
         data_path = Path(args.data)
         if not data_path.exists():
             print(f'Erreur : fichier introuvable : {data_path}')
             sys.exit(1)
         data = json.loads(data_path.read_text(encoding='utf-8'))
     else:
-        # Mode autonome : lecture de la carte agent PDF
         try:
-            pdf_path = find_carte_agent(target_date)
-            print(f'📄 Carte agent : {pdf_path.name}')
-            carte = parse_carte_agent(pdf_path)
-            if not carte['lignes']:
-                print('Erreur : aucune ligne trouvée dans la carte agent.')
-                sys.exit(1)
-            print(f'   Assignation : {carte["assignation"]} | Voiture : {carte["voiture"]}')
-            print(f'   Lignes : {", ".join(carte["lignes"])}')
-            data = build_rapport_data(carte, target_date)
+            journee_path = Path(args.journee) if args.journee else find_journee(target_date)
+            journee = json.loads(journee_path.read_text(encoding='utf-8'))
         except FileNotFoundError as e:
             print(f'Erreur : {e}')
             sys.exit(1)
+
+        # La date canonique vient du fichier journée
+        date_from_journee = journee.get('date')
+        if date_from_journee:
+            target_date = date.fromisoformat(date_from_journee)
+
+        print(f'📄 Journée : {journee_path.name}')
+        print(f'   Employé : {journee.get("employe_id", "")} | Garage : {journee.get("garage", "")}')
+        groupes = extract_groupes(journee)
+        if not groupes:
+            print('Erreur : aucun trajet de service dans la journée.')
+            sys.exit(1)
+        lignes_uniques = sorted({g["ligne"] for g in groupes})
+        print(f'   Lignes : {", ".join(lignes_uniques)}')
+        data = build_rapport_data(journee, target_date)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     output_path = args.output or str(OUTPUT_DIR / f"rapport-{target_date}.pdf")

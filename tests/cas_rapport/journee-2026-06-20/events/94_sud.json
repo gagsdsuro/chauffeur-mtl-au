@@ -1,0 +1,49 @@
+{
+  "ligne": "94",
+  "direction": "sud",
+  "detours": [
+    {
+      "evenement_id": "11248464",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-06-09T00:01:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "61810",
+          "nom": "D'Iberville / Hochelaga"
+        },
+        {
+          "id": "61889",
+          "nom": "D'Iberville / de Rouen"
+        }
+      ],
+      "description_gd": "VIA IBERVILLE G/ HOCHELAGA D/ DU HAVRE VIA R.R DU HAVRE SERA EN SUD DURANT LES TRAVAUX SUR IBERVILLE",
+      "commentaire": null,
+      "arrets_ajoutes": [
+        {
+          "id": "52946",
+          "nom": "du Havre / de Rouen"
+        }
+      ]
+    },
+    {
+      "evenement_id": "11256221",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-06-10T07:15:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "52764",
+          "nom": "D'Iberville / Sherbrooke"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_ajoutes": []
+    }
+  ]
+}

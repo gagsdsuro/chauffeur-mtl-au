@@ -3,28 +3,26 @@
 test_rapport.py — Tests de régression de gen_rapport.py
 
 Rejoue chaque cas figé dans tests/cas_rapport/<nom>/ :
-  • carte.pdf      copie du PDF de carte agent
-  • gd/            fichiers Gauche-Droite gelés (gd<ligne>_<direction>.json)
-  • attendu.json   lignes reconnues + directions G-D appariées
+  • journee.json  copie du fichier journée JSON
+  • gd/           fichiers Gauche-Droite gelés (gd<ligne>_<direction>.json)
+  • events/       fichiers d'évènements gelés (<ligne>_<direction>.json)
+  • attendu.json  projection de build_rapport_data (méta, directions, évènements, HLP)
 
 Le cas est hermétique : on redirige gen_rapport.GD_DIR vers le dossier gd/ gelé,
 donc le test ne dépend pas des données live de data/Gauche-Droite/.
 
 Couvre les régressions connues :
-  • reconnaissance des lignes sans « - P » (ex. « 125 / - / Régulier »)
-  • appariement des terminus par jetons (« Station McGill (De Maisonneuve /
-    Robert-Bourassa) » ↔ « DE MAISONNEUVE / ROBERT-BOURASSA »)
+  • sélection de parcours par id_parcours (pas par appariement de noms)
+  • filtrage des évènements par plage de quart (chauffeur.evenements)
 
 Usage :
     python3 tests/test_rapport.py                 # tous les cas
-    python3 tests/test_rapport.py carte-455       # un cas précis
+    python3 tests/test_rapport.py journee-2026-06-20   # un cas précis
 
 Code de sortie : 0 si tous les cas passent, 1 sinon.
 """
 import json
-import re
 import sys
-from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -33,27 +31,26 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import gen_rapport as gr  # noqa: E402
 
 
-def _date_du_nom(nom: str) -> date:
-    """Extrait la date cible du nom de cas (ex. « carte-455-2026-06-11 »)."""
-    m = re.search(r"\d{4}-\d{2}-\d{2}", nom)
-    return date.fromisoformat(m.group(0)) if m else date.today()
-
-
 def calculer_snapshot(dossier: Path) -> dict:
     """Produit la projection de référence d'un cas à partir de build_rapport_data().
 
-    Hermétique : GD_DIR et (si présent) EVENTS_DIR sont redirigés vers les
-    fichiers gelés du cas. La projection couvre tout ce qu'un refactor pourrait
-    altérer au niveau des données du rapport : méta, directions G-D appariées,
-    classement applicable/non-applicable des évènements, et HLP.
+    Hermétique : GD_DIR et EVENTS_DIR sont redirigés vers les fichiers gelés du cas.
+    La projection couvre tout ce qu'un refactor pourrait altérer au niveau des données
+    du rapport : méta, directions G-D, classement applicable/non-applicable des
+    évènements, et HLP.
     """
-    gr.GD_DIR = dossier / "gd"          # redirige vers les G-D gelés du cas
+    gr.GD_DIR = dossier / "gd"
     ev_dir = dossier / "events"
     if ev_dir.exists():
-        gr.EVENTS_DIR = ev_dir          # redirige vers les évènements gelés du cas
+        gr.EVENTS_DIR = ev_dir
 
-    carte = gr.parse_carte_agent(dossier / "carte.pdf")
-    data = gr.build_rapport_data(carte, _date_du_nom(dossier.name))
+    journee = json.loads((dossier / "journee.json").read_text(encoding="utf-8"))
+    from datetime import date
+    target_date = date.fromisoformat(journee["date"])
+    data = gr.build_rapport_data(journee, target_date)
+
+    groupes = gr.extract_groupes(journee)
+    lignes_uniques = sorted({g["ligne"] for g in groupes})
 
     directions, evenements = {}, {}
     for lg in data["lignes"]:
@@ -74,8 +71,8 @@ def calculer_snapshot(dossier: Path) -> dict:
         }
 
     return {
-        "carte":  carte["assignation"],
-        "lignes": carte["lignes"],
+        "employe_id": journee.get("employe_id", ""),
+        "lignes": lignes_uniques,
         "meta": {
             "date_travail": data["date_travail"],
             "jour_semaine": data["jour_semaine"],
@@ -109,8 +106,10 @@ def _diff(obtenu, attendu, chemin: str = "") -> list:
     return [] if obtenu == attendu else [f"{chemin}: obtenu {obtenu!r}, attendu {attendu!r}"]
 
 
-def jouer_cas(dossier: Path) -> list:
-    """Rejoue un cas ; retourne la liste des écarts (vide = succès)."""
+def jouer_cas(dossier: Path) -> list | None:
+    """Rejoue un cas ; retourne la liste des écarts (vide = succès), ou None si ignoré."""
+    if not (dossier / "journee.json").exists():
+        return None   # ancien cas PDF — ignoré
     attendu = json.loads((dossier / "attendu.json").read_text(encoding="utf-8"))
     return _diff(calculer_snapshot(dossier), attendu)
 
@@ -126,8 +125,13 @@ def main() -> int:
         return 1
 
     echecs = 0
+    joues  = 0
     for nom in noms:
         ecarts = jouer_cas(base / nom)
+        if ecarts is None:
+            print(f"⏭  {nom}  (ancien cas PDF — non applicable)")
+            continue
+        joues += 1
         if ecarts:
             echecs += 1
             print(f"✗ {nom}")
@@ -136,7 +140,11 @@ def main() -> int:
         else:
             print(f"✓ {nom}")
 
-    print(f"\n{len(noms) - echecs}/{len(noms)} cas réussis")
+    if joues == 0:
+        print("Aucun cas journée JSON — créer avec creer_cas_rapport.py --journee ...")
+        return 1
+
+    print(f"\n{joues - echecs}/{joues} cas réussis")
     return 1 if echecs else 0
 
 

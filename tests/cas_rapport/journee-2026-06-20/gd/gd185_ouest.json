@@ -1,0 +1,30 @@
+{
+  "ligne": "185",
+  "direction": "ouest",
+  "routes": [
+    {
+      "line_number": "185",
+      "direction": "Ouest",
+      "parcours": [
+        {
+          "id": 1,
+          "name": "Parcours principal",
+          "start": "Bellerive / Mercier",
+          "start_code": 61881,
+          "end": "du Havre / La Fontaine",
+          "end_code": 53075,
+          "direction": [
+            "Via - Bellerive",
+            "Droite - Mercier",
+            "Droite - Notre-Dame",
+            "Gauche - Des Ormeaux",
+            "Gauche - Sherbrooke",
+            "Gauche - Gascon",
+            "Droite - Hochelaga",
+            "Gauche - du Havre"
+          ]
+        }
+      ]
+    }
+  ]
+}

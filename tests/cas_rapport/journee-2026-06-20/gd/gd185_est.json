@@ -1,0 +1,28 @@
+{
+  "ligne": "185",
+  "direction": "est",
+  "routes": [
+    {
+      "line_number": "185",
+      "direction": "Est",
+      "parcours": [
+        {
+          "id": 2,
+          "name": "Parcours principal",
+          "start": "Station Frontenac (Frontenac / Ontario)",
+          "start_code": 54039,
+          "end": "Bellerive / Mercier",
+          "end_code": 61881,
+          "direction": [
+            "Via - Frontenac",
+            "Droite - Sherbrooke",
+            "Droite - Des Ormeaux",
+            "Droite - Notre-Dame",
+            "Gauche - Lebrun",
+            "Droite - Bellerive"
+          ]
+        }
+      ]
+    }
+  ]
+}
