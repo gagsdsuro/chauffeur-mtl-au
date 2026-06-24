@@ -326,7 +326,7 @@ with tabs[0]:
             with st.expander(
                 f"Pièce {pid}  —  {piece.get('debut', '?')} → {piece.get('fin', '?')}"
                 f"  ({piece.get('duree', '?')})",
-                expanded=False,
+                expanded=True,
             ):
                 pc1, pc2, pc3 = st.columns([2, 2, 2])
 
