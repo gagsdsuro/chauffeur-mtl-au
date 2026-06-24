@@ -84,7 +84,6 @@ def calculer_snapshot(dossier: Path) -> dict:
         },
         "directions": directions,
         "evenements": evenements,
-        "hlp": [{"id": h["id"], "instructions": h["instructions"]} for h in data["hlp"]],
     }
 
 

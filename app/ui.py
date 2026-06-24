@@ -106,6 +106,7 @@ tabs = st.tabs([
     "📥 Importation",
     "📊 Rapports",
     "🗂️ Fichiers",
+    "📋 Logs",
 ])
 
 
@@ -217,23 +218,15 @@ with tabs[0]:
 
         # ── Métriques résumé ──────────────────────────────────────────────────
         db_pieces = db_j_data.get("pieces", [])
-        db_debut_all = [
-            t.get("depart",  {}).get("heure", "")
-            for p in db_pieces for t in p.get("trajets", [])
-            if t.get("type") == "service" and t.get("depart", {}).get("heure")
-        ]
-        db_fin_all = [
-            t.get("arrivee", {}).get("heure", "")
-            for p in db_pieces for t in p.get("trajets", [])
-            if t.get("type") == "service" and t.get("arrivee", {}).get("heure")
-        ]
+        db_debut_all = [p.get("debut", "") for p in db_pieces if p.get("debut")]
+        db_fin_all   = [p.get("fin",   "") for p in db_pieces if p.get("fin")]
 
         mc1, mc2, mc3, mc4, mc5 = st.columns(5)
         mc1.metric("Journée n°",      db_j_data.get("journee_numero", "–"))
         mc2.metric("Garage",          db_j_data.get("garage",         "–"))
         mc3.metric("Temps travaillé", db_j_data.get("temps_travaille","–"))
-        mc4.metric("Début",           min(db_debut_all) if db_debut_all else "–")
-        mc5.metric("Fin",             max(db_fin_all)   if db_fin_all   else "–")
+        mc4.metric("Prise début",      min(db_debut_all) if db_debut_all else "–")
+        mc5.metric("Prise fin",       max(db_fin_all)   if db_fin_all   else "–")
 
         # ── Téléchargements ──────────────────────────────────────────────────
         annotee_path  = CA_DIR / f"carte-agent-{db_date_str}-annotee.pdf"
@@ -326,7 +319,7 @@ with tabs[0]:
             with st.expander(
                 f"Pièce {pid}  —  {piece.get('debut', '?')} → {piece.get('fin', '?')}"
                 f"  ({piece.get('duree', '?')})",
-                expanded=True,
+                expanded=False,
             ):
                 pc1, pc2, pc3 = st.columns([2, 2, 2])
 
@@ -336,47 +329,56 @@ with tabs[0]:
 
                 with pc2:
                     bus_edit_key = f"db_bus_edit_{db_date_str}_{idx}"
-                    st.text_input(
-                        "Numéro d'autobus",
-                        value=piece.get("numero_autobus") or "",
-                        placeholder="ex : 38013",
-                        key=bus_edit_key,
-                    )
+                    bus_save_key = f"db_bus_save_{db_date_str}_{idx}"
+                    _bcol, _scol = st.columns([5, 1])
+                    with _bcol:
+                        st.text_input(
+                            "Numéro d'autobus",
+                            value=piece.get("numero_autobus") or "",
+                            placeholder="ex : 38013",
+                            key=bus_edit_key,
+                        )
+                    with _scol:
+                        st.markdown("<div style='margin-top:1.75rem'>", unsafe_allow_html=True)
+                        if st.button("💾", key=bus_save_key, help="Enregistrer le numéro d'autobus"):
+                            val = st.session_state.get(bus_edit_key, "").strip()
+                            db_j_data["pieces"][idx]["numero_autobus"] = val or None
+                            db_j_path.write_text(
+                                json.dumps(db_j_data, indent=2, ensure_ascii=False) + "\n",
+                                encoding="utf-8",
+                            )
+                            st.success("Sauvegardé.")
+                        st.markdown("</div>", unsafe_allow_html=True)
                     current_bus = (
                         st.session_state.get(bus_edit_key, "").strip()
                         or piece.get("numero_autobus") or ""
                     )
                     geo_key = f"db_geo_r_{idx}"
-                    _gcol, _rcol = st.columns([4, 1])
-                    with _gcol:
-                        geo_clicked = st.button(
-                            "📍 Géolocaliser",
-                            key=f"db_geo_{idx}",
-                            disabled=not gtfs_info["rt_avail"],
-                            help="Requiert vehiclePositions.pb (onglet GTFS)."
+                    _rt_ts_key = "db_rt_last_fetch"
+                    geo_clicked = st.button(
+                        "📍 Géolocaliser",
+                        key=f"db_geo_{idx}",
+                        disabled=not gtfs_info["rt_avail"],
+                        help="Requiert vehiclePositions.pb (onglet GTFS)."
                                  if not gtfs_info["rt_avail"] else "",
-                        )
-                    with _rcol:
-                        rt_refresh = st.button(
-                            "🔄",
-                            key=f"db_rt_refresh_{idx}",
-                            help="Rafraîchir les données GTFS-RT",
-                        )
-                    if rt_refresh:
-                        with st.spinner("Rafraîchissement GTFS-RT…"):
-                            _rt_res = subprocess.run(
-                                [sys.executable, str(SCRIPTS_DIR / "fetch_gtfs_rt.py")],
-                                capture_output=True, text=True,
-                            )
-                        if _rt_res.returncode == 0:
-                            st.success("Données GTFS-RT mises à jour.")
-                        else:
-                            st.error("Erreur lors du rafraîchissement GTFS-RT.")
-                            st.code(_rt_res.stderr)
+                    )
                     if geo_clicked:
                         if not current_bus:
                             st.warning("Entrez un numéro d'autobus avant de géolocaliser.")
                         else:
+                            import time as _time
+                            last_fetch = st.session_state.get(_rt_ts_key, 0)
+                            if _time.time() - last_fetch >= 10:
+                                with st.spinner("Rafraîchissement GTFS-RT…"):
+                                    _rt_res = subprocess.run(
+                                        [sys.executable, str(SCRIPTS_DIR / "fetch_gtfs_rt.py")],
+                                        capture_output=True, text=True,
+                                    )
+                                if _rt_res.returncode == 0:
+                                    st.session_state[_rt_ts_key] = _time.time()
+                                else:
+                                    st.error("Erreur lors du rafraîchissement GTFS-RT.")
+                                    st.code(_rt_res.stderr)
                             with st.spinner("Recherche du véhicule…"):
                                 try:
                                     vehicles = parse_vehicle_positions(
@@ -631,28 +633,6 @@ with tabs[0]:
                             except Exception as e:
                                 st.error(f"Erreur lecture évènements : {e}")
 
-        # ── Sauvegarde des numéros d'autobus ─────────────────────────────────
-        st.divider()
-        if st.button("💾 Enregistrer les numéros d'autobus", key="db_bus_save"):
-            db_pieces_save = json.loads(json.dumps(db_j_data.get("pieces", [])))
-            for save_idx in range(len(db_pieces_save)):
-                bus_save_key = f"db_bus_edit_{db_date_str}_{save_idx}"
-                val = st.session_state.get(bus_save_key, "").strip()
-                db_pieces_save[save_idx]["numero_autobus"] = val or None
-            db_j_data["pieces"] = db_pieces_save
-            db_j_path.write_text(
-                json.dumps(db_j_data, indent=2, ensure_ascii=False) + "\n",
-                encoding="utf-8",
-            )
-            st.success("Numéros d'autobus sauvegardés.")
-            st.rerun()
-
-        # ── Données GTFS ──────────────────────────────────────────────────────
-        st.divider()
-        st.subheader("Données GTFS")
-        c1, c2 = st.columns(2)
-        c1.metric("GTFS statique",   gtfs_info["static_ts"])
-        c2.metric("GTFS temps réel", gtfs_info["rt_ts"])
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -828,7 +808,9 @@ with tabs[1]:
                     else:
                         st.error("Erreur de parsing.")
                         all_ok = False
-                    st.code(parser.get_summary())
+                    summary = parser.get_summary()
+                    st.code(summary)
+                    parser.append_log(summary)
 
                 if all_ok:
                     st.balloons()
@@ -940,11 +922,6 @@ with tabs[2]:
                 mime="application/pdf",
                 key="rj_dl",
             )
-            with st.expander("📄 Aperçu PDF", expanded=rj_generated):
-                components.html(
-                    _pdf_embed_html(rj_out.read_bytes(), height=800),
-                    height=820,
-                )
 
     # ── 3b — Rapport v2 (journée) ────────────────────────────────────────────────
     with rpt_tabs[1]:
@@ -1037,7 +1014,7 @@ with tabs[2]:
                     key="rpt_v2_niveau",
                 )
             with v2_col_f:
-                v2_fmt = st.radio("Format", ["pdf", "html"], horizontal=True, key="rpt_v2_fmt")
+                v2_fmt = st.radio("Format", ["html", "pdf"], horizontal=True, key="rpt_v2_fmt")
             with v2_col_c:
                 v2_code = st.checkbox("Codes arrêts", value=False, key="rpt_v2_code")
 
@@ -1198,3 +1175,53 @@ with tabs[3]:
                     st.json(j_prev_data)
             except Exception as e:
                 st.error(f"Erreur lecture : {e}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Tab 5 — Logs
+# ═══════════════════════════════════════════════════════════════════════════════
+with tabs[4]:
+    st.header("Logs")
+
+    LOG_DIR = DATA_DIR / "log"
+    log_files = sorted(LOG_DIR.glob("*.log"), reverse=True) if LOG_DIR.exists() else []
+
+    if not log_files:
+        st.info(
+            "Aucun fichier de log trouvé dans `data/log/`. "
+            "Les logs sont créés lors de l'exécution des scripts avec l'option `--log`."
+        )
+    else:
+        log_labels = [p.name for p in log_files]
+        log_sel = st.selectbox(
+            "Fichier de log",
+            range(len(log_labels)),
+            format_func=lambda i: log_labels[i],
+            key="log_sel",
+        )
+        log_path = log_files[log_sel]
+
+        lc1, lc2, lc3 = st.columns([2, 2, 4])
+        with lc1:
+            log_lines = st.number_input(
+                "Dernières lignes",
+                min_value=10, max_value=2000, value=200, step=50,
+                key="log_lines",
+            )
+        with lc2:
+            st.markdown("<div style='margin-top:1.75rem'>", unsafe_allow_html=True)
+            if st.button("🔄 Rafraîchir", key="log_refresh"):
+                st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+        with lc3:
+            st.caption(
+                f"Modifié le {_fmt_mtime(log_path)}  ·  {_fmt_size(log_path)}"
+            )
+
+        try:
+            log_content = log_path.read_text(encoding="utf-8", errors="replace")
+            all_lines = log_content.splitlines()
+            display_lines = all_lines[-int(log_lines):]
+            st.code("\n".join(display_lines), language=None)
+        except Exception as e:
+            st.error(f"Erreur lecture log : {e}")

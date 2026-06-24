@@ -60,15 +60,5 @@
         }
       ]
     }
-  },
-  "hlp": [
-    {
-      "id": "hlp1",
-      "instructions": "Via des Grandes-Prairies, Droite du Prado, Droite Couture, Gauche Lacordaire, Via Dickson, Droite Hochelaga, Gauche D'Iberville, Gauche Ontario, Droite du Havre"
-    },
-    {
-      "id": "hlp2",
-      "instructions": "Via Pierre-De Coubertin, Via carrefour giratoire, Via Pierre-De Coubertin, Droite carrefour giratoire, Droite Pierre-De Coubertin, Gauche Pie-IX, Droite Hochelaga, Gauche D'Iberville, Gauche Ontario, Droite du Havre"
-    }
-  ]
+  }
 }

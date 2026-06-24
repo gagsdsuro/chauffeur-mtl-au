@@ -131,7 +131,7 @@ def build_gd_column(ligne, direction):
 
 
 def page1_gd(data):
-    """Construit les flowables de la page 1 (G-D + HLP)."""
+    """Construit les flowables de la page 1 (G-D)."""
     story = []
 
     # En-tête
@@ -200,27 +200,6 @@ def page1_gd(data):
             ('LINEAFTER', (0, 0), (-2, -1), 0.5, LGREY),
         ]))
         story.append(KeepTogether([hdr, t]))
-
-    # HLP
-    hlp_list = data.get('hlp', [])
-    if hlp_list:
-        story.append(HRFlowable(width='100%', thickness=1, color=LGREY,
-                                spaceAfter=3, spaceBefore=4))
-        story.append(Paragraph('HLP', S['subsec']))
-        hlp_rows = []
-        for h in hlp_list:
-            hlp_rows.append([
-                Paragraph(f'<b>{h.get("id","")}</b>', S['body']),
-                Paragraph(h.get('instructions', ''), S['hlp']),
-            ])
-        ht = Table(hlp_rows, colWidths=[14*mm, doc_width - 14*mm])
-        ht.setStyle(TableStyle([
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 1),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-            ('LEFTPADDING', (0, 0), (-1, -1), 2),
-        ]))
-        story.append(ht)
 
     return story
 
@@ -637,22 +616,6 @@ def build_rapport_data(journee: dict, target_date: date) -> dict:
         l['detours_applicables']     = app
         l['detours_non_applicables'] = non_app
 
-    # HLP : trajets haut_le_pied de toutes les pièces
-    hlp = []
-    for piece in pieces:
-        for trajet in piece.get('trajets', []):
-            if trajet.get('type') != 'haut_le_pied':
-                continue
-            dep = trajet.get('depart',  {})
-            arr = trajet.get('arrivee', {})
-            hlp.append({
-                'id': piece.get('id', ''),
-                'instructions': (
-                    f"{dep.get('heure', '')} {dep.get('arret', '')}"
-                    f" → {arr.get('heure', '')} {arr.get('arret', '')}"
-                ),
-            })
-
     return {
         'date_travail': target_date.isoformat(),
         'jour_semaine': JOURS_FR.get(target_date.weekday(), ''),
@@ -666,7 +629,6 @@ def build_rapport_data(journee: dict, target_date: date) -> dict:
         'heure_fin':   heure_fin,
         'voiture':     voiture,
         'lignes':      list(lignes_dict.values()),
-        'hlp':         hlp,
     }
 
 

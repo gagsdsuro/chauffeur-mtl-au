@@ -78,23 +78,5 @@
         }
       ]
     }
-  },
-  "hlp": [
-    {
-      "id": "94-12",
-      "instructions": "19:14 Station Atwater → 19:36 Ste-Catherine / Du Havre"
-    },
-    {
-      "id": "185-12",
-      "instructions": "21:06 Du Havre / La Fontaine → 21:09 Station Frontenac"
-    },
-    {
-      "id": "185-12",
-      "instructions": "22:37 Du Havre / La Fontaine → 22:39 Station Frontenac"
-    },
-    {
-      "id": "185-12",
-      "instructions": "24:08 Du Havre / La Fontaine → 24:10 Station Frontenac"
-    }
-  ]
+  }
 }

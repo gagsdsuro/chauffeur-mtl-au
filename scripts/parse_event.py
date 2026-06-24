@@ -18,8 +18,9 @@ class STMEventParser:
     DATA_DIR = PROJECT_ROOT / "data"
     EVENTS_DIR = DATA_DIR / "Events"
 
-    def __init__(self, raw_text: str):
+    def __init__(self, raw_text: str, verbose: bool = True):
         self.raw_text = raw_text
+        self.verbose = verbose
         self.events_dir = self.EVENTS_DIR
         self.ligne = None
         self.direction = None
@@ -207,12 +208,24 @@ class STMEventParser:
 
         for old_event in existing_detours:
             if old_event['evenement_id'] not in new_ids:
-                self.warnings.append(f"🗑️ Événement {old_event['evenement_id']} retiré")
+                if self.verbose:
+                    titre = old_event.get('titre', '(sans titre)')
+                    motif = old_event.get('motif', '')
+                    detail = f" — {titre}" + (f" — Motif : {motif}" if motif else "")
+                    self.warnings.append(f"🗑️ Événement {old_event['evenement_id']} retiré{detail}")
+                else:
+                    self.warnings.append(f"🗑️ Événement {old_event['evenement_id']} retiré")
 
         for new_event in self.events:
             eid = new_event['evenement_id']
             if eid in existing_ids and existing_ids[eid] != new_event:
-                self.warnings.append(f"⚠️ Événement {eid} remplacé")
+                if self.verbose:
+                    old = existing_ids[eid]
+                    changed_fields = [k for k in new_event if new_event.get(k) != old.get(k)]
+                    fields_str = ", ".join(changed_fields) if changed_fields else "contenu"
+                    self.warnings.append(f"⚠️ Événement {eid} remplacé — champs modifiés : {fields_str}")
+                else:
+                    self.warnings.append(f"⚠️ Événement {eid} remplacé")
 
         changed = self.events != existing_detours
         return self.events, changed
@@ -239,6 +252,16 @@ class STMEventParser:
         except Exception as e:
             self.errors.append(f"❌ Erreur sauvegarde: {e}")
             return False, False
+
+    def append_log(self, summary: str) -> None:
+        """Sauvegarde le résumé en append dans data/log/parse_event.log."""
+        log_dir = self.PROJECT_ROOT / "data" / "log"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_path = log_dir / "parse_event.log"
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(log_path, "a", encoding="utf-8") as lf:
+            lf.write(f"\n{'='*60}\n{timestamp}\n{'='*60}\n")
+            lf.write(summary + "\n")
 
     def get_summary(self) -> str:
         lines = []
@@ -294,12 +317,18 @@ def split_sections(raw_text: str) -> List[str]:
 
 def main():
     import argparse
+
     arg_parser = argparse.ArgumentParser(
         description="Importe des données brutes d'évènements STM depuis stdin "
                     "vers des fichiers <ligne>_<direction>.json.")
     arg_parser.add_argument("--json", action="store_true",
                             help="Affiche aussi le JSON complet sur stdout "
                                  "(par défaut: rapport seulement).")
+    arg_parser.add_argument("--no-verbose", dest="verbose", action="store_false",
+                            help="Masque les détails des événements retirés/remplacés.")
+    arg_parser.set_defaults(verbose=True)
+    arg_parser.add_argument("--log", action="store_true",
+                            help="Sauvegarde la sortie dans data/log/parse_event.log (append).")
     args = arg_parser.parse_args()
 
     raw_text = sys.stdin.read()
@@ -309,7 +338,7 @@ def main():
     failed = False
 
     for section in sections:
-        parser = STMEventParser(section)
+        parser = STMEventParser(section, verbose=args.verbose)
         success = parser.parse_all()
 
         if success:
@@ -317,7 +346,10 @@ def main():
             if not saved:
                 success = False
 
-        print(parser.get_summary())
+        summary = parser.get_summary()
+        print(summary)
+        if args.log:
+            parser.append_log(summary)
 
         if success:
             results.append({"ligne": parser.ligne, "direction": parser.direction, "detours": parser.events})
