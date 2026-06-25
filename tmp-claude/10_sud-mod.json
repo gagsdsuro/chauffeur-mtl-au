@@ -1,0 +1,64 @@
+{
+  "ligne": "10",
+  "sens": "Sud",
+  "count_deviations": 1,
+  "evenements": [
+    {
+      "numero": "11251072",
+      "type": "Détour avec annulation d'arrêt",
+      "motif": "Travaux",
+      "date_debut": "2026-06-08 00:01",
+      "date_fin": null,
+      "effectif": "En tout temps",
+      "arrets": [
+        {
+          "code": "52614",
+          "nom": "Rachel / Parthenais"
+        },
+        {
+          "code": "52685",
+          "nom": "Parthenais / Gauthier"
+        },
+        {
+          "code": "52742",
+          "nom": "Sherbrooke / Fullum"
+        },
+        {
+          "code": "52964",
+          "nom": "Ontario / Fullum"
+        },
+        {
+          "code": "53033",
+          "nom": "Parthenais / Logan"
+        },
+        {
+          "code": "53046",
+          "nom": "De Maisonneuve / De Lorimier"
+        },
+        {
+          "code": "53051",
+          "nom": "Station Papineau (Dorion / Sainte-Catherine)"
+        },
+        {
+          "code": "53063",
+          "nom": "Parthenais / De Maisonneuve"
+        },
+        {
+          "code": "61889",
+          "nom": "D'Iberville / de Rouen"
+        }
+      ],
+      "description_gd": [
+        "VIA DE LORIMIER",
+        "D RACHEL",
+        "G BORDEAUX",
+        "D SHERBROOKE",
+        "G PAPINEAU",
+        "G STE-CATHERINE",
+        "G CARTIER",
+        "TERMINUS TEMPOREAIRE SUR CARTIER AU NORD DE STE-CATHERINE"
+      ],
+      "commentaire": "Arrêt(s) ajouté(s):\nTemp. - bourdeaux/gauthier\n52700 - Sherbrooke / Dorion\n52842 - Papineau / Ontario"
+    }
+  ]
+}
