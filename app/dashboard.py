@@ -2,8 +2,8 @@
 """
 dashboard.py — Fonctions utilitaires pour l'onglet Tableau de bord.
 
-Extraction de la carte agent STM (PDF), info sur les fichiers de données,
-et parsing minimal du flux GTFS-RT vehiclePositions (protobuf).
+Info sur les fichiers de données GTFS et parsing minimal du flux
+GTFS-RT vehiclePositions (protobuf).
 """
 
 from __future__ import annotations
@@ -12,189 +12,13 @@ import json
 import re
 import struct
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Rendre le package `chauffeur/` (noyau de domaine) importable depuis app/.
 _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
-
-CA_DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
-TIME_RE    = re.compile(r"^\d{1,2}:\d{2}$")
-# En-tête de trajet : « 136 - P /  -  / Régulier » ou « 125 /  -  / Régulier ».
-# Le « - P » (désignation de voiture, rampe avant) est optionnel ; on ne doit pas
-# l'exiger, sinon les lignes sans cette mention (ex. 125) sont ignorées. Exclut les
-# numéros de voiture (« 29 - 04 ») et la date (« 11/06/2026 ») qui n'ont pas le « / ».
-LINE_RE    = re.compile(r"^[a-z]?(\d+)(?:\s+-\s+\w+)?\s+/")
-
-
-# ── Carte Agent ──────────────────────────────────────────────────────────────────
-
-def get_available_ca_pdfs(ca_dir: Path) -> list[dict]:
-    """Retourne les cartes agent disponibles, triées du plus récent au plus ancien."""
-    pdfs = []
-    for p in ca_dir.glob("carte-agent-*.pdf"):
-        stem = p.stem.lower()
-        if "annot" in stem or "surligné" in stem or "annotee" in stem:
-            continue
-        m = CA_DATE_RE.search(p.name)
-        date_str = m.group(1) if m else "0000-00-00"
-        pdfs.append({"path": p, "date_str": date_str, "name": p.name})
-    pdfs.sort(key=lambda x: x["date_str"], reverse=True)
-    return pdfs
-
-
-def extract_pieces_from_pdf(pdf_path: Path) -> dict | None:
-    """
-    Extrait les pièces de travail d'une carte agent STM (PDF).
-    Retourne {carte, pieces: [{debut, fin}], lignes, line_time_ranges} ou None.
-    """
-    try:
-        import fitz  # PyMuPDF
-    except ImportError:
-        return None
-
-    try:
-        doc        = fitz.open(str(pdf_path))
-        page       = doc[0]
-        page1_text = page.get_text()
-        spans      = []
-        for block in page.get_text("dict")["blocks"]:
-            if block["type"] == 0:
-                for line in block["lines"]:
-                    for span in line["spans"]:
-                        t = span["text"].strip()
-                        if t:
-                            spans.append({"text": t, "bbox": span["bbox"]})
-        doc.close()
-    except Exception:
-        return None
-
-    # ── Colonnes Prise ────────────────────────────────────────────────────────
-    prise_cols: list[dict] = []
-    for s in spans:
-        if s["text"] == "Prise":
-            x0, _, x1, _ = s["bbox"]
-            prise_cols.append({
-                "x0": x0,
-                "range": (x0 - 6, x1 + 6),
-                "entries": [],
-            })
-    prise_cols.sort(key=lambda c: c["x0"])
-
-    if len(prise_cols) < 2:
-        return None
-
-    for col in prise_cols:
-        px0, px1 = col["range"]
-        for s in spans:
-            bx0, by0, bx1, _ = s["bbox"]
-            if px0 <= bx0 and bx1 <= px1 and 80 < by0 < 400 and TIME_RE.match(s["text"]):
-                col["entries"].append({"time": s["text"], "y": by0})
-        col["entries"].sort(key=lambda e: e["y"])
-
-    col0 = prise_cols[0]["entries"]
-    col1 = prise_cols[1]["entries"]
-    n    = min(len(col0), len(col1))
-    pieces = [{"debut": col0[i]["time"], "fin": col1[i]["time"]} for i in range(n)]
-
-    # ── Numéros de ligne ──────────────────────────────────────────────────────
-    lignes: list[str] = []
-    for s in spans:
-        m = LINE_RE.match(s["text"])
-        if m and m.group(1) not in lignes:
-            lignes.append(m.group(1))
-
-    # ── Numéro de carte ───────────────────────────────────────────────────────
-    carte_num = "?"
-    for s in spans:
-        if s["bbox"][1] < 130 and re.match(r"^\d{3,6}$", s["text"]):
-            carte_num = s["text"]
-            break
-
-    return {
-        "carte":            carte_num,
-        "pieces":           pieces,
-        "lignes":           lignes,
-        "line_time_ranges": extract_line_time_ranges(page1_text),
-    }
-
-
-# ── Extraction des plages horaires par ligne depuis le texte de la carte agent ──
-
-def _to_min(t: str) -> int:
-    h, m = map(int, t.split(":"))
-    return h * 60 + m
-
-
-def extract_line_time_ranges(page1_text: str) -> dict:
-    """Plages horaires (début/fin + terminus) par ligne.
-
-    Délègue au parser texte unifié (chauffeur.carte_agent). Forme inchangée :
-    { '195': [{'debut','fin','debut_stop','fin_stop'}, …] }.
-    """
-    return CarteAgent(trajets=parse_trajets(page1_text)).time_ranges_par_ligne()
-
-
-# Noyau de domaine partagé : appariement d'arrêts + parser texte de la carte agent.
-from chauffeur.matching import stops_match as _stops_match  # noqa: E402
-from chauffeur.carte_agent import parse_trajets  # noqa: E402
-from chauffeur.modeles import CarteAgent  # noqa: E402
-
-
-def get_time_range_for_direction(
-    gd_path: Path,
-    segments: list[dict],
-) -> tuple[str, str] | None:
-    """
-    Associe les segments de la carte agent à un fichier G-D en comparant les noms
-    de terminus (départ / arrivée). Retourne (heure_debut_min, heure_fin_max) ou None.
-    """
-    if not segments:
-        return None
-
-    try:
-        gd_data = json.loads(gd_path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-
-    # Collecte les (start, end) de tous les parcours du fichier G-D
-    gd_endpoints: list[tuple[str, str]] = []
-    for route in gd_data.get("routes", []):
-        for parcours in route.get("parcours", []):
-            s = parcours.get("start", "")
-            e = parcours.get("end",   "")
-            if s and e:
-                gd_endpoints.append((s, e))
-
-    if not gd_endpoints:
-        return None
-
-    # Phase 1 : match complet (départ ≈ gd_s ET arrivée ≈ gd_e).
-    matching: list[dict] = []
-    for seg in segments:
-        for (gd_s, gd_e) in gd_endpoints:
-            if _stops_match(seg["debut_stop"], gd_s) and _stops_match(seg["fin_stop"], gd_e):
-                matching.append(seg)
-                break
-
-    # Phase 2 : si aucun match complet, repli sur la destination seule (fin_stop ≈ gd_e).
-    # Gère les trajets débutant en cours de parcours (point de relève ou accès partiel),
-    # ex. 777 Est — G-D : Casino → Jean-Drapeau, carte agent : Gauchetière → Jean-Drapeau.
-    if not matching:
-        for seg in segments:
-            for (_, gd_e) in gd_endpoints:
-                if _stops_match(seg["fin_stop"], gd_e):
-                    matching.append(seg)
-                    break
-
-    if not matching:
-        return None
-
-    debut = min(matching, key=lambda s: _to_min(s["debut"]))["debut"]
-    fin   = max(matching, key=lambda s: _to_min(s["fin"]))["fin"]
-    return debut, fin
 
 
 # ── Fichiers de données ──────────────────────────────────────────────────────────
@@ -205,21 +29,6 @@ def fmt_mtime(path: Path) -> str:
         return "–"
     mtime = datetime.fromtimestamp(path.stat().st_mtime)
     return mtime.strftime("%Y-%m-%d %H:%M")
-
-
-def get_gd_files_for_ligne(ligne: str, data_dir: Path) -> list[dict]:
-    """Trouve tous les fichiers G-D d'une ligne (toutes directions)."""
-    gd_dir = data_dir / "Gauche-Droite"
-    results = []
-    for direction in ("est", "ouest", "nord", "sud"):
-        p = gd_dir / f"gd{ligne}_{direction}.json"
-        if p.exists():
-            results.append({"direction": direction, "path": p, "mtime": fmt_mtime(p)})
-    return results
-
-
-def get_event_file_mtime(ligne: str, direction: str, data_dir: Path) -> str:
-    return fmt_mtime(data_dir / "Events" / f"{ligne}_{direction}.json")
 
 
 def fmt_iso(value: str) -> str:
@@ -253,7 +62,6 @@ def get_gtfs_info(data_dir: Path) -> dict:
             if raw_date:
                 static_ts = fmt_iso(raw_date)
                 try:
-                    from datetime import datetime, timezone
                     dt = datetime.fromisoformat(raw_date)
                     if dt.tzinfo is None:
                         dt = dt.replace(tzinfo=timezone.utc)

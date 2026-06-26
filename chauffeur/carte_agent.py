@@ -1,13 +1,10 @@
 """chauffeur.carte_agent — parser texte unifié de la carte agent HASTUS (PDF).
 
-Source de vérité unique, anciennement dupliquée :
-  • scripts/gen_rapport.py : parse_carte_agent + extract_segments_from_carte (sans heures)
-  • app/dashboard.py       : extract_line_time_ranges (avec heures)
-
-Le modèle CarteAgent porte les heures ; les adaptateurs `segments_par_ligne` /
-`time_ranges_par_ligne` (cf. modeles) reproduisent à l'identique les deux sorties
-historiques. Le parsing GÉOMÉTRIQUE (positions bbox) reste hors de ce module
-(carte_agent_stm.py pour l'annotation, extract_pieces_from_pdf pour les colonnes Prise).
+Extrait les trajets de service à partir du texte brut de la carte agent.
+Le modèle CarteAgent (cf. modeles) porte les heures et expose `segments_par_ligne` /
+`time_ranges_par_ligne`. Le parsing GÉOMÉTRIQUE (positions bbox pour l'annotation)
+reste dans scripts/carte_agent_stm.py ; les données structurées sont lues depuis
+les fichiers journée JSON (scripts/parse_journee.py).
 """
 from __future__ import annotations
 
