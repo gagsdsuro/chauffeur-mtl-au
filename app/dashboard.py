@@ -231,16 +231,37 @@ def fmt_iso(value: str) -> str:
 
 
 def get_gtfs_info(data_dir: Path) -> dict:
-    """Retourne les métadonnées GTFS statique et RT."""
+    """Retourne les métadonnées GTFS statique et RT.
+
+    Champs retournés :
+      static_ts       — date lisible du dernier téléchargement (str)
+      static_age_days — âge en jours entiers (int) ou None si inconnu
+      rt_ts           — date lisible du dernier RT (str)
+      rt_pb           — chemin du fichier protobuf RT (Path)
+      rt_avail        — True si le fichier RT existe (bool)
+    """
     static_manifest = data_dir / "gtfs" / "gtfs_manifest.json"
     rt_manifest     = data_dir / "gtfs_rt" / "gtfs_rt_manifest.json"
     rt_pb_path      = data_dir / "gtfs_rt" / "response_vehiclePositions.pb"
 
-    static_ts = "–"
+    static_ts       = "–"
+    static_age_days = None
     if static_manifest.exists():
         try:
             m = json.loads(static_manifest.read_text(encoding="utf-8"))
-            static_ts = fmt_iso(m.get("last_update") or m.get("downloaded_at")) if (m.get("last_update") or m.get("downloaded_at")) else fmt_mtime(static_manifest)
+            raw_date = m.get("last_update") or m.get("downloaded_at")
+            if raw_date:
+                static_ts = fmt_iso(raw_date)
+                try:
+                    from datetime import datetime, timezone
+                    dt = datetime.fromisoformat(raw_date)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    static_age_days = (datetime.now(timezone.utc) - dt).days
+                except Exception:
+                    pass
+            else:
+                static_ts = fmt_mtime(static_manifest)
         except Exception:
             static_ts = fmt_mtime(static_manifest)
 
@@ -253,10 +274,11 @@ def get_gtfs_info(data_dir: Path) -> dict:
             rt_ts = fmt_mtime(rt_manifest)
 
     return {
-        "static_ts": static_ts,
-        "rt_ts":     rt_ts,
-        "rt_pb":     rt_pb_path,
-        "rt_avail":  rt_pb_path.exists(),
+        "static_ts":       static_ts,
+        "static_age_days": static_age_days,
+        "rt_ts":           rt_ts,
+        "rt_pb":           rt_pb_path,
+        "rt_avail":        rt_pb_path.exists(),
     }
 
 

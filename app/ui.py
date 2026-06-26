@@ -306,6 +306,16 @@ with tabs[0]:
         gtfs_info = get_gtfs_info(DATA_DIR)
         RAPPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
+        _gtfs_age = gtfs_info.get("static_age_days")
+        if _gtfs_age is not None and _gtfs_age > 7:
+            st.warning(
+                f"⚠️ Données GTFS périmées ({_gtfs_age} jours). "
+                "Mettez à jour via l'onglet **Importation > GTFS**.",
+                icon=None,
+            )
+        elif not (DATA_DIR / "gtfs" / "gtfs_stm").exists():
+            st.warning("⚠️ Aucune donnée GTFS. Téléchargez-les via l'onglet **Importation > GTFS**.")
+
         db_rpt_niveau = st.radio(
             "Niveau des rapports G-D",
             ["standard", "détaillé", "compact"],
@@ -477,29 +487,23 @@ with tabs[0]:
                             st.warning("Données GTFS introuvables.")
                             st.session_state[f"{t_key}_rpt_run"] = False
                         else:
-                            cmd = [
-                                sys.executable,
-                                str(SCRIPTS_DIR / "gen_rapport_v2.py"),
-                                "--journee",          str(db_j_path),
-                                "--filtre-ligne",     tl,
-                                "--filtre-direction", td,
-                                "--niveau",           db_rpt_niveau,
-                                "--format",           "html",
-                                "--output",           str(out_rpt),
-                            ]
-                            if tid is not None:
-                                cmd += ["--filtre-id-parcours", str(tid)]
+                            from gen_rapport_v2 import generer_rapport as _gen_v2
                             with st.spinner(
                                 f"Génération rapport {tl} {td.capitalize()} ID {tid}…"
                             ):
-                                rpt_res = subprocess.run(
-                                    cmd, capture_output=True, text=True
-                                )
-                            if rpt_res.returncode == 0 and out_rpt.exists():
-                                rpt_just_generated = True
-                            else:
-                                st.error("Erreur lors de la génération.")
-                                st.code(rpt_res.stderr or rpt_res.stdout)
+                                try:
+                                    _gen_v2(
+                                        db_j_path,
+                                        fmt="html",
+                                        output=out_rpt,
+                                        niveau=db_rpt_niveau,
+                                        filtre_ligne=tl,
+                                        filtre_direction=td,
+                                        filtre_id_parcours=tid,
+                                    )
+                                    rpt_just_generated = True
+                                except Exception as _e:
+                                    st.error(f"Erreur lors de la génération : {_e}")
                             st.session_state[f"{t_key}_rpt_run"] = False
 
                     # Aperçu persistant : affiché dès que le fichier existe
@@ -925,10 +929,18 @@ with tabs[1]:
         _imp_gtfs_info     = _imp_get_gtfs_info(DATA_DIR)
 
         if _imp_gtfs_manifest.exists():
-            st.info(
-                f"GTFS statique présent — dernier téléchargement le "
-                f"{_imp_gtfs_info['static_ts']}"
-            )
+            _imp_age = _imp_gtfs_info.get("static_age_days")
+            if _imp_age is not None and _imp_age > 7:
+                st.warning(
+                    f"⚠️ GTFS statique périmé ({_imp_age} jours) — "
+                    f"dernier téléchargement le {_imp_gtfs_info['static_ts']}. "
+                    "Cliquez sur **Télécharger** pour mettre à jour."
+                )
+            else:
+                st.info(
+                    f"GTFS statique présent — dernier téléchargement le "
+                    f"{_imp_gtfs_info['static_ts']}"
+                )
         else:
             st.warning(
                 "Aucune donnée GTFS statique. Cliquez sur **Télécharger** pour initialiser."
@@ -1074,27 +1086,9 @@ with tabs[2]:
                     f"  ·  Temps travaillé {v2_j_data.get('temps_travaille', '–')}"
                 )
 
-            # ── Groupes détectés (lecture inline) ─────────────────────────────
-            v2_groupes = []
-            v2_seen_g: dict = {}
-            for _p in v2_pieces:
-                for _t in _p.get("trajets", []):
-                    if _t.get("type") != "service":
-                        continue
-                    _lg = _t.get("ligne") or ""
-                    _dr = (_t.get("direction") or "").lower()
-                    _ip = _t.get("id_parcours")
-                    if not _lg or not _dr:
-                        continue
-                    _key = (_lg, _dr, _ip)
-                    if _key not in v2_seen_g:
-                        v2_seen_g[_key] = len(v2_groupes)
-                        v2_groupes.append({
-                            "ligne": _lg, "direction": _dr,
-                            "id_parcours": _ip, "detour": _t.get("detour", False),
-                        })
-                    elif _t.get("detour"):
-                        v2_groupes[v2_seen_g[_key]]["detour"] = True
+            # ── Groupes détectés ──────────────────────────────────────────────
+            from chauffeur.journee import groupes_de_service as _groupes_de_service
+            v2_groupes = _groupes_de_service(v2_j_data)
 
             if v2_groupes:
                 grp_txt = "  ·  ".join(
@@ -1124,40 +1118,33 @@ with tabs[2]:
                 v2_date_str = v2_j_data.get("date", v2_j_labels[v2_sel])
                 v2_out = RAPPORTS_DIR / f"rapport-v2-{v2_date_str}-{v2_niveau}.{v2_fmt}"
 
-                cmd = [
-                    sys.executable, str(SCRIPTS_DIR / "gen_rapport_v2.py"),
-                    "--journee", str(v2_j_path),
-                    "--niveau",  v2_niveau,
-                    "--format",  v2_fmt,
-                    "--output",  str(v2_out),
-                ]
-                if v2_code:
-                    cmd.append("--codearret")
-
+                from gen_rapport_v2 import generer_rapport as _gen_v2
                 with st.spinner("Génération en cours…"):
-                    v2_result = subprocess.run(cmd, capture_output=True, text=True)
-
-                v2_out_txt = v2_result.stdout + ("\n" + v2_result.stderr if v2_result.stderr else "")
-                st.code(v2_out_txt)
-
-                if v2_result.returncode == 0 and v2_out.exists():
-                    st.success("Rapport généré.")
-                    v2_mime = "text/html" if v2_fmt == "html" else "application/pdf"
-                    st.download_button(
-                        f"⬇️ Télécharger ({v2_fmt.upper()})",
-                        data=v2_out.read_bytes(),
-                        file_name=v2_out.name,
-                        mime=v2_mime,
-                        key="rpt_v2_dl",
-                    )
-                    if v2_fmt == "html":
-                        with st.expander("Aperçu HTML"):
-                            components.html(
-                                v2_out.read_text(encoding="utf-8"),
-                                height=600, scrolling=True,
-                            )
-                else:
-                    st.error("Erreur lors de la génération.")
+                    try:
+                        _out = _gen_v2(
+                            v2_j_path,
+                            fmt=v2_fmt,
+                            output=v2_out,
+                            niveau=v2_niveau,
+                            show_code=v2_code,
+                        )
+                        st.success("Rapport généré.")
+                        v2_mime = "text/html" if v2_fmt == "html" else "application/pdf"
+                        st.download_button(
+                            f"⬇️ Télécharger ({v2_fmt.upper()})",
+                            data=_out.read_bytes(),
+                            file_name=_out.name,
+                            mime=v2_mime,
+                            key="rpt_v2_dl",
+                        )
+                        if v2_fmt == "html":
+                            with st.expander("Aperçu HTML"):
+                                components.html(
+                                    _out.read_text(encoding="utf-8"),
+                                    height=600, scrolling=True,
+                                )
+                    except Exception as _e:
+                        st.error(f"Erreur lors de la génération : {_e}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

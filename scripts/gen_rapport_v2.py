@@ -728,55 +728,79 @@ def main():
 
     args = ap.parse_args()
 
-    if not args.journee.exists():
-        print(f"Fichier introuvable : {args.journee}", file=sys.stderr)
+    try:
+        out = generer_rapport(
+            args.journee,
+            fmt=args.fmt,
+            output=args.output,
+            niveau=args.niveau,
+            show_code=args.show_code,
+            filtre_ligne=args.filtre_ligne,
+            filtre_direction=args.filtre_direction,
+            filtre_id_parcours=args.filtre_id_parcours,
+        )
+        print(f"Rapport généré : {out}")
+    except (FileNotFoundError, ValueError) as e:
+        print(str(e), file=sys.stderr)
         sys.exit(1)
 
-    journee  = load_journee(args.journee)
+
+def generer_rapport(
+    journee_path: Path,
+    fmt: str = "html",
+    output: Path | None = None,
+    niveau: str = "détaillé",
+    show_code: bool = False,
+    filtre_ligne: str | None = None,
+    filtre_direction: str | None = None,
+    filtre_id_parcours: int | None = None,
+) -> Path:
+    """Génère le rapport v2 et retourne le chemin du fichier créé.
+
+    Lève FileNotFoundError si journee_path n'existe pas,
+    ValueError si la journée est vide ou si les filtres excluent tout.
+    """
+    if not journee_path.exists():
+        raise FileNotFoundError(f"Fichier introuvable : {journee_path}")
+
+    journee  = load_journee(journee_path)
     date_str = journee.get("date", "inconnu")
     groupes  = extract_groupes(journee)
 
     if not groupes:
-        print("Aucun trajet de service dans le fichier journée.", file=sys.stderr)
-        sys.exit(1)
+        raise ValueError("Aucun trajet de service dans le fichier journée.")
 
-    # Filtrage mono-groupe (depuis tableau de bord ou CLI)
-    if args.filtre_ligne or args.filtre_direction or args.filtre_id_parcours is not None:
+    if filtre_ligne or filtre_direction or filtre_id_parcours is not None:
         groupes = [
             g for g in groupes
-            if (args.filtre_ligne is None
-                or g["ligne"] == args.filtre_ligne)
-            and (args.filtre_direction is None
-                 or g["direction"] == args.filtre_direction)
-            and (args.filtre_id_parcours is None
-                 or g["id_parcours"] == args.filtre_id_parcours)
+            if (filtre_ligne is None      or g["ligne"]       == filtre_ligne)
+            and (filtre_direction is None  or g["direction"]   == filtre_direction)
+            and (filtre_id_parcours is None or g["id_parcours"] == filtre_id_parcours)
         ]
         if not groupes:
-            print("Aucun groupe ne correspond aux filtres spécifiés.", file=sys.stderr)
-            sys.exit(1)
+            raise ValueError("Aucun groupe ne correspond aux filtres spécifiés.")
 
     if len(groupes) > 1:
         import os
-        from concurrent.futures import ProcessPoolExecutor
+        from concurrent.futures import ThreadPoolExecutor
         workers = min(len(groupes), os.cpu_count() or 4)
-        with ProcessPoolExecutor(max_workers=workers) as pool:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
             groupes_data = list(pool.map(
                 _process_groupe_worker, [(g, date_str) for g in groupes]
             ))
     else:
         groupes_data = [process_groupe(groupes[0], date_str, {})]
 
-    ext    = args.fmt
-    output = args.output or (OUTPUT_DIR / f"rapport-v2-{date_str}.{ext}")
+    out = output or (OUTPUT_DIR / f"rapport-v2-{date_str}.{fmt}")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    if args.fmt == "html":
-        html = render_html(groupes_data, journee, args.niveau, args.show_code)
-        output.write_text(html, encoding="utf-8")
+    if fmt == "html":
+        html = render_html(groupes_data, journee, niveau, show_code)
+        out.write_text(html, encoding="utf-8")
     else:
-        render_pdf(groupes_data, journee, args.niveau, output, args.show_code)
+        render_pdf(groupes_data, journee, niveau, out, show_code)
 
-    print(f"Rapport généré : {output}")
+    return out
 
 
 if __name__ == "__main__":

@@ -15,11 +15,15 @@ from .matching import normalize_street, stops_match
 
 
 def _select_parcours(all_parcours, hint):
-    """Choisit un parcours selon un mot-clé dans le nom, ou le premier par défaut."""
+    """Choisit un parcours selon un mot-clé dans le nom, ou le premier par défaut.
+    Accepte list[ParcoursGD] ou list[dict]."""
+    def _name(p):
+        return (p.name if hasattr(p, "name") else p.get("name", "")) or ""
+
     if hint and all_parcours:
         h = hint.strip().lower()
         for p in all_parcours:
-            if h in p.get("name", "").lower():
+            if h in _name(p).lower():
                 return p
         print(f"  ⚠ Parcours '{hint}' introuvable — utilisation du premier parcours.")
     return all_parcours[0] if all_parcours else {}

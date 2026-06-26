@@ -15,6 +15,9 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from chauffeur.modeles import Journee  # noqa: E402
+
 
 MOIS_FR = {
     "janvier": "01", "février": "02", "mars": "03", "avril": "04",
@@ -307,7 +310,7 @@ class JourneeParser:
 
     # ── Assemblage ─────────────────────────────────────────────────────────────
 
-    def parse(self) -> dict | None:
+    def parse(self) -> Journee | None:
         header = self._parse_header()
         if not header.get("employe_id"):
             self.errors.append("❌ Impossible d'extraire l'identifiant employé")
@@ -337,7 +340,7 @@ class JourneeParser:
                 "trajets":         traj,
             })
 
-        return {
+        raw = {
             "date":                 self.date_str,
             "employe_id":           header.get("employe_id"),
             "garage":               header.get("garage"),
@@ -347,31 +350,33 @@ class JourneeParser:
             "mis_a_jour":           header.get("mis_a_jour"),
             "pieces":               pieces,
         }
+        return Journee.from_dict(raw)
 
-    def save(self, result: dict) -> Path:
+    def save(self, journee: Journee) -> Path:
         self.JOURNEES_DIR.mkdir(parents=True, exist_ok=True)
         out = self.JOURNEES_DIR / f"journee-{self.date_str}.json"
-        out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        out.write_text(json.dumps(journee.to_dict(), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         return out
 
-    def get_summary(self, result: dict | None = None, saved_path: Path | None = None) -> str:
+    def get_summary(self, journee: Journee | None = None, saved_path: Path | None = None) -> str:
         if self.errors:
             return "❌ Erreurs :\n" + "\n".join(f"  {e}" for e in self.errors)
 
         lines = [f"✅ Journée du {self.date_str}"]
-        if result:
+        if journee:
             lines.append(
-                f"   Employé {result['employe_id']} — {result.get('garage', '?')} "
-                f"| Journée n°{result.get('journee_numero', '?')} "
-                f"| {result.get('temps_travaille', '?')} travaillé"
+                f"   Employé {journee.employe_id} — {journee.garage or '?'} "
+                f"| Journée n°{journee.journee_numero or '?'} "
+                f"| {journee.temps_travaille or '?'} travaillé"
             )
-            for p in result.get("pieces", []):
-                bus   = p.get("numero_autobus") or "–"
-                ntraj = sum(1 for t in p.get("trajets", []) if t["type"] == "service")
-                nhlp  = sum(1 for t in p.get("trajets", []) if t["type"] == "haut_le_pied")
+            from chauffeur.modeles import TrajetService, TrajetHlp
+            for p in journee.pieces:
+                bus   = p.numero_autobus or "–"
+                ntraj = sum(1 for t in p.trajets if isinstance(t, TrajetService))
+                nhlp  = sum(1 for t in p.trajets if isinstance(t, TrajetHlp))
                 lines.append(
-                    f"   Pièce {p['id']} : bus {bus}, "
-                    f"{p.get('debut')} → {p.get('fin')}, "
+                    f"   Pièce {p.id} : bus {bus}, "
+                    f"{p.debut} → {p.fin}, "
                     f"{ntraj} voyage(s), {nhlp} HLP"
                 )
         if saved_path:
@@ -398,7 +403,7 @@ def main():
         saved = parser.save(result)
         print(parser.get_summary(result, saved))
         if args.json:
-            print(json.dumps(result, indent=2, ensure_ascii=False))
+            print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
     else:
         print(parser.get_summary())
         sys.exit(1)

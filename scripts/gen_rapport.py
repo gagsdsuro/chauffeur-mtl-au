@@ -31,6 +31,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from chauffeur.effectif import parse_shift_time          # noqa: E402
 from chauffeur.evenements import applicable_au_quart, raison_exclusion  # noqa: E402
+from chauffeur.modeles import FichierGD  # noqa: E402
 
 try:
     from reportlab.lib import colors
@@ -458,42 +459,24 @@ def load_gd_direction_by_id(ligne: str, direction: str, id_parcours) -> dict | N
     if not gd_file.exists():
         return None
     try:
-        data = json.loads(gd_file.read_text(encoding='utf-8'))
+        fichier = FichierGD.from_dict(json.loads(gd_file.read_text(encoding='utf-8')))
     except Exception as e:
         print(f"⚠️  Erreur lecture {gd_file.name}: {e}", file=sys.stderr)
         return None
 
-    for route in data.get('routes', []):
-        all_p = route.get('parcours', [])
-        if not all_p:
+    for route in fichier.routes:
+        if not route.parcours:
             continue
-        parcours = next((p for p in all_p if p.get('id') == id_parcours), all_p[0])
-        sens = route.get('direction', '')
+        parcours = next((p for p in route.parcours if p.id == id_parcours), route.parcours[0])
 
-        instructions = []
-        instructions.append({
-            'type': 'terminus',
-            'texte': parcours.get('start', ''),
-            'arret': str(parcours.get('start_code', '')),
-        })
-        for instr in parcours.get('direction', []):
+        instructions = [{'type': 'terminus', 'texte': parcours.start, 'arret': str(parcours.start_code)}]
+        for instr in parcours.direction:
             m = re.match(r'^(Via|Gauche|Droite)\s+-\s+(.+)$', instr, re.IGNORECASE)
             if m:
-                instructions.append({
-                    'type': m.group(1).lower(),
-                    'texte': m.group(2),
-                })
-        instructions.append({
-            'type': 'terminus',
-            'texte': parcours.get('end', ''),
-            'arret': str(parcours.get('end_code', '')),
-        })
+                instructions.append({'type': m.group(1).lower(), 'texte': m.group(2)})
+        instructions.append({'type': 'terminus', 'texte': parcours.end, 'arret': str(parcours.end_code)})
 
-        return {
-            'sens': sens,
-            'parcours_nom': parcours.get('name', ''),
-            'instructions': instructions,
-        }
+        return {'sens': route.direction, 'parcours_nom': parcours.name, 'instructions': instructions}
     return None
 
 

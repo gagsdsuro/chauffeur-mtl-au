@@ -13,6 +13,11 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+from chauffeur.modeles import FichierEvenements, Evenement  # noqa: E402
+
 
 # ---------------------------------------------------------------------------
 # Mini-arbre DOM — pour parser le fragment HTML retourné par le portail STM
@@ -425,6 +430,14 @@ class STMEventParser:
         changed = self.events != existing_detours
         return self.events, changed
 
+    def to_fichier(self) -> FichierEvenements:
+        """Retourne les évènements courants sous forme de FichierEvenements typé."""
+        return FichierEvenements(
+            ligne=self.ligne,
+            direction=self.direction,
+            detours=[Evenement.from_dict(e) for e in self.events],
+        )
+
     def save_json(self) -> Tuple[bool, bool]:
         """Save events. Returns (success, changed)."""
         self.events_dir.mkdir(parents=True, exist_ok=True)
@@ -436,13 +449,17 @@ class STMEventParser:
             return True, False
 
         self.no_changes = False
-        output = {"ligne": self.ligne, "direction": self.direction, "detours": merged_events}
+        fichier = FichierEvenements(
+            ligne=self.ligne,
+            direction=self.direction,
+            detours=[Evenement.from_dict(e) for e in merged_events],
+        )
         filename = f"{self.ligne}_{self.direction}.json"
         filepath = self.events_dir / filename
 
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(output, f, indent=2, ensure_ascii=False)
+                json.dump(fichier.to_dict(), f, indent=2, ensure_ascii=False)
             return True, True
         except Exception as e:
             self.errors.append(f"❌ Erreur sauvegarde: {e}")
@@ -547,7 +564,7 @@ def main():
             parser.append_log(summary)
 
         if success:
-            results.append({"ligne": parser.ligne, "direction": parser.direction, "detours": parser.events})
+            results.append(parser.to_fichier().to_dict())
         else:
             failed = True
 

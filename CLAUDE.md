@@ -10,6 +10,13 @@ La langue de travail est le **français** (noms de champs, messages, documentati
 
 ## Commandes
 
+**Lancer l'application Streamlit** :
+```bash
+streamlit run app/ui.py                     # développement local
+docker compose up --build                   # production (port 8501, volume ./data)
+```
+L'app expose 5 onglets : Tableau de bord · Importation (5 sous-onglets) · Rapports · Fichiers · GTFS.
+
 **Import Gauche-Droite** — lit depuis stdin, écrit dans `data/Gauche-Droite/` :
 ```bash
 python3 scripts/parse_gd.py < data/raw/new-gd.txt          # importe et écrit les fichiers
@@ -87,13 +94,30 @@ python3 tests/test_parse_gd.py      # régression parse_gd.py (cas : multi-parco
 python3 tests/test_matching.py
 ```
 
+**Rapport détaillé G-D / Arrêts** — rapport HTML ou Markdown pour une ligne/direction (requiert GTFS) :
+```bash
+python3 scripts/rapport_gd.py --ligne 195 --direction ouest --date 2026-06-05 --base .
+python3 scripts/rapport_gd.py --ligne 24 --direction est --heure-debut 06:00 --heure-fin 14:30
+python3 scripts/rapport_gd.py --ligne 125 --direction est --arret-debut 54112 --arret-fin 57365
+```
+Options clés : `--format html|md`, `--heure-debut`/`--heure-fin` (peut dépasser 24h ex. `25:19`), `--parcours principal|secondaire|école|weekend`, `--arret-debut`/`--arret-fin`. Sortie : `scripts/rapport_<ligne>_<dir>_<date>.html`.
+
+**Rafraîchissement événements depuis le portail STM** — lit depuis `employe.stm.info`, écrit dans `data/Events/` :
+```bash
+python3 scripts/refresh_events.py --journee data/journees/journee-2026-06-25.json
+python3 scripts/refresh_events.py --journee data/journees/journee-2026-06-25.json --restantes
+python3 scripts/refresh_events.py --ligne 10 --sens sud
+```
+Codes de sortie : `0` succès, `1` erreur HTTP/parse, `2` session expirée (renouveler les cookies).
+Session : coller la chaîne de cookies (DevTools → Application → Cookies) dans l'UI onglet Importation > Évènements, ou via `chauffeur.portail.save_session()`. Stockée dans `data/session/cookies.json` (gitignorée via `data/`).
+
 **Téléchargement GTFS** — données statiques (hebdomadaire) et temps-réel (requiert `requests`) :
 ```bash
 python3 scripts/fetch_gtfs.py
 python3 scripts/fetch_gtfs_rt.py
 ```
 
-- `parse_gd.py`, `parse_event.py` et `parse_journee.py` n'ont aucune dépendance externe (stdlib uniquement). Les autres scripts requièrent `requests` et/ou `PyMuPDF (fitz)`.
+- `parse_gd.py` est stdlib pur. `parse_event.py` et `parse_journee.py` importent `chauffeur.modeles` (stdlib, pas de package externe). Les autres scripts requièrent `requests` et/ou `PyMuPDF (fitz)`.
 - Tous les scripts résolvent les chemins via `Path(__file__).parent.parent` ; ils fonctionnent peu importe le répertoire courant.
 - Code de sortie : `0` si tout réussit, `1` si une section échoue (erreurs sur stderr).
 
@@ -102,16 +126,20 @@ python3 scripts/fetch_gtfs_rt.py
 ### Flux de données
 
 ```
-data/raw/*.txt  ──(parse_gd.py)────────►  data/Gauche-Droite/gd<ligne>_<direction>.json
-                ──(parse_event.py)──────►  data/Events/<ligne>_<direction>.json
-                ──(parse_journee.py)────►  data/journees/journee-YYYY-MM-DD.json
-data/gtfs/      ──(fetch_gtfs.py)──────►  data/gtfs/gtfs_stm/   (données statiques)
-data/ca/*.pdf   ──(carte_agent_stm.py + GTFS)──►  PDF annoté
-                ──(gen_rapport.py)──────►  data/rapports/rapport-YYYY-MM-DD.pdf
-data/journees/  ──(gen_rapport_v2.py)──►  data/rapports/rapport-v2-YYYY-MM-DD.{html,pdf}
+data/raw/*.txt        ──(parse_gd.py)────────►  data/Gauche-Droite/gd<ligne>_<direction>.json
+                      ──(parse_event.py)──────►  data/Events/<ligne>_<direction>.json
+                      ──(parse_journee.py)────►  data/journees/journee-YYYY-MM-DD.json
+employe.stm.info      ──(refresh_events.py)──►  data/Events/<ligne>_<direction>.json
+data/gtfs/            ──(fetch_gtfs.py)──────►  data/gtfs/gtfs_stm/   (données statiques)
+data/ca/*.pdf         ──(carte_agent_stm.py + GTFS)──►  PDF annoté
+                      ──(gen_rapport.py)──────►  data/rapports/rapport-YYYY-MM-DD.pdf
+data/journees/        ──(gen_rapport_v2.py)──►  data/rapports/rapport-v2-YYYY-MM-DD.{html,pdf}
+data/Gauche-Droite/ + data/Events/ + GTFS  ──(rapport_gd.py)──►  scripts/rapport_<ligne>_<dir>_<date>.html
 ```
 
-Le package **`chauffeur/`** centralise le noyau de domaine partagé entre les scripts et l'app Streamlit : `matching` (appariement noms d'arrêts), `modeles` (dataclasses), `carte_agent` (lecture PDF), `effectif` (horaires), `evenements` (filtrage par quart/arrêt), `gd` (build_rows, détours, applicabilité), `gtfs` (lookup arrêts GTFS).
+Le package **`chauffeur/`** centralise le noyau de domaine partagé entre les scripts et l'app Streamlit : `matching` (appariement noms d'arrêts), `modeles` (dataclasses), `carte_agent` (lecture PDF), `effectif` (horaires), `evenements` (filtrage par quart/arrêt), `gd` (build_rows, détours, applicabilité), `gtfs` (lookup arrêts GTFS), `portail` (session + appels HTTP portail employé STM).
+
+L'application Streamlit est divisée en deux fichiers : `app/ui.py` (interface complète, 5 onglets) et `app/dashboard.py` (utilitaires onglet Tableau de bord : parsing PDF carte agent, GTFS-RT).
 
 1. **`split_sections()`** découpe l'entrée brute en sections, une par en-tête `Gauche-Droite / <ligne> <direction>`. Un seul collage peut donc contenir plusieurs lignes/directions.
 2. **`GDParser`** traite une section :

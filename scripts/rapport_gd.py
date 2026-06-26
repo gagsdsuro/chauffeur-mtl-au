@@ -28,6 +28,7 @@ from chauffeur.gd import (  # noqa: E402
     _select_parcours, build_rows, filter_rows_by_stop_range, annotate_events,
     apply_gd_detours, insert_added_stops_inline,
 )
+from chauffeur.modeles import FichierGD, ParcoursGD  # noqa: E402
 from chauffeur import gtfs as _gtfs  # noqa: E402
 
 # Dossier GTFS par défaut ; main() le réaffecte selon --base, les outils de test
@@ -85,7 +86,7 @@ def load_stop_names():
     return _gtfs.stop_names(GTFS)
 
 
-def list_parcours(ligne, direction, base):
+def list_parcours(ligne, direction, base) -> list[ParcoursGD]:
     """
     Retourne la liste de tous les parcours disponibles pour cette ligne/direction,
     ou [] si le fichier G-D n'existe pas.
@@ -94,39 +95,29 @@ def list_parcours(ligne, direction, base):
     if not path.exists():
         return []
     with open(path) as f:
-        data = json.load(f)
-    routes = data.get("routes", [])
-    if not routes:
+        fichier = FichierGD.from_dict(json.load(f))
+    if not fichier.routes:
         return []
-    return [
-        {
-            "id":         p.get("id"),
-            "name":       p.get("name", ""),
-            "start":      p.get("start", ""),
-            "start_code": str(p.get("start_code", "")),
-            "end":        p.get("end", ""),
-            "end_code":   str(p.get("end_code", "")),
-        }
-        for p in routes[0].get("parcours", [])
-    ]
+    return fichier.routes[0].parcours
 
 
 def load_gd(ligne, direction, base, parcours_hint=None):
     """
     Charge les instructions G-D et le parcours sélectionné.
-    Retourne (instructions, parcours_obj, all_parcours).
+    Retourne (instructions: list[str], parcours: ParcoursGD | None, all_parcours: list[ParcoursGD]).
     """
     path = base / f"data/Gauche-Droite/gd{ligne}_{direction}.json"
     if not path.exists():
         return [], None, []
     with open(path) as f:
-        data = json.load(f)
-    routes = data.get("routes", [])
-    if not routes:
+        fichier = FichierGD.from_dict(json.load(f))
+    if not fichier.routes:
         return [], None, []
-    all_parcours = routes[0].get("parcours", [])
-    parcours = _select_parcours(all_parcours, parcours_hint)
-    return parcours.get("direction", []), parcours, all_parcours
+    route = fichier.routes[0]
+    if not route.parcours:
+        return [], None, []
+    parcours = _select_parcours(route.parcours, parcours_hint)
+    return parcours.direction, parcours, route.parcours
 
 
 def load_events(ligne, direction, base,
@@ -187,8 +178,8 @@ def fmt_shift_range(shift_start, shift_end, base_date):
 def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, orphan_events=None):
     base_date = datetime.strptime(args.date, "%Y-%m-%d").date()
     date_fmt = datetime.strptime(args.date, "%Y-%m-%d").strftime("%d %B %Y")
-    start = parcours.get("start", "") if parcours else ""
-    end   = parcours.get("end", "")   if parcours else ""
+    start = parcours.start if parcours else ""
+    end   = parcours.end   if parcours else ""
     quart = fmt_shift_range(shift_start, shift_end, base_date)
 
     lines = [f"""<!DOCTYPE html>
@@ -237,7 +228,7 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, o
 </head>
 <body>
 <h1>Ligne {args.ligne} — {args.direction.capitalize()} &nbsp;|&nbsp; {date_fmt}</h1>
-<div class="meta">{start} → {end} &nbsp;·&nbsp; {parcours.get("name", "") if parcours else ""} &nbsp;·&nbsp; Quart : {quart}</div>"""]
+<div class="meta">{start} → {end} &nbsp;·&nbsp; {parcours.name if parcours else ""} &nbsp;·&nbsp; Quart : {quart}</div>"""]
 
     if orphan_events:
         lines.append('<div class="alert-section"><strong>⚠️ Alertes actives (arrêts hors trajet sélectionné)</strong><ul>')
@@ -368,13 +359,13 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, o
 def render_md(rows, added, args, parcours, shift_start=None, shift_end=None, orphan_events=None):
     base_date = datetime.strptime(args.date, "%Y-%m-%d").date()
     date_fmt = datetime.strptime(args.date, "%Y-%m-%d").strftime("%d %B %Y")
-    start = parcours.get("start", "") if parcours else ""
-    end   = parcours.get("end", "")   if parcours else ""
+    start = parcours.start if parcours else ""
+    end   = parcours.end   if parcours else ""
     quart = fmt_shift_range(shift_start, shift_end, base_date)
 
     lines = [
         f"# Ligne {args.ligne} — {args.direction.capitalize()} | {date_fmt}",
-        f"**{start} → {end}** · {parcours.get('name', '') if parcours else ''} · Quart : {quart}\n",
+        f"**{start} → {end}** · {parcours.name if parcours else ''} · Quart : {quart}\n",
     ]
 
     if orphan_events:
@@ -488,10 +479,10 @@ def main():
     )
     if all_parcours:
         print("  Parcours disponibles :")
-        selected_name = (parcours or {}).get("name", "")
+        selected_name = parcours.name if parcours else ""
         for p in all_parcours:
-            marker = "►" if p.get("name") == selected_name else " "
-            print(f"    {marker} [{p['id']}] {p['name']}  {p['start_code']} → {p['end_code']}")
+            marker = "►" if p.name == selected_name else " "
+            print(f"    {marker} [{p.id}] {p.name}  {p.start_code} → {p.end_code}")
 
     # Arrêts GTFS (avec fallback si variante école absente du GTFS)
     try:

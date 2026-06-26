@@ -14,54 +14,26 @@ Codes de sortie :
 import argparse
 import json
 import sys
-from datetime import datetime
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from chauffeur.journee import lignes_de_service
+from chauffeur.modeles import Journee
 from chauffeur.portail import fetch_detours, SessionExpiredError, PortailError
 from scripts.parse_event import STMEventParser
-
-
-def _lignes_journee(journee_path: Path, restantes: bool) -> list:
-    """Retourne les paires (ligne, direction) uniques à rafraîchir.
-
-    Avec restantes=True, exclut les pièces dont l'heure de fin est dépassée.
-    """
-    data = json.loads(journee_path.read_text(encoding="utf-8"))
-    now_hm = datetime.now().strftime("%H:%M")
-    pairs, seen = [], set()
-
-    for piece in data.get("pieces", []):
-        if restantes and piece.get("fin", "99:99") <= now_hm:
-            continue
-        for trajet in piece.get("trajets", []):
-            if trajet.get("type") != "service":
-                continue
-            ligne = trajet.get("ligne")
-            direction = trajet.get("direction")
-            if not ligne or not direction:
-                continue
-            key = (ligne, direction)
-            if key not in seen:
-                seen.add(key)
-                pairs.append(key)
-
-    return pairs
 
 
 def _refresh_one(ligne: str, sens: str, log: bool = False) -> bool:
     """Rafraîchit une ligne/direction. Retourne True si succès.
 
-    Sort avec code 2 si la session est expirée (propager à tout le batch).
+    Lève SessionExpiredError si la session est expirée — l'appelant décide
+    du code de sortie.
     """
     print(f"⟳  {ligne} {sens}...", end=" ", flush=True)
     try:
         raw = fetch_detours(ligne, sens)
-    except SessionExpiredError as exc:
-        print(f"\n🔒 Session expirée : {exc}", file=sys.stderr)
-        sys.exit(2)
     except PortailError as exc:
         print(f"\n❌ Erreur portail ({ligne} {sens}) : {exc}", file=sys.stderr)
         return False
@@ -105,7 +77,11 @@ def main():
     if args.ligne:
         if not args.sens:
             ap.error("--sens est requis avec --ligne")
-        ok = _refresh_one(args.ligne, args.sens, log=args.log)
+        try:
+            ok = _refresh_one(args.ligne, args.sens, log=args.log)
+        except SessionExpiredError as exc:
+            print(f"\n🔒 Session expirée : {exc}", file=sys.stderr)
+            sys.exit(2)
         sys.exit(0 if ok else 1)
 
     # Mode journée
@@ -113,7 +89,8 @@ def main():
         print(f"❌ Fichier journée introuvable : {args.journee}", file=sys.stderr)
         sys.exit(1)
 
-    pairs = _lignes_journee(args.journee, args.restantes)
+    journee_data = Journee.from_dict(json.loads(args.journee.read_text(encoding="utf-8")))
+    pairs = lignes_de_service(journee_data, restantes_seulement=args.restantes)
     if not pairs:
         label = "restantes" if args.restantes else "de la journée"
         print(f"Aucune ligne {label} à rafraîchir.")
@@ -123,9 +100,13 @@ def main():
     print(f"🔄 {len(pairs)} ligne(s) à rafraîchir ({label}) :\n")
 
     failed = False
-    for ligne, sens in pairs:
-        if not _refresh_one(ligne, sens, log=args.log):
-            failed = True
+    try:
+        for ligne, sens in pairs:
+            if not _refresh_one(ligne, sens, log=args.log):
+                failed = True
+    except SessionExpiredError as exc:
+        print(f"\n🔒 Session expirée : {exc}", file=sys.stderr)
+        sys.exit(2)
 
     sys.exit(1 if failed else 0)
 
