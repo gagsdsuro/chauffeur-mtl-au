@@ -778,6 +778,107 @@ with tabs[1]:
 
     # ── 2d — Évènements ──────────────────────────────────────────────────────
     with imp_tabs[3]:
+        # --- Rafraîchissement depuis le portail ---
+        from chauffeur.portail import save_session, SESSION_PATH as _SESS_PATH
+
+        st.subheader("Rafraîchissement depuis le portail")
+
+        # Badge session (lecture fichier uniquement, pas d'appel HTTP)
+        if _SESS_PATH.exists():
+            try:
+                _sess_data = json.loads(_SESS_PATH.read_text(encoding="utf-8"))
+                _saved_at  = _sess_data.get("saved_at", "?")
+                st.success(f"Session enregistrée le {_saved_at}")
+            except Exception:
+                st.warning("Fichier de session illisible")
+        else:
+            st.warning("Aucune session enregistrée")
+
+        _ref_j_files = (
+            sorted(JOURNEES_DIR.glob("journee-*.json"), reverse=True)
+            if JOURNEES_DIR.exists() else []
+        )
+        if _ref_j_files:
+            _rc1, _rc2, _rc3 = st.columns([3, 2, 2])
+            with _rc1:
+                _ref_labels = [p.stem.replace("journee-", "") for p in _ref_j_files]
+                _ref_sel    = st.selectbox(
+                    "Journée",
+                    range(len(_ref_labels)),
+                    format_func=lambda i: _ref_labels[i],
+                    key="ref_j_sel",
+                )
+                _ref_j_path = _ref_j_files[_ref_sel]
+            with _rc2:
+                _ref_restantes = st.checkbox(
+                    "Restantes seulement",
+                    value=True,
+                    key="ref_restantes",
+                    help="Saute les pièces dont l'heure de fin est dépassée.",
+                )
+            with _rc3:
+                st.markdown("<div style='margin-top:1.75rem'>", unsafe_allow_html=True)
+                _ref_disabled = not _SESS_PATH.exists()
+                if st.button(
+                    "🔄 Rafraîchir",
+                    type="primary",
+                    key="ref_btn",
+                    disabled=_ref_disabled,
+                    help="Session requise — enregistrez vos cookies ci-dessous." if _ref_disabled else "",
+                ):
+                    _ref_cmd = [
+                        sys.executable, str(SCRIPTS_DIR / "refresh_events.py"),
+                        "--journee", str(_ref_j_path),
+                        "--log",
+                    ]
+                    if _ref_restantes:
+                        _ref_cmd.append("--restantes")
+                    with st.spinner("Rafraîchissement en cours…"):
+                        _ref_res = subprocess.run(_ref_cmd, capture_output=True, text=True)
+                    _ref_out = _ref_res.stdout + ("\n" + _ref_res.stderr if _ref_res.stderr else "")
+                    st.session_state["ref_result_code"] = _ref_res.returncode
+                    st.session_state["ref_result_out"]  = _ref_out
+                st.markdown("</div>", unsafe_allow_html=True)
+
+            # Résultat pleine largeur — affiché après le bloc de colonnes
+            if "ref_result_code" in st.session_state:
+                _rc = st.session_state["ref_result_code"]
+                if _rc == 2:
+                    st.error("Session expirée — renouvelez vos cookies ci-dessous.")
+                elif _rc == 0:
+                    st.success("Rafraîchissement terminé.")
+                else:
+                    st.warning("Rafraîchissement partiel (certaines lignes ont échoué).")
+                _ref_out_saved = st.session_state.get("ref_result_out", "")
+                if _ref_out_saved.strip():
+                    st.code(_ref_out_saved)
+        else:
+            st.info("Aucune journée disponible. Importez-en une dans l'onglet **Journées**.")
+
+        with st.expander("🔑 Renouveler la session", expanded=not _SESS_PATH.exists()):
+            st.caption(
+                "Connectez-vous sur `employe.stm.info` dans votre navigateur, puis ouvrez les "
+                "DevTools (F12) → onglet **Réseau** → cliquez sur n'importe quelle requête → "
+                "onglet **En-têtes** → copiez la valeur complète du champ **cookie**."
+            )
+            _cookie_input = st.text_area(
+                "Cookie (chaîne brute)",
+                height=100,
+                key="ref_cookie_input",
+                placeholder="TS01846...=...; laravel_session=eyJ...; remember_web_...=eyJ...",
+            )
+            if st.button("Enregistrer la session", key="ref_cookie_save"):
+                if _cookie_input.strip():
+                    save_session(_cookie_input.strip())
+                    st.success("Session enregistrée.")
+                    st.rerun()
+                else:
+                    st.warning("Le champ est vide.")
+
+        st.divider()
+
+        # --- Import manuel (texte brut) ---
+        st.subheader("Import manuel (texte brut)")
         st.markdown("Collez le texte brut des évènements / détours STM. Le fichier `<ligne>_<direction>.json` sera créé ou mis à jour.")
 
         ev_text = st.text_area(

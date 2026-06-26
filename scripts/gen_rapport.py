@@ -322,20 +322,19 @@ def page2_detours(data):
     for ligne in data.get('lignes', []):
         num = ligne.get('numero', '')
         for ev in ligne.get('detours_non_applicables', []):
-            arrets = ev.get('arrets_annules', [])
-            arrets_text = ', '.join(
-                f'{a.get("id", "")} {a.get("nom", "")}' for a in arrets
-            ) if arrets else ev.get('nom_arret', '')
+            ev_id    = ev.get('evenement_id', '')
+            ev_titre = ev.get('titre', '')
+            ev_label = f'{ev_id} — {ev_titre}' if ev_id else ev_titre
             non_app_rows.append([
                 Paragraph(f'<b>{num}</b>', S['body']),
                 Paragraph(ev.get('direction', ''), S['note']),
-                Paragraph(arrets_text, S['note']),
+                Paragraph(ev_label, S['note']),
                 Paragraph(ev.get('raison_exclusion', ''), S['note']),
             ])
 
     if non_app_rows:
         story.append(Paragraph("Non applicables aujourd'hui", S['subsec']))
-        na_hdr = [['Ligne', 'Dir.', 'Arrêt(s)', "Raison d'exclusion"]]
+        na_hdr = [['Ligne', 'Dir.', 'Évènement', "Raison d'exclusion"]]
         na_t = Table(na_hdr + non_app_rows,
                      colWidths=[14*mm, 14*mm, 52*mm, doc_width - 80*mm])
         na_t.setStyle(TableStyle([

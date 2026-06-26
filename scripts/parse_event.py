@@ -7,10 +7,106 @@ Parses raw STM event text and generates/updates JSON files.
 import json
 import re
 import sys
+from html import unescape
+from html.parser import HTMLParser
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 
+
+# ---------------------------------------------------------------------------
+# Mini-arbre DOM — pour parser le fragment HTML retourné par le portail STM
+# ---------------------------------------------------------------------------
+
+class _Node:
+    __slots__ = ("tag", "attrs", "children", "parent")
+
+    def __init__(self, tag, attrs=None, parent=None):
+        self.tag = tag
+        self.attrs = dict(attrs or [])
+        self.children = []
+        self.parent = parent
+
+    def cls(self):
+        return self.attrs.get("class", "") or ""
+
+    def text(self):
+        out = []
+        for c in self.children:
+            out.append(c if isinstance(c, str) else c.text())
+        return re.sub(r"\s+", " ", "".join(out)).strip()
+
+    def find(self, tag, cls=None):
+        for n in self.iter():
+            if n.tag == tag and (cls is None or cls in n.cls().split()):
+                return n
+        return None
+
+    def find_all(self, tag, cls=None, direct=False):
+        src = self.children if direct else self.iter()
+        return [n for n in src
+                if isinstance(n, _Node) and n.tag == tag
+                and (cls is None or cls in n.cls().split())]
+
+    def iter(self):
+        for c in self.children:
+            if isinstance(c, _Node):
+                yield c
+                yield from c.iter()
+
+
+_VOID = {"br", "hr", "img", "input", "meta", "link"}
+
+
+class _TreeBuilder(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.root = _Node("#root")
+        self.cur = self.root
+
+    def handle_starttag(self, tag, attrs):
+        node = _Node(tag, attrs, self.cur)
+        self.cur.children.append(node)
+        if tag not in _VOID:
+            self.cur = node
+
+    def handle_startendtag(self, tag, attrs):
+        self.cur.children.append(_Node(tag, attrs, self.cur))
+
+    def handle_endtag(self, tag):
+        n = self.cur
+        while n is not self.root and n.tag != tag:
+            n = n.parent
+        if n is not self.root:
+            self.cur = n.parent
+
+    def handle_data(self, data):
+        if data.strip():
+            self.cur.children.append(data)
+
+
+def _build_dom(html: str) -> _Node:
+    b = _TreeBuilder()
+    b.feed(html)
+    return b.root
+
+
+def _lines_br(dd: _Node) -> list:
+    """Découpe un <dd> en lignes en traitant les <br> comme séparateurs."""
+    parts, buf = [], []
+    for c in dd.children:
+        if isinstance(c, _Node) and c.tag == "br":
+            parts.append("".join(buf))
+            buf = []
+        elif isinstance(c, str):
+            buf.append(c)
+        else:
+            buf.append(c.text())
+    parts.append("".join(buf))
+    return [unescape(p).strip() for p in "\n".join(parts).splitlines() if p.strip()]
+
+
+# ---------------------------------------------------------------------------
 
 class STMEventParser:
 
@@ -168,6 +264,90 @@ class STMEventParser:
 
         return event
 
+    def _parse_portal_item(self, li: _Node) -> Optional[Dict]:
+        """Extrait et normalise un événement depuis un <li> du fragment HTML portail."""
+        ev: Dict = {}
+
+        h3 = li.find("h3")
+        parts = [p.strip() for p in (h3.text() if h3 else "").split(" - ", 2)]
+        if len(parts) == 3:
+            ev["evenement_id"] = parts[1]
+            ev["titre"] = parts[2]
+        else:
+            self.errors.append("❌ En-tête d'événement non reconnu dans le HTML portail")
+            return None
+
+        for dl in li.find_all("dl", "on-off-canvas-panel-definition", direct=True):
+            dt = dl.find("dt")
+            dd = dl.find("dd")
+            if not dt or not dd:
+                continue
+            terme = dt.text()
+
+            if terme == "Motif":
+                ev["motif"] = dd.text()
+            elif terme.startswith("Date") and "début" in terme:
+                ev["date_heure_debut"] = self.parse_date_time(dd.text())
+            elif terme.startswith("Date") and "fin" in terme:
+                v = dd.text()
+                ev["date_heure_fin"] = None if v.lower().startswith("non") else self.parse_date_time(v)
+            elif terme == "Effectif":
+                ev["effectif"] = dd.text()
+            elif terme.startswith("Arrêt") and "ajouté" not in terme.lower():
+                arrets = []
+                for item in dd.find_all("li", "on-off-canvas-panel-description-item"):
+                    t = item.text()
+                    m = re.match(r"(\d+)\s*-\s*(.+)", t)
+                    arrets.append({"id": m.group(1), "nom": m.group(2).strip()} if m else {"id": "", "nom": t})
+                ev["arrets_annules"] = arrets
+            elif "Gauche-Droite" in terme:
+                lines = _lines_br(dd)
+                ev["description_gd"] = " ".join(lines) if lines else None
+            elif terme == "Commentaire":
+                commentaire_raw = "\n".join(_lines_br(dd))
+                split = re.split(r"Arrêt\(s\)\s+ajouté\(s\)\s*:", commentaire_raw, flags=re.IGNORECASE)
+                ev["commentaire"] = split[0].strip() or None
+                ev["arrets_ajoutes"] = self._parse_arrets(split[1]) if len(split) > 1 else []
+
+        ev.setdefault("arrets_annules", [])
+        ev.setdefault("arrets_ajoutes", [])
+        ev.setdefault("description_gd", None)
+        ev.setdefault("commentaire", None)
+
+        for field, label in [("evenement_id", "ID"), ("titre", "titre"), ("motif", "motif"), ("effectif", "effectif")]:
+            if not ev.get(field):
+                self.errors.append(f"❌ Événement: {label} manquant")
+                return None
+        if not ev.get("date_heure_debut"):
+            self.errors.append(f"❌ Événement {ev.get('evenement_id', '?')}: date/heure début invalide")
+            return None
+
+        return ev
+
+    @classmethod
+    def from_portal_json(cls, raw: str, ligne: str, direction: str,
+                         verbose: bool = True) -> "STMEventParser":
+        """Construit un parser depuis la réponse brute du portail STM.
+
+        Args:
+            raw:       JSON brut : {"countDeviations": N, "html": "<fragment>"}.
+            ligne:     Numéro de ligne (ex. "10").
+            direction: Direction en minuscule (ex. "sud").
+        """
+        data = json.loads(raw)
+        root = _build_dom(data.get("html", ""))
+
+        instance = cls("", verbose=verbose)
+        instance.ligne = ligne
+        instance.direction = direction.lower()
+
+        for li in root.find_all("li", "on-off-canvas-panel-item"):
+            ev = instance._parse_portal_item(li)
+            if ev:
+                instance.events.append(ev)
+
+        return instance
+
     def parse_all(self) -> bool:
         self.ligne, self.direction = self.extract_ligne_direction()
         if not self.ligne or not self.direction:
@@ -201,27 +381,42 @@ class STMEventParser:
         return {"ligne": self.ligne, "direction": self.direction, "detours": []}
 
     def merge_events(self, existing_data: Dict) -> Tuple[List[Dict], bool]:
-        """Input is authoritative: replaces the full list. Returns (new_list, changed)."""
+        """Input is authoritative: replaces the full list. Returns (new_list, changed).
+
+        Un même evenement_id peut apparaître plusieurs fois (plages horaires distinctes).
+        La comparaison se fait par groupe d'ID, pas événement par événement.
+        """
         existing_detours = existing_data.get('detours', [])
-        existing_ids = {e['evenement_id']: e for e in existing_detours}
         new_ids = {e['evenement_id'] for e in self.events}
 
+        # Grouper par ID pour gérer les doublons légitimes
+        existing_by_id: Dict[str, List] = {}
+        for e in existing_detours:
+            existing_by_id.setdefault(e['evenement_id'], []).append(e)
+        new_by_id: Dict[str, List] = {}
+        for e in self.events:
+            new_by_id.setdefault(e['evenement_id'], []).append(e)
+
+        # Événements retirés (ID entièrement absent de la nouvelle liste)
+        seen_removed: set = set()
         for old_event in existing_detours:
-            if old_event['evenement_id'] not in new_ids:
+            eid = old_event['evenement_id']
+            if eid not in new_ids and eid not in seen_removed:
+                seen_removed.add(eid)
                 if self.verbose:
                     titre = old_event.get('titre', '(sans titre)')
                     motif = old_event.get('motif', '')
                     detail = f" — {titre}" + (f" — Motif : {motif}" if motif else "")
-                    self.warnings.append(f"🗑️ Événement {old_event['evenement_id']} retiré{detail}")
+                    self.warnings.append(f"🗑️ Événement {eid} retiré{detail}")
                 else:
-                    self.warnings.append(f"🗑️ Événement {old_event['evenement_id']} retiré")
+                    self.warnings.append(f"🗑️ Événement {eid} retiré")
 
-        for new_event in self.events:
-            eid = new_event['evenement_id']
-            if eid in existing_ids and existing_ids[eid] != new_event:
-                if self.verbose:
-                    old = existing_ids[eid]
-                    changed_fields = [k for k in new_event if new_event.get(k) != old.get(k)]
+        # Événements modifiés (groupe différent pour le même ID)
+        for eid, new_evts in new_by_id.items():
+            old_evts = existing_by_id.get(eid)
+            if old_evts is not None and old_evts != new_evts:
+                if self.verbose and len(old_evts) == 1 and len(new_evts) == 1:
+                    changed_fields = [k for k in new_evts[0] if new_evts[0].get(k) != old_evts[0].get(k)]
                     fields_str = ", ".join(changed_fields) if changed_fields else "contenu"
                     self.warnings.append(f"⚠️ Événement {eid} remplacé — champs modifiés : {fields_str}")
                 else:
