@@ -121,6 +121,19 @@ class GTFSDownloader:
         except Exception as e:
             self.log(f"Erreur manifeste: {e}", "WARNING")
 
+    def build_stops_index(self):
+        """Construit stops_index.json à partir des fichiers GTFS extraits."""
+        self.log("Construction de l'index des arrêts (stops_index.json)...")
+        try:
+            sys.path.insert(0, str(self.project_root))
+            from chauffeur.gtfs import build_stops_index as _build
+            index_path = _build(self.current_dir)
+            n_keys = len(json.loads(index_path.read_text(encoding="utf-8")))
+            size_kb = index_path.stat().st_size // 1024
+            self.log(f"Index construit : {n_keys} clés, {size_kb} Ko → {index_path.name}")
+        except Exception as e:
+            self.log(f"Erreur construction index: {e}", "WARNING")
+
     def run(self):
         temp_zip = None
         try:
@@ -131,6 +144,7 @@ class GTFSDownloader:
             temp_zip = self.download_gtfs()
             self.archive_old_version()
             self.extract_gtfs(temp_zip)
+            self.build_stops_index()
             self.update_manifest(temp_zip)
             self.cleanup_old_archives(keep_count=4)
 
@@ -154,7 +168,20 @@ class GTFSDownloader:
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Télécharge et indexe les données GTFS STM.")
+    parser.add_argument("--index-only", action="store_true",
+                        help="Reconstruit stops_index.json sans re-télécharger le GTFS")
+    args = parser.parse_args()
+
     downloader = GTFSDownloader()
+    if args.index_only:
+        if not downloader.current_dir.exists():
+            print("ERREUR: dossier GTFS absent — téléchargez d'abord sans --index-only")
+            sys.exit(1)
+        downloader.build_stops_index()
+        sys.exit(0)
+
     success = downloader.run()
     sys.exit(0 if success else 1)
 
