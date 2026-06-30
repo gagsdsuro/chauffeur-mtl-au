@@ -270,6 +270,10 @@ def event_applicable_to_parcours(event: dict, stop_ids_in_rows: set,
 
     gd_streets = {normalize_street(extract_street(i)) for i in gd_instructions}
 
+    def _in_gd(norm: str) -> bool:
+        # Exact ou suffixe : "gauchetiere" ↔ "de la gauchetiere"
+        return norm in gd_streets or any(s.endswith(" " + norm) for s in gd_streets)
+
     # 2a : première Via non-R.R.
     via_norm = None
     for instr in parsed:
@@ -288,7 +292,7 @@ def event_applicable_to_parcours(event: dict, stop_ids_in_rows: set,
 
     # Les deux bornes connues doivent figurer dans les instructions G-D.
     for norm in (via_norm, before_rr_norm):
-        if norm is not None and norm not in gd_streets:
+        if norm is not None and not _in_gd(norm):
             return False
     return True
 
