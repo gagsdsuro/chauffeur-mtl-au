@@ -297,14 +297,17 @@ def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé") -
 
         if added_inline:
             nm = f'<span class="stop-name">➕ {_h(r["stop_name"])}</span>'
-            if is_ditto:
-                nm += '<span style="display:block;text-align:center">″</span>'
-            elif r.get("added_label"):
+            if not is_ditto and r.get("added_label"):
                 nm += f'<span class="added-inline-label">{_h(r["added_label"])}</span>'
-            eff = f'<span class="effectif">{_h(r.get("effectif",""))}</span>' if r.get("effectif") else ""
+            eid_inline = r.get("evenement_id", "")
+            eff_inline = r.get("effectif", "")
+            inline_eff_cell = (
+                (f'<span class="eid">#{_h(str(eid_inline))}</span>' if eid_inline else "") +
+                (f'<span class="effectif">{_h(eff_inline)}</span>' if eff_inline else "")
+            )
             code_td = f'<td class="code"></td>' if show_code else ""
             out.append(f'<tr class="added-inline"><td class="seq"></td><td></td>'
-                       f'{code_td}<td>{nm}</td><td>{eff}</td></tr>')
+                       f'{code_td}<td>{nm}</td><td>{inline_eff_cell}</td></tr>')
             continue
 
         # G-D cell
@@ -321,7 +324,7 @@ def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé") -
         else:
             gd_cell = ""
 
-        # Arrêt cell
+        # Arrêt cell — toujours construire eff_parts (même pour ditto)
         eff_parts = []
         seen_eid  = set()
         plain_gd = gd_txt and not d_added and not d_removed and not cancelled
@@ -329,9 +332,7 @@ def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé") -
             f'<span class="stop-name">{_h(r.get("stop_name") or "")}</span>'
             if r.get("stop_name") else ""
         )
-        if is_ditto:
-            nm += '<span style="display:block;text-align:center">″</span>'
-        else:
+        if not is_ditto:
             for ev in cancelled:
                 nom_evt = ev.get("nom_evt", "")
                 if nom_evt and nom_evt != r.get("stop_name"):
@@ -341,11 +342,19 @@ def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé") -
                 nm += f'<span class="event-label">{sym} {_h(short)}</span>'
                 if ev.get("commentaire"):
                     nm += f'<span class="event-comment">{_h(ev["commentaire"])}</span>'
-                eid = ev.get("evenement_id", "")
-                eff = ev.get("effectif", "")
-                if eid and eid not in seen_eid:
-                    eff_parts.append((eid, eff))
-                    seen_eid.add(eid)
+        for ev in cancelled:
+            eid = ev.get("evenement_id", "")
+            eff = ev.get("effectif", "")
+            if eid and eid not in seen_eid:
+                eff_parts.append((eid, eff))
+                seen_eid.add(eid)
+        # Pour les lignes detour_added, ajouter l'ID d'évènement à la colonne eff
+        if d_added:
+            eid = r.get("evenement_id", "")
+            eff = r.get("effectif", "")
+            if eid and eid not in seen_eid:
+                eff_parts.append((eid, eff))
+                seen_eid.add(eid)
         eff_cell = "".join(
             f'<span class="eid">#{_h(str(eid))}</span>'
             f'<span class="effectif">{_h(eff)}</span>'
@@ -514,7 +523,6 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
         "seq"    : _s("cs_seq",    fontSize=7, leading=9, textColor=LGREY),
         "add_grn": _s("cs_ag",     fontSize=7, leading=9, textColor=GREEN,
                        fontName="Helvetica-Bold"),
-        "ditto"  : _s("cs_ditto",  fontSize=8, leading=9, alignment=1),
     }
 
     date_str   = journee.get("date", "")
@@ -606,9 +614,18 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
                     prev_arr_key_pdf = key
 
                 if inline:
+                    arr_p = Paragraph(f"+ {stop_nm}", CS["add_grn"])
+                    if not is_ditto and r.get("added_label"):
+                        arr_p = Paragraph(f"+ {stop_nm}<br/>{r['added_label']}", CS["add_grn"])
+                    eid_in  = str(r.get("evenement_id", ""))
                     eff_txt = r.get("effectif", "")
-                    arr_p = Paragraph("″", CS["ditto"]) if is_ditto else Paragraph(f"+ {stop_nm}", CS["add_grn"])
-                    eff_p = Paragraph(eff_txt, CS["eff"]) if eff_txt else ""
+                    eff_parts_in = []
+                    if eid_in:
+                        line = f"#{eid_in}"
+                        if eff_txt:
+                            line += f"<br/>{eff_txt}"
+                        eff_parts_in.append(line)
+                    eff_p = Paragraph("<br/>".join(eff_parts_in), CS["eff"]) if eff_parts_in else ""
                     row_cells = [seq, "", arr_p, eff_p]
                     if show_code:
                         row_cells = [seq, "", "", arr_p, eff_p]
@@ -626,19 +643,14 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
                 else:
                     gd_p = Paragraph(gd_txt, CS["gd"]) if gd_txt else ""
 
-                # Arrêt / Détour cell
+                # Arrêt / Détour cell — toujours construire eff_lines (même pour ditto)
                 plain_gd = gd_txt and not d_added and not d_removed and not cancelled
                 show_stop = stop_nm and not (niveau == "standard" and plain_gd)
                 arr_style = CS["arr_red"] if cancelled else CS["arr"]
                 eff_lines = []
                 seen_eid  = set()
-                if is_ditto:
-                    # Nom d'arrêt (gauche) + ″ centré sur la ligne suivante
-                    cell = ([Paragraph(stop_nm, arr_style)] if show_stop else []) + [Paragraph("″", CS["ditto"])]
-                    arr_p = cell if len(cell) > 1 else (cell[0] if cell else Paragraph("″", CS["ditto"]))
-                    eff_p = ""
-                else:
-                    arr_lines = ([stop_nm] if show_stop else [])
+                arr_lines = ([stop_nm] if show_stop else [])
+                if not is_ditto:
                     for ev in cancelled:
                         nom_evt = ev.get("nom_evt", "")
                         if nom_evt and nom_evt != stop_nm:
@@ -648,16 +660,26 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
                         arr_lines.append(f"{sym} {short}")
                         if ev.get("commentaire"):
                             arr_lines.append(f"  → {ev['commentaire']}")
-                        eid = str(ev.get("evenement_id", ""))
-                        eff = ev.get("effectif", "")
-                        if eid and eid not in seen_eid:
-                            line = f"#{eid}"
-                            if eff:
-                                line += f"<br/>{eff}"
-                            eff_lines.append(line)
-                            seen_eid.add(eid)
-                    arr_p = Paragraph("<br/>".join(arr_lines), arr_style) if arr_lines else ""
-                    eff_p = Paragraph("<br/>".join(eff_lines), CS["eff"]) if eff_lines else ""
+                for ev in cancelled:
+                    eid = str(ev.get("evenement_id", ""))
+                    eff = ev.get("effectif", "")
+                    if eid and eid not in seen_eid:
+                        line = f"#{eid}"
+                        if eff:
+                            line += f"<br/>{eff}"
+                        eff_lines.append(line)
+                        seen_eid.add(eid)
+                if d_added:
+                    eid = str(r.get("evenement_id", ""))
+                    eff = r.get("effectif", "")
+                    if eid and eid not in seen_eid:
+                        line = f"#{eid}"
+                        if eff:
+                            line += f"<br/>{eff}"
+                        eff_lines.append(line)
+                        seen_eid.add(eid)
+                arr_p = Paragraph("<br/>".join(arr_lines), arr_style) if arr_lines else ""
+                eff_p = Paragraph("<br/>".join(eff_lines), CS["eff"]) if eff_lines else ""
 
                 if show_code:
                     row_cells = [seq, gd_p, stop_cd, arr_p, eff_p]

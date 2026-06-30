@@ -296,7 +296,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "Détour avec annulation d'arrêt",
-      "evenement_id": "11255025"
+      "evenement_id": "11255025",
+      "effectif": "Seulement entre 07:00 et 19:00 chaque jour"
     },
     {
       "gd": "Gauche - ST-ANDRÉ",
@@ -307,7 +308,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11255025"
+      "evenement_id": "11255025",
+      "effectif": ""
     },
     {
       "gd": "Droite - MAISONNEUVE",
@@ -318,7 +320,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11255025"
+      "evenement_id": "11255025",
+      "effectif": ""
     },
     {
       "gd": "Droite - ST-HUBERT",
@@ -329,7 +332,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11255025"
+      "evenement_id": "11255025",
+      "effectif": ""
     },
     {
       "gd": "Gauche - ONTARIO",
@@ -340,7 +344,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11255025"
+      "evenement_id": "11255025",
+      "effectif": ""
     },
     {
       "gd": "Via - R.R.",
@@ -351,7 +356,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11255025"
+      "evenement_id": "11255025",
+      "effectif": ""
     },
     {
       "gd": "",

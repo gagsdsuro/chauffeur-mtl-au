@@ -14,7 +14,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "Détour avec annulation d'arrêt",
-      "evenement_id": "11205733"
+      "evenement_id": "11205733",
+      "effectif": "Seulement entre 06:00 et 02:00 chaque jour"
     },
     {
       "gd": "Gauche - STE CATHERINE",
@@ -25,7 +26,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11205733"
+      "evenement_id": "11205733",
+      "effectif": ""
     },
     {
       "gd": "",
@@ -36,7 +38,8 @@
       "cancelled": [],
       "added_inline": true,
       "added_label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
-      "effectif": "Seulement entre 06:00 et 02:00 chaque jour"
+      "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
+      "evenement_id": "11205733"
     },
     {
       "gd": "Via - R.R.",
@@ -47,7 +50,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11205733"
+      "evenement_id": "11205733",
+      "effectif": ""
     },
     {
       "gd": "Via - Dorion",
@@ -242,7 +246,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "Détour avec annulation d'arrêt",
-      "evenement_id": "11218486"
+      "evenement_id": "11218486",
+      "effectif": "En tout temps"
     },
     {
       "gd": "Gauche - BOURBONNIÈRE",
@@ -253,7 +258,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11218486"
+      "evenement_id": "11218486",
+      "effectif": ""
     },
     {
       "gd": "Droite - ADAM",
@@ -264,7 +270,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11218486"
+      "evenement_id": "11218486",
+      "effectif": ""
     },
     {
       "gd": "Droite - DE LA SALLE",
@@ -275,7 +282,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11218486"
+      "evenement_id": "11218486",
+      "effectif": ""
     },
     {
       "gd": "Gauche - STE-CATHERINE",
@@ -286,7 +294,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11218486"
+      "evenement_id": "11218486",
+      "effectif": ""
     },
     {
       "gd": "Via - R.R.",
@@ -297,7 +306,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11218486"
+      "evenement_id": "11218486",
+      "effectif": ""
     },
     {
       "gd": "",

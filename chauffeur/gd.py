@@ -438,6 +438,7 @@ def apply_gd_detours(rows: list, events: list) -> list:
                 "detour_added": True,
                 "detour_label": label if i == 0 else "",
                 "evenement_id": event.get("evenement_id", ""),
+                "effectif": event.get("effectif", "") if i == 0 else "",
             }
             for i, instr in enumerate(instructions)
         ]
@@ -533,9 +534,10 @@ def insert_added_stops_inline(rows: list, added: list) -> tuple:
                 "stop_code": "",
                 "stop_name": name,
                 "cancelled": [],
-                "added_inline": True,
-                "added_label": stop_info.get("label", ""),
-                "effectif":    stop_info.get("effectif", ""),
+                "added_inline":  True,
+                "added_label":   stop_info.get("label", ""),
+                "effectif":      stop_info.get("effectif", ""),
+                "evenement_id":  stop_info.get("evenement_id", ""),
             }
             rows = rows[: best_idx + 1] + [new_row] + rows[best_idx + 1 :]
         else:

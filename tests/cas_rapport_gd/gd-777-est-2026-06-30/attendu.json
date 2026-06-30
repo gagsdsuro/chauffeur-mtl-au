@@ -40,7 +40,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "Détour sans annulation",
-      "evenement_id": "11271192"
+      "evenement_id": "11271192",
+      "effectif": "Seulement entre 20:00 et 06:00 chaque jour"
     },
     {
       "gd": "Droite - MANSFIELD",
@@ -51,7 +52,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11271192"
+      "evenement_id": "11271192",
+      "effectif": ""
     },
     {
       "gd": "Droite - RENE-LEVESQUE",
@@ -62,7 +64,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11271192"
+      "evenement_id": "11271192",
+      "effectif": ""
     },
     {
       "gd": "Droite - BEAVER-HALL",
@@ -73,7 +76,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11271192"
+      "evenement_id": "11271192",
+      "effectif": ""
     },
     {
       "gd": "Droite - VIGER",
@@ -84,7 +88,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11271192"
+      "evenement_id": "11271192",
+      "effectif": ""
     },
     {
       "gd": "Gauche - ROBERT-BOURASSA",
@@ -95,7 +100,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11271192"
+      "evenement_id": "11271192",
+      "effectif": ""
     },
     {
       "gd": "Via - R.R.",
@@ -106,7 +112,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11271192"
+      "evenement_id": "11271192",
+      "effectif": ""
     },
     {
       "gd": "Via - GAUCHETIERE",
@@ -117,7 +124,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "Détour sans annulation",
-      "evenement_id": "11185389"
+      "evenement_id": "11185389",
+      "effectif": "Seulement entre 06:01 et 19:59 chaque jour"
     },
     {
       "gd": "Droite - MANSFIELD",
@@ -128,7 +136,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11185389"
+      "evenement_id": "11185389",
+      "effectif": ""
     },
     {
       "gd": "Droite - RENE-LEVESQUE",
@@ -139,7 +148,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11185389"
+      "evenement_id": "11185389",
+      "effectif": ""
     },
     {
       "gd": "Droite - ROBERT-BOURASSA",
@@ -150,7 +160,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11185389"
+      "evenement_id": "11185389",
+      "effectif": ""
     },
     {
       "gd": "Via - R.R.",
@@ -161,7 +172,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11185389"
+      "evenement_id": "11185389",
+      "effectif": ""
     },
     {
       "gd": "Gauche - de la Cathédrale",

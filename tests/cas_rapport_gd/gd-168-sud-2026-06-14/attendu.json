@@ -216,7 +216,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "Détour sans annulation",
-      "evenement_id": "11125838"
+      "evenement_id": "11125838",
+      "effectif": "Seulement entre 22:00 et 05:00 chaque jour"
     },
     {
       "gd": "Via - SORTIE 4",
@@ -227,7 +228,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11125838"
+      "evenement_id": "11125838",
+      "effectif": ""
     },
     {
       "gd": "Via - GAÉTAN-LABERGE",
@@ -238,7 +240,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11125838"
+      "evenement_id": "11125838",
+      "effectif": ""
     },
     {
       "gd": "Gauche - ENTRÉE AUTOROUTE 15 SUD",
@@ -249,7 +252,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11125838"
+      "evenement_id": "11125838",
+      "effectif": ""
     },
     {
       "gd": "Via - AUTOROUTE 15 SUD",
@@ -260,7 +264,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11125838"
+      "evenement_id": "11125838",
+      "effectif": ""
     },
     {
       "gd": "Via - SORTIE 57N",
@@ -271,7 +276,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11125838"
+      "evenement_id": "11125838",
+      "effectif": ""
     },
     {
       "gd": "Via - BOUL.ÎLE-DES-SŒURS",
@@ -282,7 +288,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11125838"
+      "evenement_id": "11125838",
+      "effectif": ""
     },
     {
       "gd": "Via - R.R.",
@@ -293,7 +300,8 @@
       "cancelled": [],
       "detour_added": true,
       "detour_label": "",
-      "evenement_id": "11125838"
+      "evenement_id": "11125838",
+      "effectif": ""
     },
     {
       "gd": "Via - sortie 5 - Île-des-Soeurs",
