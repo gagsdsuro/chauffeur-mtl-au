@@ -1,0 +1,94 @@
+{
+  "stops": [
+    [
+      1,
+      "62148"
+    ],
+    [
+      2,
+      "62168"
+    ],
+    [
+      3,
+      "53919"
+    ],
+    [
+      4,
+      "52971"
+    ],
+    [
+      5,
+      "53920"
+    ],
+    [
+      6,
+      "62149"
+    ],
+    [
+      7,
+      "62150"
+    ],
+    [
+      8,
+      "62151"
+    ],
+    [
+      9,
+      "62152"
+    ],
+    [
+      10,
+      "62153"
+    ],
+    [
+      11,
+      "54335"
+    ]
+  ],
+  "stop_names": {
+    "62148": {
+      "code": "62148",
+      "name": "Station Bonaventure (Gauchetière / Mansfield)"
+    },
+    "62168": {
+      "code": "62168",
+      "name": "Robert-Bourassa / Notre-Dame"
+    },
+    "53919": {
+      "code": "53919",
+      "name": "Robert-Bourassa / William"
+    },
+    "52971": {
+      "code": "52971",
+      "name": "Robert-Bourassa / Wellington"
+    },
+    "53920": {
+      "code": "53920",
+      "name": "des Moulins / No 950"
+    },
+    "62149": {
+      "code": "62149",
+      "name": "Pierre-Dupuy / des Moulins"
+    },
+    "62150": {
+      "code": "62150",
+      "name": "Pierre-Dupuy / Quai Bickerdike"
+    },
+    "62151": {
+      "code": "62151",
+      "name": "Pierre-Dupuy / Habitat 67"
+    },
+    "62152": {
+      "code": "62152",
+      "name": "Pierre-Dupuy / de la Concorde"
+    },
+    "62153": {
+      "code": "62153",
+      "name": "Casino de Montréal"
+    },
+    "54335": {
+      "code": "54335",
+      "name": "Station Jean-Drapeau"
+    }
+  }
+}
