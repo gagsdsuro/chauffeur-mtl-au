@@ -254,6 +254,20 @@ def _h(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def _arr_key(r: dict) -> str:
+    """Clé sémantique de la cellule Arrêt/Détour — sert à détecter les répétitions."""
+    stop_nm = r.get("stop_name") or ""
+    cancelled = r.get("cancelled") or []
+    if r.get("added_inline"):
+        return "+" + stop_nm + ("|" + r.get("added_label", "") if r.get("added_label") else "")
+    parts = [stop_nm]
+    for ev in cancelled:
+        parts.append(ev.get("short_label") or ev.get("label", ""))
+        if ev.get("commentaire"):
+            parts.append(ev["commentaire"])
+    return "|".join(parts)
+
+
 def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé") -> str:
     code_th = '<th style="width:7%">Code</th>' if show_code else ""
     out = [
@@ -265,6 +279,7 @@ def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé") -
         '<th style="width:20%">#évènement / Effectif</th>'
         '</tr></thead><tbody>'
     ]
+    prev_arr_key = None
     for r in rows:
         cancelled   = r.get("cancelled",      [])
         d_added     = r.get("detour_added",   False)
@@ -272,10 +287,18 @@ def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé") -
         added_inline= r.get("added_inline",   False)
         label       = r.get("detour_label",   "")
 
+        key = _arr_key(r)
+        is_ditto = bool(key) and key == prev_arr_key
+        if key:
+            prev_arr_key = key
+
         if added_inline:
-            nm = f'<span class="stop-name">➕ {_h(r["stop_name"])}</span>'
-            if r.get("added_label"):
-                nm += f'<span class="added-inline-label">{_h(r["added_label"])}</span>'
+            if is_ditto:
+                nm = '<span style="display:block;text-align:center">″</span>'
+            else:
+                nm = f'<span class="stop-name">➕ {_h(r["stop_name"])}</span>'
+                if r.get("added_label"):
+                    nm += f'<span class="added-inline-label">{_h(r["added_label"])}</span>'
             eff = f'<span class="effectif">{_h(r.get("effectif",""))}</span>' if r.get("effectif") else ""
             code_td = f'<td class="code"></td>' if show_code else ""
             out.append(f'<tr class="added-inline"><td class="seq"></td><td></td>'
@@ -296,28 +319,31 @@ def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé") -
         else:
             gd_cell = ""
 
-        # Arrêt cell — vide pour les lignes G-D standard (non modifiées)
-        plain_gd = gd_txt and not d_added and not d_removed and not cancelled
-        nm = "" if (niveau == "standard" and plain_gd) else (
-            f'<span class="stop-name">{_h(r.get("stop_name") or "")}</span>'
-            if r.get("stop_name") else ""
-        )
+        # Arrêt cell
         eff_parts = []
         seen_eid  = set()
-        for ev in cancelled:
-            nom_evt = ev.get("nom_evt", "")
-            if nom_evt and nom_evt != r.get("stop_name"):
-                nm += f'<span class="event-precision">📍 {_h(nom_evt)}</span>'
-            sym = TYPE_SYMBOL.get(ev.get("type_evenement", ""), "!")
-            short = ev.get("short_label") or ev["label"]
-            nm += f'<span class="event-label">{sym} {_h(short)}</span>'
-            if ev.get("commentaire"):
-                nm += f'<span class="event-comment">{_h(ev["commentaire"])}</span>'
-            eid = ev.get("evenement_id", "")
-            eff = ev.get("effectif", "")
-            if eid and eid not in seen_eid:
-                eff_parts.append((eid, eff))
-                seen_eid.add(eid)
+        if is_ditto:
+            nm = '<span style="display:block;text-align:center">″</span>'
+        else:
+            plain_gd = gd_txt and not d_added and not d_removed and not cancelled
+            nm = "" if (niveau == "standard" and plain_gd) else (
+                f'<span class="stop-name">{_h(r.get("stop_name") or "")}</span>'
+                if r.get("stop_name") else ""
+            )
+            for ev in cancelled:
+                nom_evt = ev.get("nom_evt", "")
+                if nom_evt and nom_evt != r.get("stop_name"):
+                    nm += f'<span class="event-precision">📍 {_h(nom_evt)}</span>'
+                sym = TYPE_SYMBOL.get(ev.get("type_evenement", ""), "!")
+                short = ev.get("short_label") or ev["label"]
+                nm += f'<span class="event-label">{sym} {_h(short)}</span>'
+                if ev.get("commentaire"):
+                    nm += f'<span class="event-comment">{_h(ev["commentaire"])}</span>'
+                eid = ev.get("evenement_id", "")
+                eff = ev.get("effectif", "")
+                if eid and eid not in seen_eid:
+                    eff_parts.append((eid, eff))
+                    seen_eid.add(eid)
         eff_cell = "".join(
             f'<span class="eid">#{_h(str(eid))}</span>'
             f'<span class="effectif">{_h(eff)}</span>'
@@ -449,8 +475,6 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
     RED   = rl_colors.HexColor("#CC0000")
     GREEN = rl_colors.HexColor("#2e7d32")
     LGREY = rl_colors.HexColor("#CCCCCC")
-    BGGRN = rl_colors.HexColor("#e8f5e9")
-    BGRED = rl_colors.HexColor("#fff0f0")
     AMBER = rl_colors.HexColor("#7a3e00")
 
     def _s(name, **kw):
@@ -488,6 +512,7 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
         "seq"    : _s("cs_seq",    fontSize=7, leading=9, textColor=LGREY),
         "add_grn": _s("cs_ag",     fontSize=7, leading=9, textColor=GREEN,
                        fontName="Helvetica-Bold"),
+        "ditto"  : _s("cs_ditto",  fontSize=8, leading=9, alignment=1),
     }
 
     date_str   = journee.get("date", "")
@@ -561,6 +586,7 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
                 ("BOTTOMPADDING",(0, 0), (-1, -1), 2),
             ]
 
+            prev_arr_key_pdf = None
             for ri, r in enumerate(filtered, start=1):
                 d_added   = r.get("detour_added",   False)
                 d_removed = r.get("detour_removed",  False)
@@ -572,15 +598,19 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
                 stop_cd   = r.get("stop_code") or ""
                 seq       = str(r["seq"]) if r.get("seq") else ""
 
+                key = _arr_key(r)
+                is_ditto = bool(key) and key == prev_arr_key_pdf
+                if key:
+                    prev_arr_key_pdf = key
+
                 if inline:
                     eff_txt = r.get("effectif", "")
-                    arr_p = Paragraph(f"+ {stop_nm}", CS["add_grn"])
+                    arr_p = Paragraph("″", CS["ditto"]) if is_ditto else Paragraph(f"+ {stop_nm}", CS["add_grn"])
                     eff_p = Paragraph(eff_txt, CS["eff"]) if eff_txt else ""
                     row_cells = [seq, "", arr_p, eff_p]
                     if show_code:
                         row_cells = [seq, "", "", arr_p, eff_p]
                     tdata.append(row_cells)
-                    tstyle.append(("BACKGROUND", (0, ri), (-1, ri), BGGRN))
                     continue
 
                 # G-D cell
@@ -594,36 +624,40 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
                 else:
                     gd_p = Paragraph(gd_txt, CS["gd"]) if gd_txt else ""
 
-                # Arrêt / Détour cell — vide pour les lignes G-D standard (non modifiées)
-                plain_gd = gd_txt and not d_added and not d_removed and not cancelled
-                arr_lines = []
-                if stop_nm and not (niveau == "standard" and plain_gd):
-                    arr_lines.append(stop_nm)
-                for ev in cancelled:
-                    nom_evt = ev.get("nom_evt", "")
-                    if nom_evt and nom_evt != stop_nm:
-                        arr_lines.append(f"  📍 {nom_evt}")
-                    sym = TYPE_SYMBOL.get(ev.get("type_evenement", ""), "!")
-                    short = ev.get("short_label") or ev["label"]
-                    arr_lines.append(f"{sym} {short}")
-                    if ev.get("commentaire"):
-                        arr_lines.append(f"  → {ev['commentaire']}")
-                arr_style = CS["arr_red"] if cancelled else CS["arr"]
-                arr_p = Paragraph("<br/>".join(arr_lines), arr_style) if arr_lines else ""
+                # Arrêt / Détour cell
+                if is_ditto:
+                    arr_p = Paragraph("″", CS["ditto"])
+                    eff_p = ""
+                else:
+                    plain_gd = gd_txt and not d_added and not d_removed and not cancelled
+                    arr_lines = []
+                    if stop_nm and not (niveau == "standard" and plain_gd):
+                        arr_lines.append(stop_nm)
+                    for ev in cancelled:
+                        nom_evt = ev.get("nom_evt", "")
+                        if nom_evt and nom_evt != stop_nm:
+                            arr_lines.append(f"  📍 {nom_evt}")
+                        sym = TYPE_SYMBOL.get(ev.get("type_evenement", ""), "!")
+                        short = ev.get("short_label") or ev["label"]
+                        arr_lines.append(f"{sym} {short}")
+                        if ev.get("commentaire"):
+                            arr_lines.append(f"  → {ev['commentaire']}")
+                    arr_style = CS["arr_red"] if cancelled else CS["arr"]
+                    arr_p = Paragraph("<br/>".join(arr_lines), arr_style) if arr_lines else ""
 
-                # #évènement / Effectif cell
-                eff_lines = []
-                seen_eid  = set()
-                for ev in cancelled:
-                    eid = str(ev.get("evenement_id", ""))
-                    eff = ev.get("effectif", "")
-                    if eid and eid not in seen_eid:
-                        line = f"#{eid}"
-                        if eff:
-                            line += f"<br/>{eff}"
-                        eff_lines.append(line)
-                        seen_eid.add(eid)
-                eff_p = Paragraph("<br/>".join(eff_lines), CS["eff"]) if eff_lines else ""
+                    # #évènement / Effectif cell
+                    eff_lines = []
+                    seen_eid  = set()
+                    for ev in cancelled:
+                        eid = str(ev.get("evenement_id", ""))
+                        eff = ev.get("effectif", "")
+                        if eid and eid not in seen_eid:
+                            line = f"#{eid}"
+                            if eff:
+                                line += f"<br/>{eff}"
+                            eff_lines.append(line)
+                            seen_eid.add(eid)
+                    eff_p = Paragraph("<br/>".join(eff_lines), CS["eff"]) if eff_lines else ""
 
                 if show_code:
                     row_cells = [seq, gd_p, stop_cd, arr_p, eff_p]
@@ -631,12 +665,8 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
                     row_cells = [seq, gd_p, arr_p, eff_p]
                 tdata.append(row_cells)
 
-                if d_added:
-                    tstyle.append(("BACKGROUND", (0, ri), (-1, ri), BGGRN))
-                elif d_removed:
-                    tstyle.append(("TEXTCOLOR",  (0, ri), (-1, ri), LGREY))
-                if cancelled:
-                    tstyle.append(("BACKGROUND", (0, ri), (-1, ri), BGRED))
+                if d_removed:
+                    tstyle.append(("TEXTCOLOR", (0, ri), (-1, ri), LGREY))
 
             t = Table(tdata, colWidths=COL_W)
             t.setStyle(TableStyle(tstyle))
