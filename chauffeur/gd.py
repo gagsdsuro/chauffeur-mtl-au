@@ -180,7 +180,9 @@ def annotate_events(rows, events):
             })
         for a in e.get("arrets_ajoutes", []):
             name = a if isinstance(a, str) else a.get("nom", "")
-            added.append({"name": name, "label": label, "effectif": effectif,
+            added.append({"name": name, "label": label,
+                          "short_label": f"{titre} ({motif})",
+                          "commentaire": commentaire, "effectif": effectif,
                           "evenement_id": e.get("evenement_id", "")})
 
     for r in rows:
@@ -536,6 +538,8 @@ def insert_added_stops_inline(rows: list, added: list) -> tuple:
                 "cancelled": [],
                 "added_inline":  True,
                 "added_label":   stop_info.get("label", ""),
+                "added_short_label": stop_info.get("short_label", ""),
+                "commentaire":   stop_info.get("commentaire", ""),
                 "effectif":      stop_info.get("effectif", ""),
                 "evenement_id":  stop_info.get("evenement_id", ""),
             }

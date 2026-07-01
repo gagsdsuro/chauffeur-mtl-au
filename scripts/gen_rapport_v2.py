@@ -262,7 +262,8 @@ def _arr_key(r: dict) -> str:
     """
     cancelled = r.get("cancelled") or []
     if r.get("added_inline"):
-        return r.get("added_label", "")
+        return (r.get("added_short_label") or r.get("added_label", "")) + \
+               (("|" + r["commentaire"]) if r.get("commentaire") else "")
     parts = []
     for ev in cancelled:
         parts.append(ev.get("short_label") or ev.get("label", ""))
@@ -297,8 +298,12 @@ def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé") -
 
         if added_inline:
             nm = f'<span class="stop-name">➕ {_h(r["stop_name"])}</span>'
-            if not is_ditto and r.get("added_label"):
-                nm += f'<span class="added-inline-label">{_h(r["added_label"])}</span>'
+            if not is_ditto:
+                _albl = r.get("added_short_label") or r.get("added_label", "")
+                if _albl:
+                    nm += f'<span class="added-inline-label">{_h(_albl)}</span>'
+                if r.get("commentaire"):
+                    nm += f'<span class="event-comment">{_h(r["commentaire"])}</span>'
             eid_inline = r.get("evenement_id", "")
             eff_inline = r.get("effectif", "")
             inline_eff_cell = (
@@ -615,8 +620,14 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
 
                 if inline:
                     arr_p = Paragraph(f"+ {stop_nm}", CS["add_grn"])
-                    if not is_ditto and r.get("added_label"):
-                        arr_p = Paragraph(f"+ {stop_nm}<br/>{r['added_label']}", CS["add_grn"])
+                    if not is_ditto:
+                        _albl = r.get("added_short_label") or r.get("added_label", "")
+                        _txt = f"+ {stop_nm}"
+                        if _albl:
+                            _txt += f"<br/>{_albl}"
+                        if r.get("commentaire"):
+                            _txt += f"<br/>{r['commentaire']}"
+                        arr_p = Paragraph(_txt, CS["add_grn"])
                     eid_in  = str(r.get("evenement_id", ""))
                     eff_txt = r.get("effectif", "")
                     eff_parts_in = []

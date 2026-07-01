@@ -383,6 +383,8 @@
     {
       "name": "Temp. - Station Papineau (Caetier / Sainte-Catherine 53047)",
       "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA RENÉ-LÉVESQUE G CARTIER TERMINUS TEMPORAIRE CARTIER AU NORD DE STE-CATHERINE",
+      "short_label": "Détour avec annulation d'arrêt (Travaux)",
+      "commentaire": "",
       "effectif": "En tout temps",
       "evenement_id": "11205733"
     }

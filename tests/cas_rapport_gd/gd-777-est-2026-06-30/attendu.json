@@ -351,6 +351,8 @@
     {
       "name": "Terminus Centre-Ville",
       "label": "Détour sans annulation (Travaux) — G-D: VIA GAUCHETIERE D/MANSFIELD D/RENE-LEVESQUE D/ROBERT-BOURASSA VIA R.R",
+      "short_label": "Détour sans annulation (Travaux)",
+      "commentaire": "",
       "effectif": "Seulement entre 06:01 et 19:59 chaque jour",
       "evenement_id": "11185389"
     }
