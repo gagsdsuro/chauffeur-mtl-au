@@ -48,8 +48,14 @@ def stops_match(a: str, b: str) -> bool:
 
 
 def normalize_street(s: str) -> str:
-    """Normalise un nom de rue pour la comparaison : minuscules, sans accents ni tirets."""
+    """Normalise un nom de rue pour la comparaison : minuscules, sans accents ni tirets.
+
+    Étend aussi les abréviations courantes des descriptions_gd STM :
+      STE → sainte, ST → saint.
+    """
     s = unicodedata.normalize("NFD", s.lower())
     s = "".join(c for c in s if unicodedata.category(c) != "Mn")
     s = re.sub(r"[-\s]+", " ", s).strip()
+    s = re.sub(r"\bste\b", "sainte", s)
+    s = re.sub(r"\bst\b",  "saint",  s)
     return s
