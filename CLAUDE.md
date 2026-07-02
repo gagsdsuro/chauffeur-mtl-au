@@ -94,6 +94,16 @@ python3 tests/test_parse_gd.py      # régression parse_gd.py (cas : multi-parco
 python3 tests/test_matching.py
 ```
 
+**Tests unitaires journée** — couvre `chauffeur.journee` (`groupes_de_service`, `lignes_de_service`) sur des journées synthétiques inline :
+```bash
+python3 tests/test_journee.py
+```
+
+**Test de régression portail** — rejoue un fragment HTML figé (`tests/cas_portail/`) et vérifie la normalisation des événements par `STMEventParser.from_portal_json()`, y compris un `evenement_id` dupliqué sans faux avertissement :
+```bash
+python3 tests/test_portail.py
+```
+
 **Rapport détaillé G-D / Arrêts** — rapport HTML ou Markdown pour une ligne/direction (requiert GTFS) :
 ```bash
 python3 scripts/rapport_gd.py --ligne 195 --direction ouest --date 2026-06-05 --base .
@@ -114,8 +124,10 @@ Session : coller la chaîne de cookies (DevTools → Application → Cookies) da
 **Téléchargement GTFS** — données statiques (hebdomadaire) et temps-réel (requiert `requests`) :
 ```bash
 python3 scripts/fetch_gtfs.py
+python3 scripts/fetch_gtfs.py --index-only   # reconstruit stops_index.json sans re-télécharger
 python3 scripts/fetch_gtfs_rt.py
 ```
+`fetch_gtfs.py` construit `stops_index.json` après extraction (scan unique de `stop_times.txt`) ; `chauffeur.gtfs.stops_for_line()` lit cet index (~80x plus rapide qu'un scan CSV) avec repli automatique si l'index est absent.
 
 - `parse_gd.py` est stdlib pur. `parse_event.py` et `parse_journee.py` importent `chauffeur.modeles` (stdlib, pas de package externe). Les autres scripts requièrent `requests` et/ou `PyMuPDF (fitz)`.
 - Tous les scripts résolvent les chemins via `Path(__file__).parent.parent` ; ils fonctionnent peu importe le répertoire courant.
@@ -137,7 +149,7 @@ data/journees/        ──(gen_rapport_v2.py)──►  data/rapports/rapport-
 data/Gauche-Droite/ + data/Events/ + GTFS  ──(rapport_gd.py)──►  scripts/rapport_<ligne>_<dir>_<date>.html
 ```
 
-Le package **`chauffeur/`** centralise le noyau de domaine partagé entre les scripts et l'app Streamlit : `matching` (appariement noms d'arrêts), `modeles` (dataclasses), `carte_agent` (lecture PDF), `effectif` (horaires), `evenements` (filtrage par quart/arrêt), `gd` (build_rows, détours, applicabilité), `gtfs` (lookup arrêts GTFS), `portail` (session + appels HTTP portail employé STM).
+Le package **`chauffeur/`** centralise le noyau de domaine partagé entre les scripts et l'app Streamlit : `matching` (appariement noms d'arrêts), `modeles` (dataclasses), `carte_agent` (lecture PDF), `effectif` (horaires), `evenements` (filtrage par quart/arrêt), `gd` (build_rows, détours, applicabilité), `gtfs` (lookup arrêts GTFS, index `stops_index.json`), `journee` (groupes/lignes de service à partir d'une journée), `portail` (session + appels HTTP portail employé STM).
 
 L'application Streamlit est divisée en deux fichiers : `app/ui.py` (interface complète, 5 onglets) et `app/dashboard.py` (utilitaires onglet Tableau de bord : parsing PDF carte agent, GTFS-RT).
 
