@@ -13,9 +13,21 @@ Ce document décrit les interactions des utilisateurs avec le système, indépen
 
 ---
 
+## Chauffeur — Préparation de la note spécifique de réserve (entre environ 14h et 16h)
+
+**Contexte :** Lorsque le chauffeur a le rôle réserve ou RFLEX, le chauffeur effectue ses choix de préférence de journée de travail à partir d'une liste pré-appel. Le pré-appel se fait généralement entre 14h et 16h pour la journée suivante. Le chauffeur RFLEX peut être muté dans un autre garage au besoin.
+
+1. Charge la liste Pré-appel.
+2. Révise les critères de préférence pour la sélection des journées de travail et applique les critères de sélection.
+3. Créer une note spécifique réserve à partir des 21 meilleurs choix disponibles.
+
+---
+
 ## Chauffeur — Préparation de la journée (la veille)
 
 **Contexte :** La veille de la journée de travail, généralement en soirée. La carte agent et la journée sont disponibles vers 17h.
+
+**Pré-requis :** La connexion au portail employé doit être active (session valide).
 
 1. S'assure que les données hebdomadaires (GTFS) sont à jour.
 2. Charge la carte agent du lendemain, effectue les annotations et imprime la version annotée en PDF.
@@ -35,14 +47,18 @@ Ce document décrit les interactions des utilisateurs avec le système, indépen
 **Pré-requis :** La connexion au portail employé doit être active (session valide).
 
 1. Rafraîchit les données des événements pour les lignes de la journée.
-2. Au besoin, génère et analyse une nouvelle version du Rapport V2.
-3. Au besoin, génère une nouvelle version du Rapport quotidien en PDF et l'imprime.
+2. Au besoin, anaylse les changements aux événements depuis la dernière mise à jour.
+3. Au besoin, génère et analyse une nouvelle version du Rapport V2.
+4. Au besoin, génère une nouvelle version du Rapport quotidien en PDF et l'imprime.
 
 ---
 
 ## Chauffeur — En route
 
 **Contexte :** Aux terminus, en pause ou en interligne. Interaction principalement sur téléphone, limitée au tableau de bord.
+
+**Pré-requis :** La connexion au portail employé doit être active (session valide).
+**Pré-requis :** Une connexion à api.stm.info avec une clé API valide (session API valide).
 
 1. Au besoin, rafraîchit les données des événements pour les lignes restantes.
 2. Au besoin, génère et consulte une nouvelle version du Rapport V2.
@@ -60,4 +76,5 @@ Ce document décrit les interactions des utilisateurs avec le système, indépen
 3. Révise les fichiers Rapport et supprime les fichiers obsolètes (plus de 3 mois).
 4. Révise les fichiers Journée et supprime les fichiers obsolètes (plus d'un an).
 5. Révise les fichiers Carte agent et supprime les fichiers obsolètes (plus d'un an).
-6. Au besoin, consulte les journaux d'activité.
+6. Au besoin, révise le registre des journées de travail.
+7. Au besoin, consulte les journaux d'activité.
