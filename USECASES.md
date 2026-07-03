@@ -15,11 +15,13 @@ Ce document décrit les interactions des utilisateurs avec le système, indépen
 
 ## Chauffeur — Préparation de la note spécifique de réserve (entre environ 14h et 16h)
 
-**Contexte :** Lorsque le chauffeur a le rôle réserve ou RFLEX, le chauffeur effectue ses choix de préférence de journée de travail à partir d'une liste pré-appel. Le pré-appel se fait généralement entre 14h et 16h pour la journée suivante. Le chauffeur RFLEX peut être muté dans un autre garage au besoin.
+**fonction future**
+
+**Contexte :** Lorsque le chauffeur a le rôle Réserve ou RFLEX, le chauffeur effectue ses choix de préférence de journée de travail à partir d'une liste pré-appel. Cette liste est disponible généralement à partir 14h et le choix des journées doit se faire avant 16h pour la journée suivante. Note que le chauffeur RFLEX peut être muté dans un autre garage au besoin. 
 
 1. Charge la liste Pré-appel.
 2. Révise les critères de préférence pour la sélection des journées de travail et applique les critères de sélection.
-3. Créer une note spécifique réserve à partir des 21 meilleurs choix disponibles.
+3. Créer une "Note spécifique réserve" pour le centre de transport assigné ou muté à partir des 21 premières journées sélectionnées.
 
 ---
 
@@ -47,9 +49,10 @@ Ce document décrit les interactions des utilisateurs avec le système, indépen
 **Pré-requis :** La connexion au portail employé doit être active (session valide).
 
 1. Rafraîchit les données des événements pour les lignes de la journée.
-2. Au besoin, anaylse les changements aux événements depuis la dernière mise à jour.
-3. Au besoin, génère et analyse une nouvelle version du Rapport V2.
-4. Au besoin, génère une nouvelle version du Rapport quotidien en PDF et l'imprime.
+2. Au besoin, analyse les changements aux événements depuis la dernière mise à jour (nouveaux évènement, évènements retirés ou modifiés).
+3. Au besoin, génère et analyse le Rapport V2.
+4. Au besoin, génère et analyse le Rapport quotidien en PDF
+5. Au besoin imprime le rapport quotidien.
 
 ---
 
@@ -61,7 +64,8 @@ Ce document décrit les interactions des utilisateurs avec le système, indépen
 **Pré-requis :** Une connexion à api.stm.info avec une clé API valide (session API valide).
 
 1. Au besoin, rafraîchit les données des événements pour les lignes restantes.
-2. Au besoin, génère et consulte une nouvelle version du Rapport V2.
+2. Au besoin, analyse les changements aux événements depuis la dernière mise à jour (nouveaux évènement, évènements retirés ou modifiés).
+2. Au besoin, génère et/ou consulte le Rapport V2.
 3. Au besoin, consulte plus en détail un Gauche-Droite ou les événements d'une ligne et direction spécifique.
 4. Au besoin, géolocalise le prochain bus à récupérer.
 
@@ -76,5 +80,5 @@ Ce document décrit les interactions des utilisateurs avec le système, indépen
 3. Révise les fichiers Rapport et supprime les fichiers obsolètes (plus de 3 mois).
 4. Révise les fichiers Journée et supprime les fichiers obsolètes (plus d'un an).
 5. Révise les fichiers Carte agent et supprime les fichiers obsolètes (plus d'un an).
-6. Au besoin, révise le registre des journées de travail.
+6. Au besoin, révise le registre des journées de travail. **fonction future**
 7. Au besoin, consulte les journaux d'activité.

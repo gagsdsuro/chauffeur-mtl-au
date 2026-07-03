@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Vue d'ensemble
 
-`chauffeur-stm` est un dépôt de **données** d'itinéraires d'autobus de la STM (Montréal) destinées aux chauffeurs, accompagnées de scripts Python d'import et de génération de rapports. Le cœur du projet est un ensemble de fichiers JSON normalisés : parcours « Gauche-Droite » (instructions de conduite virage-par-virage) et événements affectant les arrêts.
+`chauffeur-stm` est un dépôt de **données** d'itinéraires d'autobus de la STM (Montréal) destinées aux chauffeurs, accompagnées de scripts Python d'import et de génération de rapports. Le cœur du projet est un ensemble de fichiers JSON normalisés : parcours « Gauche-Droite » (instructions de conduite virage-par-virage) et événements affectant les arrêts et/ou le parcours.
 
 La langue de travail est le **français** (noms de champs, messages, documentation).
 
