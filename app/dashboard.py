@@ -90,6 +90,33 @@ def get_gtfs_info(data_dir: Path) -> dict:
     }
 
 
+def get_gd_info(gd_dir: Path, ligne: str, direction: str,
+                max_age_days: int = 90) -> dict:
+    """Info de fraîcheur d'un fichier Gauche-Droite (miroir de get_gtfs_info).
+
+    Les JSON G-D ne contiennent aucune date : la fraîcheur est basée sur le
+    mtime du fichier. Un fichier ré-importé sans changement paraîtra « frais ».
+
+    Convention de nommage : gd<ligne>_<direction>.json (direction minuscule).
+
+    Champs retournés :
+      exists    — True si le fichier existe (bool)
+      path      — chemin du fichier (Path) ou None
+      age_days  — âge en jours entiers (int) ou None si absent
+      fresh     — True si présent et age_days <= max_age_days (bool)
+    """
+    path = gd_dir / f"gd{ligne}_{(direction or '').lower()}.json"
+    if not path.exists():
+        return {"exists": False, "path": None, "age_days": None, "fresh": False}
+    age_days = (datetime.now() - datetime.fromtimestamp(path.stat().st_mtime)).days
+    return {
+        "exists":   True,
+        "path":     path,
+        "age_days": age_days,
+        "fresh":    age_days <= max_age_days,
+    }
+
+
 # ── GTFS-RT — parser protobuf minimal ───────────────────────────────────────────
 
 def _read_varint(data: bytes, pos: int) -> tuple[int, int]:

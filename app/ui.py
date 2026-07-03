@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Interface Streamlit — Chauffeur STM
-Onglets : Tableau de bord · Importation · Rapports · Fichiers · GTFS
+Onglets : Ma journée · Importation · Rapports · Fichiers · Logs
 """
 
 import base64
@@ -102,7 +102,7 @@ st.markdown(
 st.title("🚌 Chauffeur STM")
 
 tabs = st.tabs([
-    "🏠 Tableau de bord",
+    "🏠 Ma journée",
     "📥 Importation",
     "📊 Rapports",
     "🗂️ Fichiers",
@@ -180,14 +180,14 @@ def _event_applies(event: dict, date_str: str, tr) -> bool:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Tab 1 — Tableau de bord
+# Tab 1 — Ma journée (orchestrateur : sélection unique + checklist + consultation)
 # ═══════════════════════════════════════════════════════════════════════════════
 with tabs[0]:
     from dashboard import (
-        get_gtfs_info, parse_vehicle_positions, find_vehicle,
+        get_gtfs_info, get_gd_info, parse_vehicle_positions, find_vehicle,
     )
 
-    st.header("Tableau de bord")
+    st.header("Ma journée")
 
     db_j_files = (
         sorted(JOURNEES_DIR.glob("journee-*.json"), reverse=True)
@@ -197,24 +197,320 @@ with tabs[0]:
     if not db_j_files:
         st.info(
             "Aucune journée enregistrée. "
-            "Importez-en une dans l'onglet **Journées**."
+            "Importez-en une dans **📥 Importation › Journée**."
         )
     else:
+        # ── Sélecteur UNIQUE de journée (source partagée journee_date) ─────────
         db_j_labels = [p.stem.replace("journee-", "") for p in db_j_files]
-        db_sel = st.selectbox(
-            "Journée",
-            range(len(db_j_labels)),
-            format_func=lambda i: db_j_labels[i],
-            key="db_j_sel",
-        )
-        db_j_path   = db_j_files[db_sel]
-        db_date_str = db_j_labels[db_sel]
+        # Purge d'une sélection périmée (journée supprimée entre deux reruns)
+        if st.session_state.get("journee_date") not in db_j_labels:
+            st.session_state.pop("journee_date", None)
+        db_date_str = st.selectbox("Journée", db_j_labels, key="journee_date")
+        db_j_path   = JOURNEES_DIR / f"journee-{db_date_str}.json"
 
         try:
             db_j_data = json.loads(db_j_path.read_text(encoding="utf-8"))
         except Exception as e:
             st.error(f"Erreur lecture journée : {e}")
             st.stop()
+
+        # ── Checklist de préparation ──────────────────────────────────────────
+        gtfs_info = get_gtfs_info(DATA_DIR)
+        RAPPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
+        from chauffeur.journee import lignes_de_service as _lignes_de_service
+        _paires = _lignes_de_service(db_j_data)
+
+        db_rpt_niveau = st.radio(
+            "Niveau des rapports G-D",
+            ["standard", "détaillé", "compact"],
+            index=0, horizontal=True, key="db_rpt_niveau",
+        )
+
+        # États dérivés
+        _gtfs_age = gtfs_info.get("static_age_days")
+        _gtfs_ok  = _gtfs_age is not None and _gtfs_age <= 7
+        _ca_annot = CA_DIR / f"carte-agent-{db_date_str}-annotee.pdf"
+        _ca_surl  = CA_DIR / f"carte-agent-{db_date_str}-surligné.pdf"
+        _ca_ok    = _ca_annot.exists() or _ca_surl.exists()
+
+        _gd_missing, _gd_stale = [], []
+        _ev_missing = []
+        for _lg, _dr in _paires:
+            _gd = get_gd_info(GD_DIR, _lg, _dr)
+            if not _gd["exists"]:
+                _gd_missing.append((_lg, _dr))
+            elif not _gd["fresh"]:
+                _gd_stale.append((_lg, _dr, _gd["age_days"]))
+            if not (EVENTS_DIR / f"{_lg}_{_dr}.json").exists():
+                _ev_missing.append((_lg, _dr))
+
+        _v2_present = bool(
+            [p for p in RAPPORTS_DIR.glob(f"rapport-v2-{db_date_str}-*.html")
+             if not re.search(r"-id\d+", p.stem)]
+            + [p for p in RAPPORTS_DIR.glob(f"rapport-v2-{db_date_str}-*.pdf")
+               if not re.search(r"-id\d+", p.stem)]
+        ) if RAPPORTS_DIR.exists() else False
+        _v1_present = (RAPPORTS_DIR / f"rapport-{db_date_str}.pdf").exists()
+
+        with st.expander("✅ Préparation de la journée", expanded=True):
+            from chauffeur.portail import SESSION_PATH as _CHK_SESS
+            _sess_ok = _CHK_SESS.exists()
+            _gtfs_present = (DATA_DIR / "gtfs" / "gtfs_stm").exists()
+
+            # ── Actions chaînées ──────────────────────────────────────────────
+            def _chain_gtfs():
+                _r = subprocess.run(
+                    [sys.executable, str(SCRIPTS_DIR / "fetch_gtfs.py")],
+                    capture_output=True, text=True)
+                return _r.returncode == 0, _r
+
+            def _chain_refresh_events():
+                _r = subprocess.run(
+                    [sys.executable, str(SCRIPTS_DIR / "refresh_events.py"),
+                     "--journee", str(db_j_path), "--log"],
+                    capture_output=True, text=True)
+                st.session_state["ref_result_code"] = _r.returncode
+                st.session_state["ref_result_out"] = (
+                    _r.stdout + ("\n" + _r.stderr if _r.stderr else ""))
+                return _r.returncode, _r
+
+            def _check_cookie() -> bool:
+                """Vérifie la validité du cookie (appel live) et l'affiche. True si valide."""
+                with st.spinner("Vérification du cookie…"):
+                    try:
+                        from chauffeur.portail import is_session_valid
+                        _ok, _msg = is_session_valid()
+                    except Exception as _e:
+                        _ok, _msg = False, str(_e)
+                st.write(("✅ Cookie valide" if _ok else f"❌ Cookie invalide — {_msg}"))
+                return _ok
+
+            def _chain_gen_v2():
+                from gen_rapport_v2 import generer_rapport as _gv2
+                _gv2(db_j_path, fmt="html",
+                     output=RAPPORTS_DIR / f"rapport-v2-{db_date_str}-{db_rpt_niveau}.html",
+                     niveau=db_rpt_niveau)
+
+            def _chain_gen_v1():
+                _r = subprocess.run(
+                    [sys.executable, str(SCRIPTS_DIR / "gen_rapport.py"),
+                     "--date", db_date_str,
+                     "--output", str(RAPPORTS_DIR / f"rapport-{db_date_str}.pdf")],
+                    capture_output=True, text=True)
+                return _r.returncode == 0, _r
+
+            def _diff_summary(out: str) -> None:
+                """Résumé compact des changements d'événements depuis le stdout."""
+                retires  = [l for l in out.splitlines() if "🗑️" in l]
+                remplaces = [l for l in out.splitlines()
+                             if "remplacé" in l or "champs modifiés" in l]
+                if not (retires or remplaces):
+                    st.caption("Aucun changement d'événement détecté.")
+                    return
+                st.markdown(
+                    f"**Changements :** {len(retires)} retiré·s · "
+                    f"{len(remplaces)} remplacé·s / modifié·s")
+                for l in retires + remplaces:
+                    st.text(f"  {l.strip()}")
+
+            ca1, ca2 = st.columns(2)
+            with ca1:
+                if st.button("🌙 Tout préparer (veille)", key="chk_prep_all",
+                             use_container_width=True):
+                    with st.status("Préparation de la journée…", expanded=True) as _stt:
+                        if not _gtfs_ok:
+                            st.write("① GTFS statique…")
+                            ok, _r = _chain_gtfs()
+                            if not ok:
+                                _stt.update(label="Échec GTFS", state="error")
+                                st.code(_r.stderr or _r.stdout)
+                                st.stop()
+                        if not _ca_ok:
+                            st.write("② Carte agent : 🔒 upload requis (📥 Carte Agent) — ignoré.")
+                        st.write(f"③ Journée : ✅ {db_date_str}")
+                        if _gd_missing or _gd_stale:
+                            st.write("④ G-D manquants/périmés : 🔒 collage requis (📥 Gauche-Droite) — ignoré.")
+                        if _sess_ok:
+                            st.write("⑤ Cookie…")
+                            if not _check_cookie():
+                                _stt.update(label="Cookie invalide", state="error")
+                                st.error("Renouvelez vos cookies (📥 Évènements).")
+                                st.stop()
+                            st.write("⑤ Événements…")
+                            rc, _r = _chain_refresh_events()
+                            if rc == 2:
+                                _stt.update(label="Session expirée", state="error")
+                                st.error("Renouvelez vos cookies (📥 Évènements).")
+                                st.stop()
+                            _diff_summary(st.session_state.get("ref_result_out", ""))
+                        else:
+                            st.write("⑤ Événements : 🔒 session requise (📥 Évènements) — ignoré.")
+                        if _gtfs_present:
+                            st.write("⑥ Rapport v2…")
+                            try:
+                                _chain_gen_v2()
+                            except Exception as _e:
+                                st.warning(f"Rapport v2 non généré : {_e}")
+                            st.write("⑦ Rapport journalier…")
+                            ok, _r = _chain_gen_v1()
+                            if not ok:
+                                st.warning("Rapport journalier non généré.")
+                        else:
+                            st.write("⑥⑦ Rapports : GTFS requis — ignorés.")
+                        _stt.update(label="Préparation terminée", state="complete")
+                    st.rerun()
+            with ca2:
+                if st.button("🚀 Tout rafraîchir (avant départ)", key="chk_refresh_all",
+                             use_container_width=True, disabled=not _sess_ok,
+                             help="" if _sess_ok else "Session requise (📥 Évènements)."):
+                    with st.status("Rafraîchissement…", expanded=True) as _stt:
+                        st.write("⑤ Cookie…")
+                        if not _check_cookie():
+                            _stt.update(label="Cookie invalide", state="error")
+                            st.error("Renouvelez vos cookies (📥 Évènements).")
+                            st.stop()
+                        st.write("⑤ Événements…")
+                        rc, _r = _chain_refresh_events()
+                        if rc == 2:
+                            _stt.update(label="Session expirée", state="error")
+                            st.error("Renouvelez vos cookies (📥 Évènements).")
+                            st.stop()
+                        _diff_summary(st.session_state.get("ref_result_out", ""))
+                        if _gtfs_present:
+                            st.write("⑥ Rapport v2…")
+                            try:
+                                _chain_gen_v2()
+                            except Exception as _e:
+                                st.warning(f"Rapport v2 non généré : {_e}")
+                        else:
+                            st.write("⑥ Rapport v2 : GTFS requis — ignoré.")
+                        _stt.update(label="Rafraîchissement terminé", state="complete")
+                    st.rerun()
+
+            st.markdown("---")
+
+            # 1 — GTFS
+            c1, c2 = st.columns([7, 2])
+            if _gtfs_ok:
+                c1.markdown(f"✅ **GTFS statique frais** ({_gtfs_age} j)")
+            elif _gtfs_age is not None:
+                c1.markdown(f"⚠️ **GTFS statique périmé** ({_gtfs_age} j)")
+            else:
+                c1.markdown("⬜ **GTFS statique absent**")
+            if not _gtfs_ok and c2.button("⬇️ GTFS", key="chk_gtfs"):
+                with st.spinner("Téléchargement GTFS…"):
+                    _r = subprocess.run(
+                        [sys.executable, str(SCRIPTS_DIR / "fetch_gtfs.py")],
+                        capture_output=True, text=True,
+                    )
+                (st.success if _r.returncode == 0 else st.error)(
+                    "GTFS mis à jour." if _r.returncode == 0 else "Échec GTFS.")
+                st.code(_r.stdout + ("\n" + _r.stderr if _r.stderr else ""))
+
+            # 2 — Carte agent annotée (action manuelle : upload)
+            c1, c2 = st.columns([7, 2])
+            if _ca_ok:
+                c1.markdown("✅ **Carte agent annotée présente**")
+            else:
+                c1.markdown("🔒 **Carte agent non annotée**")
+                c2.caption("→ 📥 Carte Agent")
+
+            # 3 — Journée chargée
+            st.markdown(f"✅ **Journée chargée** ({db_date_str})")
+
+            # 4 — Gauche-Droite disponibles et récents (<90 j)
+            c1, c2 = st.columns([7, 2])
+            if not _paires:
+                c1.markdown("⬜ **Aucune ligne de service**")
+            elif _gd_missing:
+                c1.markdown(
+                    "🔒 **G-D manquants** : "
+                    + ", ".join(f"{l} {d}" for l, d in _gd_missing))
+                c2.caption("→ 📥 Gauche-Droite")
+            elif _gd_stale:
+                c1.markdown(
+                    "⚠️ **G-D périmés (>90 j)** : "
+                    + ", ".join(f"{l} {d} ({a} j)" for l, d, a in _gd_stale))
+                c2.caption("→ 📥 Gauche-Droite")
+            else:
+                c1.markdown(f"✅ **Gauche-Droite à jour** ({len(_paires)} ligne·s)")
+
+            # 5 — Événements extraits (fichier absent = « à extraire », pas « manquant » :
+            #     un refresh valide sans évènement matérialise un fichier vide)
+            c1, c2 = st.columns([7, 2])
+            if not _paires:
+                c1.markdown("⬜ **Aucune ligne de service**")
+            elif _ev_missing:
+                c1.markdown(
+                    "⬜ **Événements à extraire** : "
+                    + ", ".join(f"{l} {d}" for l, d in _ev_missing))
+            else:
+                c1.markdown(f"✅ **Événements extraits** ({len(_paires)} ligne·s)")
+            if _paires and c2.button(
+                "🔄 Événements", key="chk_events", disabled=not _sess_ok,
+                help="" if _sess_ok else "Session requise (📥 Évènements).",
+            ):
+                if not _check_cookie():
+                    st.error("Renouvelez vos cookies (📥 Évènements).")
+                else:
+                    _rc = [
+                        sys.executable, str(SCRIPTS_DIR / "refresh_events.py"),
+                        "--journee", str(db_j_path), "--log",
+                    ]
+                    with st.spinner("Rafraîchissement des événements…"):
+                        _r = subprocess.run(_rc, capture_output=True, text=True)
+                    st.session_state["ref_result_code"] = _r.returncode
+                    st.session_state["ref_result_out"] = (
+                        _r.stdout + ("\n" + _r.stderr if _r.stderr else ""))
+                    if _r.returncode == 2:
+                        st.error("Session expirée — renouvelez vos cookies (📥 Évènements).")
+                    elif _r.returncode == 0:
+                        st.success("Événements rafraîchis.")
+                    else:
+                        st.warning("Rafraîchissement partiel.")
+                    if st.session_state["ref_result_out"].strip():
+                        st.code(st.session_state["ref_result_out"])
+
+            # 6 — Rapport v2
+            c1, c2 = st.columns([7, 2])
+            c1.markdown(
+                "✅ **Rapport v2 présent**" if _v2_present
+                else "⬜ **Rapport v2 non généré**")
+            if c2.button("📊 Rapport v2", key="chk_v2",
+                         disabled=not (DATA_DIR / "gtfs" / "gtfs_stm").exists(),
+                         help="" if (DATA_DIR / "gtfs" / "gtfs_stm").exists()
+                              else "GTFS requis."):
+                from gen_rapport_v2 import generer_rapport as _gen_v2
+                _v2_out = RAPPORTS_DIR / f"rapport-v2-{db_date_str}-{db_rpt_niveau}.html"
+                with st.spinner("Génération du rapport v2…"):
+                    try:
+                        _gen_v2(db_j_path, fmt="html", output=_v2_out,
+                                niveau=db_rpt_niveau)
+                        st.success("Rapport v2 généré.")
+                    except Exception as _e:
+                        st.error(f"Erreur génération v2 : {_e}")
+
+            # 7 — Rapport journalier (v1)
+            c1, c2 = st.columns([7, 2])
+            c1.markdown(
+                "✅ **Rapport journalier présent**" if _v1_present
+                else "⬜ **Rapport journalier non généré**")
+            if c2.button("📄 Rapport v1", key="chk_v1"):
+                _v1_out = RAPPORTS_DIR / f"rapport-{db_date_str}.pdf"
+                with st.spinner("Génération du rapport journalier…"):
+                    _r = subprocess.run(
+                        [sys.executable, str(SCRIPTS_DIR / "gen_rapport.py"),
+                         "--date", db_date_str, "--output", str(_v1_out)],
+                        capture_output=True, text=True,
+                    )
+                if _r.returncode == 0 and _v1_out.exists():
+                    st.success("Rapport journalier généré.")
+                else:
+                    st.error("Échec de la génération.")
+                    st.code(_r.stdout + ("\n" + _r.stderr if _r.stderr else ""))
+
+        st.divider()
 
         # ── Métriques résumé ──────────────────────────────────────────────────
         db_pieces = db_j_data.get("pieces", [])
@@ -300,29 +596,8 @@ with tabs[0]:
 
         st.divider()
 
-        # ── Pièces de travail ─────────────────────────────────────────────────
+        # ── Pièces de travail (consultation « En route ») ─────────────────────
         st.subheader("Pièces de travail")
-
-        gtfs_info = get_gtfs_info(DATA_DIR)
-        RAPPORTS_DIR.mkdir(parents=True, exist_ok=True)
-
-        _gtfs_age = gtfs_info.get("static_age_days")
-        if _gtfs_age is not None and _gtfs_age > 7:
-            st.warning(
-                f"⚠️ Données GTFS périmées ({_gtfs_age} jours). "
-                "Mettez à jour via l'onglet **Importation > GTFS**.",
-                icon=None,
-            )
-        elif not (DATA_DIR / "gtfs" / "gtfs_stm").exists():
-            st.warning("⚠️ Aucune donnée GTFS. Téléchargez-les via l'onglet **Importation > GTFS**.")
-
-        db_rpt_niveau = st.radio(
-            "Niveau des rapports G-D",
-            ["standard", "détaillé", "compact"],
-            index=0,
-            horizontal=True,
-            key="db_rpt_niveau",
-        )
 
         for idx, piece in enumerate(db_pieces):
             pid = piece.get("id", f"pièce-{idx + 1}")
@@ -334,8 +609,17 @@ with tabs[0]:
                 pc1, pc2, pc3 = st.columns([2, 2, 2])
 
                 with pc1:
-                    st.markdown(f"**Lieu prise :** `{piece.get('lieu_prise', '–')}`")
-                    st.markdown(f"**Lieu fin :** `{piece.get('lieu_fin', '–')}`")
+                    from chauffeur.reference import lieu_point_releve as _lieu_pr
+                    _garage = db_j_data.get("garage")
+
+                    def _lieu_md(label, code):
+                        code = code or "–"
+                        lieu = _lieu_pr(code, _garage) if code != "–" else None
+                        suffix = f" — {lieu}" if lieu else ""
+                        return f"**{label} :** `{code}`{suffix}"
+
+                    st.markdown(_lieu_md("Lieu prise", piece.get("lieu_prise")))
+                    st.markdown(_lieu_md("Lieu fin", piece.get("lieu_fin")))
 
                 with pc2:
                     bus_edit_key = f"db_bus_edit_{db_date_str}_{idx}"
@@ -637,6 +921,12 @@ with tabs[0]:
                             except Exception as e:
                                 st.error(f"Erreur lecture évènements : {e}")
 
+    # ── Réserve (fonction future) ─────────────────────────────────────────────
+    with st.expander("🅿️ Réserve — pré-appel / note spécifique (à venir)"):
+        st.info(
+            "Fonction à venir : chargement de la liste pré-appel, application des "
+            "critères de préférence et génération de la note spécifique réserve."
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -798,21 +1088,16 @@ with tabs[1]:
         else:
             st.warning("Aucune session enregistrée")
 
-        _ref_j_files = (
-            sorted(JOURNEES_DIR.glob("journee-*.json"), reverse=True)
-            if JOURNEES_DIR.exists() else []
+        # Journée active partagée (choisie dans 🏠 Ma journée)
+        _ref_date   = st.session_state.get("journee_date")
+        _ref_j_path = (
+            JOURNEES_DIR / f"journee-{_ref_date}.json" if _ref_date else None
         )
-        if _ref_j_files:
-            _rc1, _rc2, _rc3 = st.columns([3, 2, 2])
-            with _rc1:
-                _ref_labels = [p.stem.replace("journee-", "") for p in _ref_j_files]
-                _ref_sel    = st.selectbox(
-                    "Journée",
-                    range(len(_ref_labels)),
-                    format_func=lambda i: _ref_labels[i],
-                    key="ref_j_sel",
-                )
-                _ref_j_path = _ref_j_files[_ref_sel]
+        if _ref_j_path and _ref_j_path.exists():
+            st.caption(
+                f"Journée active : **{_ref_date}** — changer dans **🏠 Ma journée**."
+            )
+            _rc2, _rc3 = st.columns([2, 2])
             with _rc2:
                 _ref_restantes = st.checkbox(
                     "Restantes seulement",
@@ -857,7 +1142,10 @@ with tabs[1]:
                 if _ref_out_saved.strip():
                     st.code(_ref_out_saved)
         else:
-            st.info("Aucune journée disponible. Importez-en une dans l'onglet **Journées**.")
+            st.info(
+                "Aucune journée active. Sélectionnez-en une dans **🏠 Ma journée** "
+                "(ou importez-en une dans **📅 Journée**)."
+            )
 
         with st.expander("🔑 Renouveler la session", expanded=not _SESS_PATH.exists()):
             st.caption(
@@ -1043,23 +1331,21 @@ with tabs[2]:
             "Chaque groupe (ligne · direction · ID parcours) est traité séparément."
         )
 
-        v2_journee_files = (
-            sorted(JOURNEES_DIR.glob("journee-*.json"), reverse=True)
-            if JOURNEES_DIR.exists() else []
+        # Journée active partagée (choisie dans 🏠 Ma journée)
+        v2_date   = st.session_state.get("journee_date")
+        v2_j_path = (
+            JOURNEES_DIR / f"journee-{v2_date}.json" if v2_date else None
         )
 
-        if not v2_journee_files:
-            st.info("Aucune journée disponible. Importez-en une dans l'onglet **Journées**.")
-        else:
-            v2_j_labels = [p.stem.replace("journee-", "") for p in v2_journee_files]
-            v2_sel = st.selectbox(
-                "Journée",
-                range(len(v2_j_labels)),
-                format_func=lambda i: v2_j_labels[i],
-                key="rpt_v2_sel",
+        if not (v2_j_path and v2_j_path.exists()):
+            st.info(
+                "Aucune journée active. Sélectionnez-en une dans **🏠 Ma journée** "
+                "(ou importez-en une dans **📅 Journée**)."
             )
-            v2_j_path = v2_journee_files[v2_sel]
-
+        else:
+            st.caption(
+                f"Journée active : **{v2_date}** — changer dans **🏠 Ma journée**."
+            )
             try:
                 v2_j_data = json.loads(v2_j_path.read_text(encoding="utf-8"))
             except Exception as e:
@@ -1115,7 +1401,7 @@ with tabs[2]:
 
             if st.button("Générer", type="primary", key="rpt_v2_btn"):
                 RAPPORTS_DIR.mkdir(parents=True, exist_ok=True)
-                v2_date_str = v2_j_data.get("date", v2_j_labels[v2_sel])
+                v2_date_str = v2_j_data.get("date", v2_date)
                 v2_out = RAPPORTS_DIR / f"rapport-v2-{v2_date_str}-{v2_niveau}.{v2_fmt}"
 
                 from gen_rapport_v2 import generer_rapport as _gen_v2
@@ -1187,6 +1473,50 @@ with tabs[3]:
                         st.session_state[confirm_key] = True
                         st.rerun()
 
+    def _purge_older_than(files: list[Path], days: int) -> list[Path]:
+        """Fichiers dont le mtime dépasse `days` jours (candidats à la purge)."""
+        cutoff = datetime.now().timestamp() - days * 86400
+        return [f for f in files if f.stat().st_mtime < cutoff]
+
+    def _purge_ui(label: str, files: list[Path], days: int) -> None:
+        """Bouton de purge des fichiers obsolètes (> `days`), avec confirmation."""
+        candidats = _purge_older_than(files, days)
+        annees = days // 365
+        seuil_txt = f"{annees} an·s" if annees >= 1 else f"{days // 30} mois"
+        st.divider()
+        st.caption(
+            f"🧹 **Entretien** — {len(candidats)} fichier(s) obsolète(s) "
+            f"(> {seuil_txt})."
+        )
+        if not candidats:
+            return
+        confirm_key = f"fm_purge_confirm_{label}"
+        if st.session_state.get(confirm_key):
+            st.warning(
+                "⚠️ Ces fichiers sont suivis par git ; la suppression modifie "
+                "l'arbre de travail et devra être committée séparément."
+            )
+            for f in candidats:
+                st.text(f"  • {f.name}  ({_fmt_mtime(f)})")
+            pc1, pc2 = st.columns([1, 4])
+            with pc1:
+                if st.button("⚠️ Confirmer", key=f"fm_purge_ok_{label}"):
+                    for f in candidats:
+                        f.unlink(missing_ok=True)
+                    del st.session_state[confirm_key]
+                    st.rerun()
+            with pc2:
+                if st.button("Annuler", key=f"fm_purge_cancel_{label}"):
+                    del st.session_state[confirm_key]
+                    st.rerun()
+        else:
+            if st.button(
+                f"🧹 Purger les {len(candidats)} fichier(s) obsolète(s)",
+                key=f"fm_purge_{label}",
+            ):
+                st.session_state[confirm_key] = True
+                st.rerun()
+
     fm_tabs = st.tabs([
         "📋 Cartes agent",
         "↔️ Gauche-Droite",
@@ -1200,30 +1530,35 @@ with tabs[3]:
         ca_all = sorted(CA_DIR.glob("*.pdf"), reverse=True) if CA_DIR.exists() else []
         st.caption(f"{len(ca_all)} fichier(s) dans `data/ca/`")
         _file_manager("ca", ca_all, mime="application/pdf")
+        _purge_ui("ca", ca_all, days=365)
 
     # ── Gauche-Droite ─────────────────────────────────────────────────────────
     with fm_tabs[1]:
         gd_all = sorted(GD_DIR.glob("gd*.json")) if GD_DIR.exists() else []
         st.caption(f"{len(gd_all)} fichier(s) dans `data/Gauche-Droite/`")
         _file_manager("gd", gd_all, mime="application/json")
+        _purge_ui("gd", gd_all, days=365)
 
     # ── Évènements ────────────────────────────────────────────────────────────
     with fm_tabs[2]:
         ev_all = sorted(EVENTS_DIR.glob("*.json")) if EVENTS_DIR.exists() else []
         st.caption(f"{len(ev_all)} fichier(s) dans `data/Events/`")
         _file_manager("ev", ev_all, mime="application/json")
+        _purge_ui("ev", ev_all, days=90)
 
     # ── Rapports journaliers ──────────────────────────────────────────────────
     with fm_tabs[3]:
         rp_all = sorted(RAPPORTS_DIR.glob("rapport-*.pdf"), reverse=True) if RAPPORTS_DIR.exists() else []
         st.caption(f"{len(rp_all)} fichier(s) dans `data/rapports/`")
         _file_manager("rp", rp_all, mime="application/pdf")
+        _purge_ui("rp", rp_all, days=90)
 
     # ── Journées ──────────────────────────────────────────────────────────────
     with fm_tabs[4]:
         j_all = sorted(JOURNEES_DIR.glob("journee-*.json"), reverse=True) if JOURNEES_DIR.exists() else []
         st.caption(f"{len(j_all)} fichier(s) dans `data/journees/`")
         _file_manager("journee", j_all, mime="application/json")
+        _purge_ui("journee", j_all, days=365)
 
         if j_all:
             st.divider()
@@ -1263,6 +1598,14 @@ with tabs[3]:
                     st.json(j_prev_data)
             except Exception as e:
                 st.error(f"Erreur lecture : {e}")
+
+    # ── Registre des journées (fonction future) ───────────────────────────────
+    st.divider()
+    with st.expander("📒 Registre des journées de travail (à venir)"):
+        st.info(
+            "Fonction à venir : registre consolidé des journées travaillées "
+            "(consultation et révision par le chauffeur-admin)."
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

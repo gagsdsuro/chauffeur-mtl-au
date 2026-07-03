@@ -15,7 +15,7 @@ La langue de travail est le **français** (noms de champs, messages, documentati
 streamlit run app/ui.py                     # développement local
 docker compose up --build                   # production (port 8501, volume ./data)
 ```
-L'app expose 5 onglets : Tableau de bord · Importation (5 sous-onglets) · Rapports · Fichiers · GTFS.
+L'app expose 5 onglets : Ma journée (orchestrateur : sélection unique de journée, checklist de préparation, actions chaînées, consultation par pièce/trajet) · Importation (5 sous-onglets, dont GTFS) · Rapports (2 sous-onglets) · Fichiers (5 sous-onglets, avec purge des fichiers obsolètes) · Logs.
 
 **Import Gauche-Droite** — lit depuis stdin, écrit dans `data/Gauche-Droite/` :
 ```bash
@@ -151,7 +151,7 @@ data/Gauche-Droite/ + data/Events/ + GTFS  ──(rapport_gd.py)──►  scrip
 
 Le package **`chauffeur/`** centralise le noyau de domaine partagé entre les scripts et l'app Streamlit : `matching` (appariement noms d'arrêts), `modeles` (dataclasses), `carte_agent` (lecture PDF), `effectif` (horaires), `evenements` (filtrage par quart/arrêt), `gd` (build_rows, détours, applicabilité), `gtfs` (lookup arrêts GTFS, index `stops_index.json`), `journee` (groupes/lignes de service à partir d'une journée), `portail` (session + appels HTTP portail employé STM).
 
-L'application Streamlit est divisée en deux fichiers : `app/ui.py` (interface complète, 5 onglets) et `app/dashboard.py` (utilitaires onglet Tableau de bord : parsing PDF carte agent, GTFS-RT).
+L'application Streamlit est divisée en deux fichiers : `app/ui.py` (interface complète, 5 onglets) et `app/dashboard.py` (utilitaires onglet Ma journée : fraîcheur GTFS `get_gtfs_info`, fraîcheur G-D `get_gd_info`, parsing PDF carte agent, GTFS-RT).
 
 1. **`split_sections()`** découpe l'entrée brute en sections, une par en-tête `Gauche-Droite / <ligne> <direction>`. Un seul collage peut donc contenir plusieurs lignes/directions.
 2. **`GDParser`** traite une section :

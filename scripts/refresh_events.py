@@ -49,6 +49,16 @@ def _refresh_one(ligne: str, sens: str, log: bool = False) -> bool:
         return False
 
     success, _ = parser.save_json()
+    # Un fetch réussi sans évènement matérialise tout de même un fichier vide,
+    # pour distinguer « vérifié : aucun évènement » de « jamais vérifié ».
+    if success and not parser.events:
+        out = parser.events_dir / f"{parser.ligne}_{parser.direction}.json"
+        if not out.exists():
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(
+                json.dumps(parser.to_fichier().to_dict(), indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
     print()
     summary = parser.get_summary()
     print(summary)
