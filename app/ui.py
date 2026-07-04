@@ -253,7 +253,7 @@ with tabs[0]:
         ) if RAPPORTS_DIR.exists() else False
         _v1_present = (RAPPORTS_DIR / f"rapport-{db_date_str}.pdf").exists()
 
-        with st.expander("✅ Préparation de la journée", expanded=True):
+        with st.expander("✅ Préparation de la journée", expanded=False):
             from chauffeur.portail import SESSION_PATH as _CHK_SESS
             _sess_ok = _CHK_SESS.exists()
             _gtfs_present = (DATA_DIR / "gtfs" / "gtfs_stm").exists()
@@ -318,7 +318,7 @@ with tabs[0]:
             with ca1:
                 if st.button("🌙 Tout préparer (veille)", key="chk_prep_all",
                              use_container_width=True):
-                    with st.status("Préparation de la journée…", expanded=True) as _stt:
+                    with st.status("Préparation de la journée…", expanded=False) as _stt:
                         if not _gtfs_ok:
                             st.write("① GTFS statique…")
                             ok, _r = _chain_gtfs()
