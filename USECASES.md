@@ -32,8 +32,8 @@ Ce document décrit les interactions des utilisateurs avec le système, indépen
 **Pré-requis :** La connexion au portail employé doit être active (session valide).
 
 1. S'assure que les données hebdomadaires (GTFS) sont à jour.
-2. Charge la carte agent du lendemain, effectue les annotations et imprime la version annotée en PDF.
-3. Charge le fichier journée du lendemain.
+2. Charge le fichier journée du lendemain.
+3. Au besoin, charge la carte agent du lendemain, effectue les annotations et imprime la version annotée en PDF.
 4. Vérifie que les Gauche-Droite des lignes de la journée sont disponibles et récents (moins de 90 jours).
 5. Extrait une première version des événements pour les lignes du jour.
 6. Au besoin, génère et analyse le Rapport V2 (routes, événements, détours).
