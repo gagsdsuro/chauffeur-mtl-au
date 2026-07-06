@@ -53,14 +53,69 @@ def jouer_cas(dossier: Path) -> list:
     return ecarts
 
 
+def verifier_extract_jour_type() -> list:
+    """extract_jour_type() sur du texte synthétique : champ présent (BASE, REM),
+    absent, et « En vigueur » indépendant de la date de la carte elle-même."""
+    ecarts = []
+
+    avec_base = (
+        "Société de Transport de Montréal\n"
+        "En vigueur: 15/06/2026\n"
+        "453\n"
+        "Voiture\n"
+        "20/06/2026\n"
+        "Samedi - BASE\n"
+        "Voiture\n"
+    )
+    r = cas.extract_jour_type(avec_base)
+    if r != {"jour_type_imprime": "samedi", "variante": "BASE", "en_vigueur": "2026-06-15"}:
+        ecarts.append(f"avec_base: {r}")
+
+    avec_rem = (
+        "Société de Transport de Montréal\n"
+        "En vigueur: 18/05/2026\n"
+        "523\n"
+        "Voiture\n"
+        "01/06/2026\n"
+        "Semaine - REM\n"
+        "Voiture\n"
+    )
+    r = cas.extract_jour_type(avec_rem)
+    if r != {"jour_type_imprime": "semaine", "variante": "REM", "en_vigueur": "2026-05-18"}:
+        ecarts.append(f"avec_rem: {r}")
+
+    sans_champ = (
+        "Société de Transport de Montréal\n"
+        "458\n"
+        "Voiture\n"
+        "03/07/2026\n"
+        "Voiture\n"
+    )
+    r = cas.extract_jour_type(sans_champ)
+    if r != {"jour_type_imprime": None, "variante": None, "en_vigueur": None}:
+        ecarts.append(f"sans_champ: {r}")
+
+    return ecarts
+
+
 def main() -> int:
+    echecs = 0
+
+    ecarts = verifier_extract_jour_type()
+    if ecarts:
+        echecs += 1
+        print("ECHEC  extract_jour_type:")
+        for e in ecarts:
+            print(f"       - {e}")
+    else:
+        print("OK     extract_jour_type")
+
     base = ROOT / "tests" / "cas"
     noms = sys.argv[1:] or sorted(d.name for d in base.iterdir() if d.is_dir())
     if not noms:
         print("Aucun cas de test dans tests/cas/ — créer avec creer_cas_test.py")
         return 1
 
-    echecs = 0
     for nom in noms:
         dossier = base / nom
         if not (dossier / "attendu.json").exists():
@@ -76,7 +131,8 @@ def main() -> int:
         else:
             print(f"OK     {nom}")
 
-    print(f"\n{len(noms) - echecs}/{len(noms)} cas passent.")
+    total = len(noms) + 1  # +1 pour verifier_extract_jour_type
+    print(f"\n{total - echecs}/{total} cas passent.")
     return 1 if echecs else 0
 
 

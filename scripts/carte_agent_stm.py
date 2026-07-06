@@ -144,6 +144,41 @@ def extract_meta(spans: list) -> dict:
             "fin": heure_fin, "lignes": lignes}
 
 
+_DATE_LIGNE_RE  = re.compile(r'^\d{2}/\d{2}/\d{4}$')
+_JOUR_TYPE_RE   = re.compile(r'^(Semaine|Samedi|Dimanche)\s*-\s*(\S+)$')
+_EN_VIGUEUR_RE  = re.compile(r'En vigueur:\s*(\d{2})/(\d{2})/(\d{4})')
+
+
+def extract_jour_type(page1_text: str) -> dict:
+    """Champ optionnel imprimé sur certaines cartes : jour-type + date de mise en
+    vigueur (ex. « Samedi - BASE » juste après la date de la carte, « En vigueur:
+    15/06/2026 » en en-tête). Absent sur d'autres cartes (raison non confirmée à ce
+    jour — cf. mémoire projet). Sert uniquement de validation croisée à
+    chauffeur.periodes.identite_ca() — jamais de source d'identité, pour que
+    toutes les cartes (avec ou sans ce champ) suivent la même règle de dérivation.
+
+    Retour : {"jour_type_imprime": "samedi"|"dimanche"|"semaine"|None,
+              "variante": "BASE"|"REM"|... |None, "en_vigueur": "YYYY-MM-DD"|None}
+    """
+    en_vigueur = None
+    m = _EN_VIGUEUR_RE.search(page1_text)
+    if m:
+        j, mo, a = m.groups()
+        en_vigueur = f"{a}-{mo}-{j}"
+
+    jour_type, variante = None, None
+    lignes = page1_text.split("\n")
+    for i, ligne in enumerate(lignes):
+        if _DATE_LIGNE_RE.match(ligne) and i + 1 < len(lignes):
+            mj = _JOUR_TYPE_RE.match(lignes[i + 1])
+            if mj:
+                jour_type = mj.group(1).lower()
+                variante  = mj.group(2)
+            break
+
+    return {"jour_type_imprime": jour_type, "variante": variante, "en_vigueur": en_vigueur}
+
+
 # ===========================================================================
 #  3.  Horaires terminus depuis le GTFS statique
 # ===========================================================================
@@ -431,6 +466,7 @@ def annotate(src: str, dst: str, schedules: dict) -> dict:
     spans = get_spans(page)
 
     meta = extract_meta(spans)
+    meta.update(extract_jour_type(page.get_text()))
 
     highlight_prise(page, spans)
     plan = plan_annotations(page, spans, schedules)
@@ -493,11 +529,24 @@ def main() -> int:
                     help="Ignore le GTFS : surlignage jaune + bleu seulement")
     ap.add_argument("--json", action="store_true",
                     help="Affiche un résumé JSON sur stdout (carte, début, fin, lignes)")
+    ap.add_argument("--meta-only", action="store_true",
+                    help="N'annote pas le PDF : extrait seulement les métadonnées "
+                         "(carte, prise début/fin, lignes) et les imprime en JSON sur "
+                         "stdout. Utile pour un PDF déjà annoté ailleurs (identifier "
+                         "sans relancer le traitement GTFS).")
     args = ap.parse_args()
 
     src = Path(args.pdf).expanduser()
     if not src.is_file():
         sys.exit(f"ERREUR : PDF introuvable : {src}")
+
+    if args.meta_only:
+        doc = fitz.open(str(src))
+        meta = extract_meta(get_spans(doc[0]))
+        meta.update(extract_jour_type(doc[0].get_text()))
+        doc.close()
+        print(json.dumps(meta, ensure_ascii=False))
+        return 0
 
     out = (Path(args.out).expanduser() if args.out
            else src.with_name(f"{src.stem}-surligné.pdf"))

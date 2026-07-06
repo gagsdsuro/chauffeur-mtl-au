@@ -184,7 +184,7 @@ def _event_applies(event: dict, date_str: str, tr) -> bool:
 # ═══════════════════════════════════════════════════════════════════════════════
 with tabs[0]:
     from dashboard import (
-        get_gtfs_info, get_gd_info, parse_vehicle_positions, find_vehicle,
+        get_gtfs_info, get_gd_info, get_ca_info, parse_vehicle_positions, find_vehicle,
     )
 
     st.header("Ma journée")
@@ -230,9 +230,9 @@ with tabs[0]:
         # États dérivés
         _gtfs_age = gtfs_info.get("static_age_days")
         _gtfs_ok  = _gtfs_age is not None and _gtfs_age <= 7
-        _ca_annot = CA_DIR / f"carte-agent-{db_date_str}-annotee.pdf"
-        _ca_surl  = CA_DIR / f"carte-agent-{db_date_str}-surligné.pdf"
-        _ca_ok    = _ca_annot.exists() or _ca_surl.exists()
+        _ca_info  = get_ca_info(CA_DIR, date.fromisoformat(db_date_str),
+                                 db_j_data.get("journee_numero"))
+        _ca_ok    = _ca_info["annotee"] is not None
 
         _gd_missing, _gd_stale = [], []
         _ev_missing = []
@@ -411,7 +411,13 @@ with tabs[0]:
             # 2 — Carte agent annotée (action manuelle : upload)
             c1, c2 = st.columns([7, 2])
             if _ca_ok:
-                c1.markdown("✅ **Carte agent annotée présente**")
+                _ca_msg = "✅ **Carte agent annotée présente**"
+                if _ca_info["legacy"]:
+                    _ca_msg += " (ancien import par date)"
+                elif _ca_info["identite"]:
+                    _n, _g, _j = _ca_info["identite"]
+                    _ca_msg += f" (n° {_n} · {_g} · {_j} — réutilisable)"
+                c1.markdown(_ca_msg)
             else:
                 c1.markdown("🔒 **Carte agent non annotée**")
                 c2.caption("→ 📥 Carte Agent")
@@ -525,12 +531,7 @@ with tabs[0]:
         mc5.metric("Prise fin",       max(db_fin_all)   if db_fin_all   else "–")
 
         # ── Téléchargements ──────────────────────────────────────────────────
-        annotee_path  = CA_DIR / f"carte-agent-{db_date_str}-annotee.pdf"
-        surligné_path = CA_DIR / f"carte-agent-{db_date_str}-surligné.pdf"
-        annotee_file  = (
-            annotee_path  if annotee_path.exists()  else
-            surligné_path if surligné_path.exists() else None
-        )
+        annotee_file = _ca_info["annotee"]
         _v2_html = sorted(
             RAPPORTS_DIR.glob(f"rapport-v2-{db_date_str}-*.html"),
             key=lambda p: p.stat().st_mtime, reverse=True,
@@ -938,53 +939,141 @@ with tabs[1]:
 
     # ── 2a — Carte Agent ──────────────────────────────────────────────────────
     with imp_tabs[0]:
-        st.markdown("Déposez le PDF brut de votre carte agent. L'application le sauvegarde et génère une version annotée (horaires GTFS surlignés).")
+        from chauffeur.periodes import identite_ca, nom_ca
+
+        st.markdown(
+            "Déposez le PDF brut de votre carte agent. L'application l'annote (horaires "
+            "GTFS surlignés) et la range par **identité** (numéro + liste + jour-type) — "
+            "une même identité est réutilisée automatiquement entre journées, sans "
+            "réimporter le PDF."
+        )
 
         uploaded = st.file_uploader("Fichier carte agent (PDF)", type="pdf", key="ca_upload")
 
         col1, col2 = st.columns(2)
         with col1:
-            ca_date = st.date_input("Date de la carte", value=date.today(), key="ca_date")
+            ca_date = st.date_input(
+                "Date représentative de la carte", value=date.today(), key="ca_date",
+                help="Sert à calculer la liste et le jour-type (semaine/samedi/dimanche/"
+                     "variation) via le calendrier de référence — pas seulement à nommer le fichier.",
+            )
         with col2:
             no_gtfs = st.checkbox("Sans GTFS (surlignage seulement)", value=False, key="ca_no_gtfs")
 
-        if uploaded and st.button("Annoter la carte", type="primary", key="ca_btn"):
-            CA_DIR.mkdir(parents=True, exist_ok=True)
-            src_path  = CA_DIR / f"carte-agent-{ca_date}.pdf"
-            out_path  = CA_DIR / f"carte-agent-{ca_date}-annotee.pdf"
-            gtfs_path = DATA_DIR / "gtfs" / "gtfs_stm"
+        ca_remplacer = st.checkbox(
+            "Remplacer une CA existante pour cette identité (version augmentée)",
+            value=False, key="ca_remplacer",
+        )
+        ca_deja_annotee = st.checkbox(
+            "Le PDF déposé est déjà annoté — le ranger tel quel (remplace uniquement "
+            "la version annotée, sans relancer le traitement GTFS)",
+            value=False, key="ca_deja_annotee",
+        )
 
-            src_path.write_bytes(uploaded.read())
-            st.info(f"PDF sauvegardé : {src_path.name}")
+        btn_label = "Enregistrer la version annotée" if ca_deja_annotee else "Annoter la carte"
+        if uploaded and st.button(btn_label, type="primary", key="ca_btn"):
+            def _traiter_upload():
+                CA_DIR.mkdir(parents=True, exist_ok=True)
+                tmp_src = CA_DIR / f"_tmp_{uploaded.name}"
+                tmp_out = None if ca_deja_annotee else CA_DIR / f"_tmp_annotee_{uploaded.name}"
+                tmp_src.write_bytes(uploaded.read())
 
-            cmd = [
-                sys.executable, str(SCRIPTS_DIR / "carte_agent_stm.py"),
-                "--pdf", str(src_path),
-                "--out", str(out_path),
-                "--date", str(ca_date),
-            ]
-            if not no_gtfs and gtfs_path.exists():
-                cmd += ["--gtfs", str(gtfs_path)]
-            elif no_gtfs:
-                cmd.append("--no-gtfs")
+                def _nettoyer_tmp():
+                    tmp_src.unlink(missing_ok=True)
+                    if tmp_out:
+                        tmp_out.unlink(missing_ok=True)
 
-            with st.spinner("Annotation en cours…"):
-                result = subprocess.run(cmd, capture_output=True, text=True)
+                if ca_deja_annotee:
+                    cmd = [sys.executable, str(SCRIPTS_DIR / "carte_agent_stm.py"),
+                           "--pdf", str(tmp_src), "--meta-only"]
+                    spinner_msg = "Lecture des métadonnées…"
+                else:
+                    gtfs_path = DATA_DIR / "gtfs" / "gtfs_stm"
+                    cmd = [sys.executable, str(SCRIPTS_DIR / "carte_agent_stm.py"),
+                           "--pdf", str(tmp_src), "--out", str(tmp_out),
+                           "--date", str(ca_date), "--json"]
+                    if not no_gtfs and gtfs_path.exists():
+                        cmd += ["--gtfs", str(gtfs_path)]
+                    elif no_gtfs:
+                        cmd.append("--no-gtfs")
+                    spinner_msg = "Annotation en cours…"
 
-            if result.returncode == 0:
-                st.success("Carte annotée avec succès.")
-                st.code(result.stdout or "(pas de sortie)")
-                if out_path.exists():
-                    st.download_button(
-                        "⬇️ Télécharger la carte annotée",
-                        data=out_path.read_bytes(),
-                        file_name=out_path.name,
-                        mime="application/pdf",
-                        key="ca_dl",
+                with st.spinner(spinner_msg):
+                    result = subprocess.run(cmd, capture_output=True, text=True)
+
+                if result.returncode != 0:
+                    st.error("Erreur lors du traitement.")
+                    st.code(result.stderr or result.stdout)
+                    _nettoyer_tmp()
+                    return
+
+                try:
+                    meta = json.loads(result.stdout.strip().splitlines()[-1])
+                    numero, groupe_id, jour_type = identite_ca(ca_date, meta["carte"])
+                except (json.JSONDecodeError, IndexError, KeyError) as e:
+                    st.error(f"Sortie inattendue du traitement : {e}")
+                    st.code(result.stdout)
+                    _nettoyer_tmp()
+                    return
+                except (FileNotFoundError, ValueError) as e:
+                    st.error(f"Impossible de calculer l'identité de la carte : {e}")
+                    _nettoyer_tmp()
+                    return
+
+                # Validation croisée (pas une source d'identité) : certaines cartes
+                # impriment elles-mêmes leur jour-type ; on signale un écart sans bloquer.
+                jt_imprime = meta.get("jour_type_imprime")
+                if jt_imprime and jt_imprime != jour_type:
+                    variante_txt = f" ({meta['variante']})" if meta.get("variante") else ""
+                    st.warning(
+                        f"⚠️ Écart calendrier/carte : identite_ca calcule jour_type="
+                        f"« {jour_type} » pour cette date, mais la carte imprime "
+                        f"« {jt_imprime} »{variante_txt} (En vigueur : "
+                        f"{meta.get('en_vigueur') or '?'}). Vérifie le calendrier de "
+                        "référence — l'identité retenue reste celle du calendrier."
                     )
-            else:
-                st.error("Erreur lors de l'annotation.")
-                st.code(result.stderr or result.stdout)
+
+                dest_out = CA_DIR / nom_ca(numero, groupe_id, jour_type, annotee=True)
+                dest_src = None if ca_deja_annotee else CA_DIR / nom_ca(numero, groupe_id, jour_type)
+                collision = dest_out.exists() or (dest_src is not None and dest_src.exists())
+
+                if collision and not ca_remplacer:
+                    st.error(
+                        f"Une CA existe déjà pour cette identité (n° {numero} · "
+                        f"{groupe_id} · {jour_type}). Cochez « Remplacer » ci-dessus "
+                        "pour l'écraser."
+                    )
+                    _nettoyer_tmp()
+                    return
+
+                if collision:
+                    for dest in filter(None, (dest_src, dest_out)):
+                        if dest.exists():
+                            dest.replace(dest.with_name(dest.name + ".bak"))
+
+                if ca_deja_annotee:
+                    tmp_src.replace(dest_out)
+                    st.success(
+                        f"Version annotée remplacée directement (sans traitement GTFS) "
+                        f"— identité : n° {numero} · {groupe_id} · {jour_type}."
+                    )
+                else:
+                    tmp_src.replace(dest_src)
+                    tmp_out.replace(dest_out)
+                    st.success(
+                        f"Carte annotée et rangée — identité : n° {numero} · "
+                        f"{groupe_id} · {jour_type}."
+                    )
+
+                st.download_button(
+                    "⬇️ Télécharger la carte annotée",
+                    data=dest_out.read_bytes(),
+                    file_name=dest_out.name,
+                    mime="application/pdf",
+                    key="ca_dl",
+                )
+
+            _traiter_upload()
 
     # ── 2b — Journée ─────────────────────────────────────────────────────────
     with imp_tabs[1]:

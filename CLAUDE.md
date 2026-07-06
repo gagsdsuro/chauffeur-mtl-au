@@ -99,6 +99,11 @@ python3 tests/test_matching.py
 python3 tests/test_journee.py
 ```
 
+**Tests unitaires périodes** — couvre `chauffeur.periodes` (`identite_ca` : liste/semaine/samedi/dimanche, férié isolé dans une semaine de liste, variations multi-semaines, date hors calendrier) :
+```bash
+python3 tests/test_periodes.py
+```
+
 **Test de régression portail** — rejoue un fragment HTML figé (`tests/cas_portail/`) et vérifie la normalisation des événements par `STMEventParser.from_portal_json()`, y compris un `evenement_id` dupliqué sans faux avertissement :
 ```bash
 python3 tests/test_portail.py
@@ -149,7 +154,7 @@ data/journees/        ──(gen_rapport_v2.py)──►  data/rapports/rapport-
 data/Gauche-Droite/ + data/Events/ + GTFS  ──(rapport_gd.py)──►  scripts/rapport_<ligne>_<dir>_<date>.html
 ```
 
-Le package **`chauffeur/`** centralise le noyau de domaine partagé entre les scripts et l'app Streamlit : `matching` (appariement noms d'arrêts), `modeles` (dataclasses), `carte_agent` (lecture PDF), `effectif` (horaires), `evenements` (filtrage par quart/arrêt), `gd` (build_rows, détours, applicabilité), `gtfs` (lookup arrêts GTFS, index `stops_index.json`), `journee` (groupes/lignes de service à partir d'une journée), `portail` (session + appels HTTP portail employé STM).
+Le package **`chauffeur/`** centralise le noyau de domaine partagé entre les scripts et l'app Streamlit : `matching` (appariement noms d'arrêts), `modeles` (dataclasses), `carte_agent` (lecture PDF), `effectif` (horaires), `evenements` (filtrage par quart/arrêt), `gd` (build_rows, détours, applicabilité), `gtfs` (lookup arrêts GTFS, index `stops_index.json`), `journee` (groupes/lignes de service à partir d'une journée), `periodes` (calendrier de référence STM — listes/variations/fériés — et dérivation de l'identité d'une carte agent via `identite_ca(date, numero)`), `portail` (session + appels HTTP portail employé STM).
 
 L'application Streamlit est divisée en deux fichiers : `app/ui.py` (interface complète, 5 onglets) et `app/dashboard.py` (utilitaires onglet Ma journée : fraîcheur GTFS `get_gtfs_info`, fraîcheur G-D `get_gd_info`, parsing PDF carte agent, GTFS-RT).
 
@@ -176,7 +181,7 @@ Racine : `{ ligne, direction, routes: [ { line_number, direction, parcours: [...
 - **Gauche-Droite** : `gd<ligne>_<direction>.json` (avec préfixe `gd`), direction en minuscule (`est|ouest|nord|sud`), ligne avec `e` minuscule si applicable (`85e`). Un fichier par direction.
 - **Événements** : `<ligne>_<direction>.json` (sans préfixe), même convention de direction/ligne.
 - **Journées** : `data/journees/journee-YYYY-MM-DD.json` (sortie de `parse_journee.py`).
-- **Cartes agent** : `data/ca/carte-agent-YYYY-MM-DD.pdf` (PDF source), rapports annotés dans le même dossier.
+- **Cartes agent** : identifiées par `(numéro, liste/variation, jour-type)` via `chauffeur.periodes.identite_ca()`, pas par leur seule date — un même numéro peut désigner des cartes différentes selon la liste et le jour-type (semaine/samedi/dimanche/variation). Nommage `data/ca/<numéro>_<groupe_id>_<jour_type>.pdf` (+ `-annotee.pdf`), les deux copies conservées ; une identité déjà présente est refusée à l'écrasement sauf action explicite « remplacer » (sauvegarde `.bak`). Les fichiers `carte-agent-YYYY-MM-DD.pdf` restent le nommage des imports antérieurs à cette refonte (non migrés, lus en repli par `get_ca_info()`).
 - **Rapports journaliers v1** : `data/rapports/rapport-YYYY-MM-DD.pdf`.
 - **Rapports journaliers v2** : `data/rapports/rapport-v2-YYYY-MM-DD.{html,pdf}` (ou `rapport-v2-DATE-LIGNE-DIR-idN.html` pour un rapport mono-groupe).
 - JSON écrit avec indentation 2 espaces et accents préservés (`ensure_ascii=False`).

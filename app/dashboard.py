@@ -12,13 +12,15 @@ import json
 import re
 import struct
 import sys
-from datetime import datetime, timezone
+from datetime import date as _date, datetime, timezone
 from pathlib import Path
 
 # Rendre le package `chauffeur/` (noyau de domaine) importable depuis app/.
 _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
+
+from chauffeur.periodes import identite_ca, nom_ca  # noqa: E402
 
 
 # ── Fichiers de données ──────────────────────────────────────────────────────────
@@ -115,6 +117,54 @@ def get_gd_info(gd_dir: Path, ligne: str, direction: str,
         "age_days": age_days,
         "fresh":    age_days <= max_age_days,
     }
+
+
+def get_ca_info(ca_dir: Path, jour: _date, numero) -> dict:
+    """Résout le PDF de carte agent (brute + annotée) applicable à une journée.
+
+    Cherche d'abord par identité (chauffeur.periodes.identite_ca) — ce qui permet
+    la réutilisation d'une même CA entre journées partageant numéro/liste/jour-type.
+    Si absent, replie sur l'ancien nommage par date (carte-agent-YYYY-MM-DD[-annotee|
+    -surligné].pdf), pour les CA importées avant la refonte par identité.
+
+    Champs retournés :
+      identite — (numero, groupe_id, jour_type) ou None si non calculable
+      brute    — Path du PDF brut, ou None
+      annotee  — Path du PDF annoté, ou None
+      legacy   — True si le PDF annoté résolu vient de l'ancien nommage par date
+    """
+    date_str = jour.isoformat()
+    identite = None
+    brute = annotee = None
+
+    if numero:
+        try:
+            identite = identite_ca(jour, str(numero))
+        except (FileNotFoundError, ValueError):
+            identite = None
+
+    if identite:
+        n, g, j = identite
+        p_brute = ca_dir / nom_ca(n, g, j)
+        p_annotee = ca_dir / nom_ca(n, g, j, annotee=True)
+        if p_brute.exists():
+            brute = p_brute
+        if p_annotee.exists():
+            annotee = p_annotee
+
+    legacy = False
+    if annotee is None:
+        for suffixe in ("-annotee", "-surligné"):
+            p = ca_dir / f"carte-agent-{date_str}{suffixe}.pdf"
+            if p.exists():
+                annotee, legacy = p, True
+                break
+    if brute is None:
+        p = ca_dir / f"carte-agent-{date_str}.pdf"
+        if p.exists():
+            brute = p
+
+    return {"identite": identite, "brute": brute, "annotee": annotee, "legacy": legacy}
 
 
 # ── GTFS-RT — parser protobuf minimal ───────────────────────────────────────────
