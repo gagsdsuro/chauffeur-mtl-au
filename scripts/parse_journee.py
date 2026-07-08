@@ -121,6 +121,11 @@ class JourneeParser:
         Chaque ligne Sommaire ressemble à (labels et valeurs collés) :
             Sommaire24 - 1538013--3:18Horaire   ← bus 38013
             Sommaire24 - 02--4:12Horaire        ← pas encore de bus (--)
+            Sommaire136 - 2538023631:44Horaire  ← bus 38023, emplacement 63
+                                                   à la place du "--" habituel
+        Le séparateur avant la durée est soit "--" (littéral, emplacement
+        inconnu), soit un numéro d'emplacement du bus dans le garage (1-2
+        chiffres, non retenu — sans utilité pour l'application).
         Suivi de : Prise / <heure> / Lieu / <code> / Début / <heure> / Fin / <heure> / Lieu / <code>
         """
         sommaires = []
@@ -130,8 +135,10 @@ class JourneeParser:
             line = raw_line.strip()
             # \d{1,3} pour le numéro de pièce (01, 02, … 15, etc.)
             # (\d{5})? pour le numéro d'autobus (5 chiffres, optionnel)
+            # (?:--|\d{2}) pour le séparateur : "--" littéral, ou numéro
+            # d'emplacement (même largeur que "--", 2 caractères)
             m = re.match(
-                r'^Sommaire(\d+\s*-\s*\d{1,3})(\d{5})?-+(\d+:\d{2})Horaire$',
+                r'^Sommaire(\d+\s*-\s*\d{1,3})(\d{5})?(?:--|\d{2})(\d{1,2}:\d{2})Horaire$',
                 line
             )
             if not m:
