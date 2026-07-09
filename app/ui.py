@@ -1688,6 +1688,76 @@ with tabs[3]:
             except Exception as e:
                 st.error(f"Erreur lecture : {e}")
 
+        # ── Export CSV ────────────────────────────────────────────────────────
+        st.divider()
+        st.subheader("Export CSV")
+
+        j_dates = sorted(date.fromisoformat(p.stem.replace("journee-", "")) for p in j_all)
+        exp_c1, exp_c2 = st.columns(2)
+        with exp_c1:
+            exp_debut = st.date_input(
+                "Date de début", value=j_dates[0], key="fm_j_exp_debut"
+            )
+        with exp_c2:
+            exp_fin = st.date_input(
+                "Date de fin", value=j_dates[-1], key="fm_j_exp_fin"
+            )
+
+        N_TRAJET_COLS = 7
+
+        if st.button("📤 Générer l'export CSV", key="fm_j_exp_btn"):
+            import csv
+            import io
+
+            lignes_csv = []
+            for p in j_all:
+                try:
+                    d = date.fromisoformat(p.stem.replace("journee-", ""))
+                except ValueError:
+                    continue
+                if not (exp_debut <= d <= exp_fin):
+                    continue
+                try:
+                    jd = json.loads(p.read_text(encoding="utf-8"))
+                except Exception:
+                    continue
+
+                for piece in jd.get("pieces", []):
+                    lignes_service = [
+                        t.get("ligne") for t in piece.get("trajets", [])
+                        if t.get("type") == "service"
+                    ]
+                    row = {
+                        "date": jd.get("date", ""),
+                        "employe_id": jd.get("employe_id", ""),
+                        "journee_numero": jd.get("journee_numero", ""),
+                        "piece_id": piece.get("id", ""),
+                    }
+                    for i in range(N_TRAJET_COLS):
+                        row[f"trajet{i + 1}_ligne"] = (
+                            lignes_service[i] if i < len(lignes_service) else ""
+                        )
+                    lignes_csv.append(row)
+
+            if not lignes_csv:
+                st.warning("Aucune journée dans cet intervalle.")
+            else:
+                buf = io.StringIO()
+                fieldnames = ["date", "employe_id", "journee_numero", "piece_id"] + [
+                    f"trajet{i + 1}_ligne" for i in range(N_TRAJET_COLS)
+                ]
+                writer = csv.DictWriter(buf, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(lignes_csv)
+                st.download_button(
+                    "⬇️ Télécharger le CSV",
+                    data=buf.getvalue().encode("utf-8"),
+                    file_name=f"journees-{exp_debut}-{exp_fin}.csv",
+                    mime="text/csv",
+                    key="fm_j_exp_dl",
+                )
+                st.success(f"{len(lignes_csv)} pièce(s) exportée(s).")
+
     # ── Registre des journées (fonction future) ───────────────────────────────
     st.divider()
     with st.expander("📒 Registre des journées de travail (à venir)"):
