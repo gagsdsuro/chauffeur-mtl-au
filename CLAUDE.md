@@ -83,10 +83,11 @@ python3 tests/test_rapport_gd.py
 python3 tests/creer_cas_rapport_gd.py --ligne 125 --direction ouest --date 2026-06-11   # figer un nouveau cas (vérifier attendu.json)
 ```
 
-**Tests de régression parseurs** — rejoue des collages bruts figés dans `tests/cas_event/` et `tests/cas_gd/` :
+**Tests de régression parseurs** — rejoue des collages bruts figés dans `tests/cas_event/`, `tests/cas_gd/` et `tests/cas_journee/` :
 ```bash
-python3 tests/test_parse_event.py   # régression parse_event.py (cas : détour sans annulation, arrêts vides)
-python3 tests/test_parse_gd.py      # régression parse_gd.py (cas : multi-parcours même ligne/direction)
+python3 tests/test_parse_event.py     # régression parse_event.py (cas : détour sans annulation, arrêts vides)
+python3 tests/test_parse_gd.py        # régression parse_gd.py (cas : multi-parcours même ligne/direction)
+python3 tests/test_parse_journee.py   # régression parse_journee.py (cas : sommaire sans bus, placeholders "--"+"--")
 ```
 
 **Tests unitaires appariement** — couvre `chauffeur.matching` (stations vs rues, parenthèses, REM, troncature) :
