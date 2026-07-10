@@ -626,6 +626,31 @@ with tabs[0]:
                         st.session_state.get(bus_edit_key, "").strip()
                         or piece.get("numero_autobus") or ""
                     )
+
+                    if current_bus:
+                        from chauffeur.notes import note_voiture as _note_voiture
+                        from chauffeur.notes import sauvegarder_note_voiture as _save_note_voiture
+
+                        note_v = _note_voiture(current_bus)
+                        note_v_key  = f"db_note_voiture_edit_{db_date_str}_{idx}"
+                        note_v_save = f"db_note_voiture_save_{db_date_str}_{idx}"
+                        _nvcol, _nvscol = st.columns([5, 1])
+                        with _nvcol:
+                            st.text_area(
+                                f"Note — bus {current_bus}",
+                                value=(note_v or {}).get("note", ""),
+                                height=68,
+                                key=note_v_key,
+                            )
+                        with _nvscol:
+                            st.markdown("<div style='margin-top:1.75rem'>", unsafe_allow_html=True)
+                            if st.button("💾", key=note_v_save, help="Enregistrer la note du bus"):
+                                _save_note_voiture(current_bus, st.session_state.get(note_v_key, ""))
+                                st.success("Note sauvegardée.")
+                            st.markdown("</div>", unsafe_allow_html=True)
+                        if note_v and note_v.get("maj"):
+                            st.caption(f"Mise à jour : {note_v['maj']}")
+
                     geo_key = f"db_geo_r_{idx}"
                     _rt_ts_key = "db_rt_last_fetch"
                     geo_clicked = st.button(
@@ -689,13 +714,34 @@ with tabs[0]:
                             )
 
                 with pc3:
+                    from chauffeur.notes import note_matricule as _note_matricule
+                    from chauffeur.notes import sauvegarder_note_matricule as _save_note_matricule
+
                     releve = piece.get("releve") or {}
-                    if releve.get("je_releve"):
-                        r = releve["je_releve"]
-                        st.caption(f"Relève : {r['nom']} ({r['matricule']})")
-                    if releve.get("je_suis_releve_par"):
-                        r = releve["je_suis_releve_par"]
-                        st.caption(f"Relevé par : {r['nom']} ({r['matricule']})")
+                    for _rk, _label in (
+                        ("je_releve", "Relève"), ("je_suis_releve_par", "Relevé par"),
+                    ):
+                        r = releve.get(_rk)
+                        if not r:
+                            continue
+                        st.caption(f"{_label} : {r['nom']} ({r['matricule']})")
+                        _mat = r["matricule"]
+                        note_m = _note_matricule(_mat)
+                        note_m_key  = f"db_note_mat_edit_{db_date_str}_{idx}_{_rk}"
+                        note_m_save = f"db_note_mat_save_{db_date_str}_{idx}_{_rk}"
+                        st.text_area(
+                            f"Note — {r['nom']}",
+                            value=(note_m or {}).get("note", ""),
+                            height=68,
+                            key=note_m_key,
+                        )
+                        if st.button("💾 Enregistrer", key=note_m_save):
+                            _save_note_matricule(
+                                _mat, st.session_state.get(note_m_key, ""), nom=r["nom"]
+                            )
+                            st.success("Note sauvegardée.")
+                        if note_m and note_m.get("maj"):
+                            st.caption(f"Mise à jour : {note_m['maj']}")
 
                 # ── Trajets ───────────────────────────────────────────────────
                 for ti, trajet in enumerate(piece.get("trajets", [])):
