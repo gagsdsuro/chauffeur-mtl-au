@@ -51,7 +51,6 @@ BLUE     = colors.HexColor('#0072CE')
 DARK     = colors.HexColor('#1A1A2E')
 GREY_BG  = colors.HexColor('#F5F5F5')
 RED      = colors.HexColor('#CC0000')
-ORANGE   = colors.HexColor('#E87722')
 LGREY    = colors.HexColor('#CCCCCC')
 
 # ─── Styles ─────────────────────────────────────────────────────────────────
@@ -143,15 +142,14 @@ def page1_gd(data):
     lieu_p    = data.get('lieu_prise', '')
     heure_f   = data.get('heure_fin', '')
     voiture   = data.get('voiture', '')
-    assignation = agent.get('assignation', '')
 
     story.append(Paragraph(
         f'RAPPORT DE JOURNÉE — {jour_str.upper()} {date_str}',
         S['title']
     ))
     story.append(Paragraph(
-        f'Agent {assignation} – {agent.get("nom","")}  |  Voiture {voiture}  |  '
-        f'Prise {lieu_p} {heure_p}  →  Fin {heure_f}  |  Garage {agent.get("garage","")}',
+        f'Garage {agent.get("garage_id","")} – {agent.get("garage","")}  |  Voiture {voiture}  |  '
+        f'Prise {lieu_p} {heure_p}  →  Fin {heure_f}',
         S['subtitle']
     ))
     story.append(HRFlowable(width='100%', thickness=2, color=BLUE, spaceAfter=4))
@@ -602,9 +600,9 @@ def build_rapport_data(journee: dict, target_date: date) -> dict:
         'date_travail': target_date.isoformat(),
         'jour_semaine': JOURS_FR.get(target_date.weekday(), ''),
         'agent': {
-            'assignation': journee.get('employe_id', ''),
-            'nom':         '',
-            'garage':      journee.get('garage', ''),
+            'garage_id': journee.get('garage_id', ''),
+            'nom':       '',
+            'garage':    journee.get('garage', ''),
         },
         'heure_prise': heure_prise,
         'lieu_prise':  lieu_prise,
@@ -650,7 +648,7 @@ def main():
             target_date = date.fromisoformat(date_from_journee)
 
         print(f'📄 Journée : {journee_path.name}')
-        print(f'   Employé : {journee.get("employe_id", "")} | Garage : {journee.get("garage", "")}')
+        print(f'   Garage : {journee.get("garage_id", "")} — {journee.get("garage", "")}')
         groupes = extract_groupes(journee)
         if not groupes:
             print('Erreur : aucun trajet de service dans la journée.')

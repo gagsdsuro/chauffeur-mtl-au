@@ -3,8 +3,7 @@
 Le modèle EST l'architecture : ces structures sont les frontières entre le
 parsing (carte agent), l'appariement G-D et le filtrage d'évènements.
 
-Trois domaines couverts :
-  · Carte agent HASTUS  — CarteAgent, Trajet, Segment, Hlp  (existant)
+Domaines couverts :
   · Journée de travail  — Journee, Piece, TrajetService, TrajetHlp, ArretHoraire
   · Événements STM      — FichierEvenements, Evenement, ArretAnnule
   · Gauche-Droite       — FichierGD, RouteGD, ParcoursGD
@@ -16,74 +15,6 @@ Chaque dataclass expose :
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date as _date
-
-
-@dataclass
-class Segment:
-    """Un aller d'un trajet : terminus de départ/arrivée + heures (HH:MM HASTUS,
-    peut dépasser 24:00 pour les services de nuit). Les stops peuvent être vides
-    si la mise en page du PDF ne les a pas rendus exploitables."""
-    debut_stop: str = ""
-    fin_stop: str = ""
-    debut: str = ""
-    fin: str = ""
-
-
-@dataclass
-class Trajet:
-    """Un bloc de trajet de la carte agent (un en-tête « 125 - P / - / Régulier »)."""
-    ligne: str
-    designation: str = ""      # ce qui suit « - » dans l'en-tête (« P », « 05 », …)
-    service: str = ""          # « Régulier », « Scolaire », …
-    segment: Segment = field(default_factory=Segment)
-
-
-@dataclass
-class Hlp:
-    """Trajet haut-le-pied (déplacement à vide)."""
-    id: str
-    instructions: str = ""
-    code_debut: str = ""
-    code_fin: str = ""
-
-
-@dataclass
-class CarteAgent:
-    """Modèle texte d'une carte agent HASTUS (pages 1-2)."""
-    assignation: str = ""
-    date: _date | None = None
-    voiture: str = ""
-    lieu_debut: str = ""
-    heure_debut: str = ""
-    heure_fin: str = ""
-    garage: str = ""
-    lignes: list[str] = field(default_factory=list)
-    trajets: list[Trajet] = field(default_factory=list)
-    hlp: list[Hlp] = field(default_factory=list)
-
-    def segments_par_ligne(self) -> dict:
-        """{ '125': [(départ, arrivée), …] } — seulement les trajets dont les deux
-        terminus sont exploitables (filtrage de gen_rapport)."""
-        out: dict = {}
-        for tr in self.trajets:
-            s = tr.segment
-            if s.debut_stop and s.fin_stop:
-                out.setdefault(tr.ligne, []).append((s.debut_stop, s.fin_stop))
-        return out
-
-    def time_ranges_par_ligne(self) -> dict:
-        """{ '125': [{debut, fin, debut_stop, fin_stop}, …] } — tous les trajets
-        ayant des heures (forme attendue par le tableau de bord)."""
-        out: dict = {}
-        for tr in self.trajets:
-            s = tr.segment
-            if s.debut and s.fin:
-                out.setdefault(tr.ligne, []).append({
-                    "debut": s.debut, "fin": s.fin,
-                    "debut_stop": s.debut_stop, "fin_stop": s.fin_stop,
-                })
-        return out
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -238,7 +169,7 @@ class Journee:
     journee_numero: int | str   # int depuis parse_journee, str si chargé tel quel
     garage: str
     temps_travaille: str
-    employe_id: str = ""
+    garage_id: str = ""
     temps_supplementaire: str = ""
     mis_a_jour: str = ""
     pieces: list[Piece] = field(default_factory=list)
@@ -247,7 +178,7 @@ class Journee:
     def from_dict(cls, d: dict) -> Journee:
         return cls(
             date=d.get("date", ""),
-            employe_id=d.get("employe_id", ""),
+            garage_id=d.get("garage_id", ""),
             garage=d.get("garage", ""),
             journee_numero=d.get("journee_numero", ""),
             temps_travaille=d.get("temps_travaille", ""),
@@ -259,7 +190,7 @@ class Journee:
     def to_dict(self) -> dict:
         return {
             "date": self.date,
-            "employe_id": self.employe_id,
+            "garage_id": self.garage_id,
             "garage": self.garage,
             "journee_numero": self.journee_numero,
             "temps_travaille": self.temps_travaille,
@@ -441,29 +372,3 @@ class FichierGD:
             "direction": self.direction,
             "routes": [r.to_dict() for r in self.routes],
         }
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Tableau G-D / Arrêts (pipeline de rendu)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@dataclass
-class LigneTableau:
-    """Une ligne du tableau G-D produit par le pipeline build_rows → annotate → détours.
-
-    Champs optionnels (défaut falsy) : présents seulement dans les lignes pertinentes.
-    Le tableau est mutable — les étapes du pipeline ajoutent cancelled / detour_removed, etc.
-    """
-    gd: str = ""                          # instruction G-D ("Via - X", "Gauche - Y", …)
-    seq: int | None = None                # numéro de séquence GTFS
-    stop_id: str | None = None            # identifiant arrêt GTFS
-    stop_code: str = ""                   # code STM 5 chiffres
-    stop_name: str = ""                   # nom lisible de l'arrêt
-    cancelled: list = field(default_factory=list)   # [{label, effectif, …}]
-    detour_added: bool = False            # ligne insérée par un détour
-    detour_removed: bool = False          # instruction contournée (barrée)
-    detour_label: str = ""               # libellé du 1er arrêt d'un détour ajouté
-    evenement_id: str = ""               # ID événement associé (détour)
-    added_inline: bool = False           # arrêt ajouté placé inline
-    added_label: str = ""               # label de l'arrêt ajouté
-    effectif: str = ""                  # effectif de l'événement

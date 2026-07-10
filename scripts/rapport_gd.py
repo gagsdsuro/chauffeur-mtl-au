@@ -86,21 +86,6 @@ def load_stop_names():
     return _gtfs.stop_names(GTFS)
 
 
-def list_parcours(ligne, direction, base) -> list[ParcoursGD]:
-    """
-    Retourne la liste de tous les parcours disponibles pour cette ligne/direction,
-    ou [] si le fichier G-D n'existe pas.
-    """
-    path = base / f"data/Gauche-Droite/gd{ligne}_{direction}.json"
-    if not path.exists():
-        return []
-    with open(path) as f:
-        fichier = FichierGD.from_dict(json.load(f))
-    if not fichier.routes:
-        return []
-    return fichier.routes[0].parcours
-
-
 def load_gd(ligne, direction, base, parcours_hint=None):
     """
     Charge les instructions G-D et le parcours sélectionné.

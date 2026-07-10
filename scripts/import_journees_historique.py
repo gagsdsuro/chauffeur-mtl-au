@@ -9,9 +9,8 @@ en colonnes) qui ne conserve que certains champs réels ; le reste (heures,
 lieux, arrêts, direction, id_parcours, detour) est du remplissage de gabarit
 non représentatif et n'est donc pas importé tel quel.
 
-Champs réels importés : date, employe_id (colonne « garage_id »), garage,
-journee_numero, id de pièce, numero_autobus, matricules de relève, ligne de
-chaque trajet de service.
+Champs réels importés : date, garage_id, garage, journee_numero, id de pièce,
+numero_autobus, matricules de relève, ligne de chaque trajet de service.
 
 Ne modifie jamais un fichier journee-*.json déjà présent (importation unique).
 
@@ -35,13 +34,6 @@ JOURNEES_DIR = PROJECT_ROOT / "data" / "journees"
 N_TRAJET_SLOTS  = 4
 BASE_COLS       = 15   # nb de colonnes avant le 1er slot de trajet
 COLS_PER_TRAJET = 9
-
-
-def _time_str(t) -> str:
-    """Convertit un datetime.time en 'H:MM' ; chaîne vide si absent."""
-    if t is None:
-        return ""
-    return f"{t.hour}:{t.minute:02d}"
 
 
 def _row_to_piece(row: tuple, suffix: str = "") -> dict:
@@ -105,7 +97,7 @@ def _build_journee(date_str: str, rows: list[tuple]) -> dict:
 
     return {
         "date": date_str,
-        "employe_id": str(first[1]) if first[1] is not None else "",
+        "garage_id": str(first[1]) if first[1] is not None else "",
         "garage": first[2] or "",
         "journee_numero": first[3],
         "temps_travaille": "",

@@ -228,16 +228,6 @@ def _parse_position(data: bytes) -> tuple[float | None, float | None]:
     return lat, lon
 
 
-def _parse_vehicle_desc(data: bytes) -> tuple[str | None, str | None]:
-    v_id = v_label = None
-    for fnum, wtype, val in _iter_fields(data):
-        if fnum == 1 and wtype == 2:
-            v_id = _str(val)
-        elif fnum == 2 and wtype == 2:
-            v_label = _str(val)
-    return v_id, v_label
-
-
 def _parse_vp(data: bytes, entity_id: str | None = None) -> dict | None:
     # STM encode la position au field 2 (pas field 3 du standard GTFS-RT)
     # et n'envoie pas de VehicleDescriptor ; l'ID du bus est FeedEntity.id

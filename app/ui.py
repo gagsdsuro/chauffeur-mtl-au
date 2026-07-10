@@ -4,7 +4,6 @@ Interface Streamlit — Chauffeur STM
 Onglets : Ma journée · Importation · Rapports · Fichiers · Logs
 """
 
-import base64
 import json
 import re
 import subprocess
@@ -123,27 +122,6 @@ def _fmt_size(path: Path) -> str:
         return ""
     b = path.stat().st_size
     return f"{b/1024:.0f} KB" if b < 1_048_576 else f"{b/1_048_576:.1f} MB"
-
-
-def _pdf_embed_html(pdf_bytes: bytes, height: int = 800) -> str:
-    """Embarque un PDF via un Blob URL (data: URLs bloquées par Chrome pour les PDF)."""
-    import uuid
-    b64 = base64.b64encode(pdf_bytes).decode()
-    frame_id = f"pdf_{uuid.uuid4().hex}"
-    return f"""
-<iframe id="{frame_id}" width="100%" height="{height}px" style="border:none;"></iframe>
-<script>
-(function(){{
-    var b64="{b64}", s=atob(b64), i, arr=[];
-    for(i=0;i<s.length;i+=512){{
-        var sl=s.slice(i,i+512), n=new Array(sl.length);
-        for(var j=0;j<sl.length;j++) n[j]=sl.charCodeAt(j);
-        arr.push(new Uint8Array(n));
-    }}
-    var url=URL.createObjectURL(new Blob(arr,{{type:"application/pdf"}}));
-    document.getElementById("{frame_id}").src=url;
-}})();
-</script>"""
 
 
 def _event_applies_to_date(event: dict, date_str: str) -> bool:
@@ -1729,7 +1707,7 @@ with tabs[3]:
                     ]
                     row = {
                         "date": jd.get("date", ""),
-                        "employe_id": jd.get("employe_id", ""),
+                        "garage_id": jd.get("garage_id", ""),
                         "journee_numero": jd.get("journee_numero", ""),
                         "piece_id": piece.get("id", ""),
                     }
@@ -1743,7 +1721,7 @@ with tabs[3]:
                 st.warning("Aucune journée dans cet intervalle.")
             else:
                 buf = io.StringIO()
-                fieldnames = ["date", "employe_id", "journee_numero", "piece_id"] + [
+                fieldnames = ["date", "garage_id", "journee_numero", "piece_id"] + [
                     f"trajet{i + 1}_ligne" for i in range(N_TRAJET_COLS)
                 ]
                 writer = csv.DictWriter(buf, fieldnames=fieldnames)

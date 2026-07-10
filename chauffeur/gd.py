@@ -55,7 +55,6 @@ def build_rows(gd_instructions, stops_ordered, stop_names):
     """
     streets = [extract_street(instr) for instr in gd_instructions]
     n_instr = len(gd_instructions)
-    n_stops = len(stops_ordered)
 
     def _match_index(name_low, start):
         """Première instruction >= start dont la rue est dans le nom (rue principale d'abord)."""

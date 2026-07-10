@@ -71,7 +71,7 @@ def calculer_snapshot(dossier: Path) -> dict:
         }
 
     return {
-        "employe_id": journee.get("employe_id", ""),
+        "garage_id": journee.get("garage_id", ""),
         "lignes": lignes_uniques,
         "meta": {
             "date_travail": data["date_travail"],

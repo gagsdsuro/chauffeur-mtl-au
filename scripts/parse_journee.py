@@ -88,8 +88,8 @@ class JourneeParser:
 
         m = re.search(r"(?:Hier|Aujourd'hui)?(\d{4,6})\s*-\s*([\w ,-]+?)(?=\n|$)", t)
         if m:
-            h["employe_id"] = m.group(1)
-            h["garage"]     = m.group(2).strip()
+            h["garage_id"] = m.group(1)
+            h["garage"]    = m.group(2).strip()
 
         m = re.search(r'Journée(\d+)', t)
         if m:
@@ -319,8 +319,8 @@ class JourneeParser:
 
     def parse(self) -> Journee | None:
         header = self._parse_header()
-        if not header.get("employe_id"):
-            self.errors.append("❌ Impossible d'extraire l'identifiant employé")
+        if not header.get("garage_id"):
+            self.errors.append("❌ Impossible d'extraire l'identifiant de garage")
             return None
 
         sommaires = self._parse_sommaires()
@@ -349,7 +349,7 @@ class JourneeParser:
 
         raw = {
             "date":                 self.date_str,
-            "employe_id":           header.get("employe_id"),
+            "garage_id":            header.get("garage_id"),
             "garage":               header.get("garage"),
             "journee_numero":       header.get("journee_numero"),
             "temps_travaille":      header.get("temps_travaille"),
@@ -372,7 +372,7 @@ class JourneeParser:
         lines = [f"✅ Journée du {self.date_str}"]
         if journee:
             lines.append(
-                f"   Employé {journee.employe_id} — {journee.garage or '?'} "
+                f"   Garage {journee.garage_id} — {journee.garage or '?'} "
                 f"| Journée n°{journee.journee_numero or '?'} "
                 f"| {journee.temps_travaille or '?'} travaillé"
             )

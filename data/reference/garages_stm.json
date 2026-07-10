@@ -1,0 +1,13 @@
+{
+  "description": "Correspondance entre garage_id (numéro à 5 chiffres apparaissant dans l'en-tête des journées STM, ex. « 59200 » — anciennement mal nommé « employe_id » dans le code) et le nom du centre de transport (garage). St-Denis est un garage STM connu mais son garage_id n'est pas encore confirmé — absent de la liste ci-dessous tant que non vérifié.",
+  "garages": {
+    "50200": "Stinson",
+    "51200": "Bellechasse",
+    "54200": "Anjou",
+    "56200": "LaSalle",
+    "57200": "Mont-Royal",
+    "58200": "Legendre",
+    "59200": "Frontenac",
+    "60200": "St-Laurent"
+  }
+}

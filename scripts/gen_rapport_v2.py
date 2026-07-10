@@ -416,17 +416,17 @@ def _render_events_table_html(events_all: list, events_app: list) -> str:
 
 def render_html(groupes_data: list, journee: dict, niveau: str,
                 show_code: bool = False) -> str:
-    date_str   = journee.get("date", "")
-    employe_id = journee.get("employe_id", "")
-    garage     = journee.get("garage", "")
-    jnum       = journee.get("journee_numero", "")
-    duree      = journee.get("temps_travaille", "")
+    date_str  = journee.get("date", "")
+    garage_id = journee.get("garage_id", "")
+    garage    = journee.get("garage", "")
+    jnum      = journee.get("journee_numero", "")
+    duree     = journee.get("temps_travaille", "")
 
     body = [
         f'<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">'
         f'<title>Rapport {date_str}</title><style>{_CSS}</style></head><body>',
         f'<h1>Rapport journalier — {date_str}</h1>',
-        f'<div class="meta">Employé {employe_id} &nbsp;·&nbsp; Garage {garage}'
+        f'<div class="meta">Garage {garage_id} — {garage}'
         f' &nbsp;·&nbsp; Journée #{jnum} &nbsp;·&nbsp; Durée {duree}'
         f' &nbsp;·&nbsp; Niveau : {niveau}</div>',
     ]
@@ -491,7 +491,6 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
     RED   = rl_colors.HexColor("#CC0000")
     GREEN = rl_colors.HexColor("#2e7d32")
     LGREY = rl_colors.HexColor("#CCCCCC")
-    AMBER = rl_colors.HexColor("#7a3e00")
 
     def _s(name, **kw):
         defaults = dict(fontName="Helvetica", fontSize=8, leading=10,
@@ -530,16 +529,16 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
                        fontName="Helvetica-Bold"),
     }
 
-    date_str   = journee.get("date", "")
-    employe_id = journee.get("employe_id", "")
-    garage     = journee.get("garage", "")
-    jnum       = journee.get("journee_numero", "")
-    duree      = journee.get("temps_travaille", "")
+    date_str  = journee.get("date", "")
+    garage_id = journee.get("garage_id", "")
+    garage    = journee.get("garage", "")
+    jnum      = journee.get("journee_numero", "")
+    duree     = journee.get("temps_travaille", "")
 
     story = [
         Paragraph(f"Rapport journalier — {date_str}", S["h1"]),
         Paragraph(
-            f"Employé {employe_id}  ·  Garage {garage}  ·  "
+            f"Garage {garage_id} — {garage}  ·  "
             f"Journée #{jnum}  ·  Durée {duree}  ·  Niveau : {niveau}",
             S["meta"],
         ),
