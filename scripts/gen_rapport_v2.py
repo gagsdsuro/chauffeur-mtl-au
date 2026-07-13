@@ -224,6 +224,7 @@ td{padding:4px 8px;border-bottom:1px solid #ddd;vertical-align:top}
 .code{color:#888;font-size:11px;white-space:nowrap}
 .seq{color:#aaa;font-size:11px;text-align:right;padding-right:4px}
 .effectif{font-size:10px;color:#666;font-style:italic}
+.periode{font-size:10px;color:#888;display:block}
 .eid{font-size:10px;color:#555;font-weight:bold;display:block}
 .cancelled td{background:#fff0f0}
 .cancelled .stop-name{text-decoration:line-through;color:#c00}
@@ -254,6 +255,21 @@ def _h(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def _format_periode(e: dict) -> str:
+    """Période d'un évènement, avec heure : 'YYYY-MM-DD HH:MM → HH:MM' (même jour)
+    ou 'YYYY-MM-DD HH:MM → YYYY-MM-DD HH:MM' (jours différents), '→ ' si fin ouverte."""
+    debut_raw = e.get("date_heure_debut")
+    if not debut_raw:
+        return ""
+    debut = datetime.fromisoformat(debut_raw)
+    fin_raw = e.get("date_heure_fin")
+    if not fin_raw:
+        return f"{debut:%Y-%m-%d %H:%M} → "
+    fin = datetime.fromisoformat(fin_raw)
+    fin_fmt = f"{fin:%H:%M}" if fin.date() == debut.date() else f"{fin:%Y-%m-%d %H:%M}"
+    return f"{debut:%Y-%m-%d %H:%M} → {fin_fmt}"
+
+
 def _arr_key(r: dict) -> str:
     """Clé de l'annotation événement sous le nom d'arrêt — sert à détecter les répétitions.
 
@@ -272,7 +288,8 @@ def _arr_key(r: dict) -> str:
     return "|".join(parts)
 
 
-def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé") -> str:
+def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé",
+                       events: list = ()) -> str:
     code_th = '<th style="width:7%">Code</th>' if show_code else ""
     out = [
         '<table><thead><tr>'
@@ -280,10 +297,12 @@ def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé") -
         '<th style="width:28%">G-D</th>'
         + code_th +
         '<th>Arrêt / Détour</th>'
-        '<th style="width:20%">#évènement / Effectif</th>'
+        '<th style="width:20%">#évènement / Effectif / Période</th>'
         '</tr></thead><tbody>'
     ]
+    periode_by_eid = {e.get("evenement_id", ""): _format_periode(e) for e in events}
     prev_arr_key = None
+    prev_ev_eids = set()   # eid des badges #évènement affichés à la ligne précédente
     for r in rows:
         cancelled   = r.get("cancelled",      [])
         d_added     = r.get("detour_added",   False)
@@ -305,11 +324,15 @@ def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé") -
                 if r.get("commentaire"):
                     nm += f'<span class="event-comment">{_h(r["commentaire"])}</span>'
             eid_inline = r.get("evenement_id", "")
-            eff_inline = r.get("effectif", "")
+            ditto_eid  = bool(eid_inline) and eid_inline in prev_ev_eids
+            eff_inline = "" if ditto_eid else r.get("effectif", "")
+            per_inline = "" if ditto_eid else periode_by_eid.get(eid_inline, "")
             inline_eff_cell = (
                 (f'<span class="eid">#{_h(str(eid_inline))}</span>' if eid_inline else "") +
-                (f'<span class="effectif">{_h(eff_inline)}</span>' if eff_inline else "")
+                (f'<span class="effectif">{_h(eff_inline)}</span>' if eff_inline else "") +
+                (f'<span class="periode">{_h(per_inline)}</span>' if per_inline else "")
             )
+            prev_ev_eids = {eid_inline} if eid_inline else set()
             code_td = f'<td class="code"></td>' if show_code else ""
             out.append(f'<tr class="added-inline"><td class="seq"></td><td></td>'
                        f'{code_td}<td>{nm}</td><td>{inline_eff_cell}</td></tr>')
@@ -360,11 +383,23 @@ def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé") -
             if eid and eid not in seen_eid:
                 eff_parts.append((eid, eff))
                 seen_eid.add(eid)
-        eff_cell = "".join(
-            f'<span class="eid">#{_h(str(eid))}</span>'
-            f'<span class="effectif">{_h(eff)}</span>'
-            for eid, eff in eff_parts
-        )
+
+        # Badges #évènement / Effectif / Période — Effectif et Période sont
+        # tus quand le même évènement couvrait déjà la ligne précédente.
+        curr_ev_eids = set()
+        eff_cell_bits = []
+        for eid, eff in eff_parts:
+            ditto_eid = eid in prev_ev_eids
+            per = "" if ditto_eid else periode_by_eid.get(eid, "")
+            eff = "" if ditto_eid else eff
+            eff_cell_bits.append(
+                f'<span class="eid">#{_h(str(eid))}</span>'
+                + (f'<span class="effectif">{_h(eff)}</span>' if eff else "")
+                + (f'<span class="periode">{_h(per)}</span>' if per else "")
+            )
+            curr_ev_eids.add(eid)
+        eff_cell = "".join(eff_cell_bits)
+        prev_ev_eids = curr_ev_eids
 
         # Row class
         if d_added:
@@ -405,9 +440,7 @@ def _render_events_table_html(events_all: list, events_app: list) -> str:
         cls    = "" if appl else ' class="ev-na"'
         titre  = _h(e.get("titre", ""))
         eff    = _h(e.get("effectif", ""))
-        debut  = (e.get("date_heure_debut") or "")[:10]
-        fin    = (e.get("date_heure_fin")   or "")[:10]
-        per    = f"{debut} → {fin}" if debut else ""
+        per    = _h(_format_periode(e))
         out.append(f'<tr{cls}><td>{mark}</td><td>{eid}</td><td>{titre}</td>'
                    f'<td>{eff}</td><td>{per}</td></tr>')
     out.append("</tbody></table>")
@@ -461,7 +494,7 @@ def render_html(groupes_data: list, journee: dict, niveau: str,
         elif not filtered and niveau != "détaillé":
             body.append('<p class="no-gd">Aucune modification pour ce parcours.</p>')
         else:
-            body.append(_render_rows_html(filtered, show_code, niveau))
+            body.append(_render_rows_html(filtered, show_code, niveau, events_app))
 
         body.append(_render_events_table_html(events_all, events_app))
 
@@ -553,7 +586,8 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
     else:
         COL_W = [8*mm, 50*mm, 98*mm, 30*mm]
 
-    HDR = ["#", "G-D"] + (["Code"] if show_code else []) + ["Arrêt / Détour", "#évènement / Effectif"]
+    HDR = ["#", "G-D"] + (["Code"] if show_code else []) + \
+          ["Arrêt / Détour", "#évènement / Effectif / Période"]
 
     for gd in groupes_data:
         groupe     = gd["groupe"]
@@ -600,7 +634,10 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
                 ("BOTTOMPADDING",(0, 0), (-1, -1), 2),
             ]
 
+            periode_by_eid_pdf = {str(e.get("evenement_id", "")): _format_periode(e)
+                                   for e in events_app}
             prev_arr_key_pdf = None
+            prev_ev_eids_pdf = set()   # eid des badges #évènement affichés à la ligne précédente
             for ri, r in enumerate(filtered, start=1):
                 d_added   = r.get("detour_added",   False)
                 d_removed = r.get("detour_removed",  False)
@@ -627,15 +664,20 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
                         if r.get("commentaire"):
                             _txt += f"<br/>{r['commentaire']}"
                         arr_p = Paragraph(_txt, CS["add_grn"])
-                    eid_in  = str(r.get("evenement_id", ""))
-                    eff_txt = r.get("effectif", "")
+                    eid_in    = str(r.get("evenement_id", ""))
+                    ditto_eid = bool(eid_in) and eid_in in prev_ev_eids_pdf
+                    eff_txt   = "" if ditto_eid else r.get("effectif", "")
+                    per_txt   = "" if ditto_eid else periode_by_eid_pdf.get(eid_in, "")
                     eff_parts_in = []
                     if eid_in:
                         line = f"#{eid_in}"
                         if eff_txt:
                             line += f"<br/>{eff_txt}"
+                        if per_txt:
+                            line += f"<br/>{per_txt}"
                         eff_parts_in.append(line)
                     eff_p = Paragraph("<br/>".join(eff_parts_in), CS["eff"]) if eff_parts_in else ""
+                    prev_ev_eids_pdf = {eid_in} if eid_in else set()
                     row_cells = [seq, "", arr_p, eff_p]
                     if show_code:
                         row_cells = [seq, "", "", arr_p, eff_p]
@@ -670,24 +712,36 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
                         arr_lines.append(f"{sym} {short}")
                         if ev.get("commentaire"):
                             arr_lines.append(f"  → {ev['commentaire']}")
+                eff_parts = []
                 for ev in cancelled:
                     eid = str(ev.get("evenement_id", ""))
                     eff = ev.get("effectif", "")
                     if eid and eid not in seen_eid:
-                        line = f"#{eid}"
-                        if eff:
-                            line += f"<br/>{eff}"
-                        eff_lines.append(line)
+                        eff_parts.append((eid, eff))
                         seen_eid.add(eid)
                 if d_added:
                     eid = str(r.get("evenement_id", ""))
                     eff = r.get("effectif", "")
                     if eid and eid not in seen_eid:
-                        line = f"#{eid}"
-                        if eff:
-                            line += f"<br/>{eff}"
-                        eff_lines.append(line)
+                        eff_parts.append((eid, eff))
                         seen_eid.add(eid)
+
+                # Badges #évènement / Effectif / Période — Effectif et Période
+                # sont tus quand le même évènement couvrait déjà la ligne précédente.
+                curr_ev_eids_pdf = set()
+                for eid, eff in eff_parts:
+                    ditto_eid = eid in prev_ev_eids_pdf
+                    per = "" if ditto_eid else periode_by_eid_pdf.get(eid, "")
+                    eff = "" if ditto_eid else eff
+                    line = f"#{eid}"
+                    if eff:
+                        line += f"<br/>{eff}"
+                    if per:
+                        line += f"<br/>{per}"
+                    eff_lines.append(line)
+                    curr_ev_eids_pdf.add(eid)
+                prev_ev_eids_pdf = curr_ev_eids_pdf
+
                 arr_p = Paragraph("<br/>".join(arr_lines), arr_style) if arr_lines else ""
                 eff_p = Paragraph("<br/>".join(eff_lines), CS["eff"]) if eff_lines else ""
 
@@ -725,14 +779,12 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
                 eid   = str(e.get("evenement_id", "?"))
                 appl  = eid in app_ids
                 mark  = "OK" if appl else "--"
-                debut = (e.get("date_heure_debut") or "")[:10]
-                fin   = (e.get("date_heure_fin")   or "")[:10]
                 cs    = EV_S if appl else EV_GRY_S
                 ev_data.append([
                     mark, eid,
                     Paragraph(e.get("titre", ""), cs),
                     Paragraph(e.get("effectif", ""), cs),
-                    Paragraph(f"{debut}→{fin}" if debut else "", cs),
+                    Paragraph(_format_periode(e), cs),
                 ])
             et = Table(ev_data,
                        colWidths=[6*mm, 18*mm, 78*mm, 52*mm, 32*mm])
