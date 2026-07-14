@@ -1,7 +1,7 @@
 """chauffeur.matching — appariement de noms d'arrêts et de rues (utilitaire pur).
 
-Source de vérité unique, anciennement dupliquée dans gen_rapport.py et
-app/dashboard.py (appariement d'arrêts) et rapport_gd.py (normalisation de rue).
+Source de vérité unique, anciennement dupliquée dans gen_rapport.py
+(appariement d'arrêts) et rapport_gd.py (normalisation de rue).
 Aucune dépendance UI/CLI.
 """
 import re

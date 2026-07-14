@@ -10,7 +10,7 @@ pour permettre des tests hermétiques sur des fichiers gelés.
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from .evenements import applicable_a_la_date
@@ -19,6 +19,11 @@ DATA_DIR     = Path(__file__).resolve().parent.parent / "data"
 GD_DIR       = DATA_DIR / "Gauche-Droite"
 EVENTS_DIR   = DATA_DIR / "Events"
 JOURNEES_DIR = DATA_DIR / "journees"
+CA_DIR       = DATA_DIR / "ca"
+
+# Seuils de fraîcheur (règles métier, partagés UI/scripts)
+FRAICHEUR_GTFS_JOURS = 7    # GTFS statique : mise à jour hebdomadaire STM
+FRAICHEUR_GD_JOURS   = 90   # fichiers Gauche-Droite : ré-import périodique
 
 
 # ── Chemins canoniques ────────────────────────────────────────────────────────
@@ -78,3 +83,98 @@ def evenements_pour_date(ligne: str, direction: str, jour: date,
     """Évènements de la ligne/direction valides à cette date (filtre date seulement)."""
     return [e for e in charger_evenements(ligne, direction, events_dir)
             if applicable_a_la_date(e, jour)]
+
+
+# ── Fraîcheur des dépôts ──────────────────────────────────────────────────────
+
+def _fmt_mtime(path: Path) -> str:
+    """Date/heure de modification du fichier, ou '–' s'il n'existe pas."""
+    if not path.exists():
+        return "–"
+    return datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+
+
+def _fmt_iso(value: str) -> str:
+    """Horodatage ISO 8601 → 'YYYY-MM-DD HH:MM', ou la valeur brute si invalide."""
+    try:
+        return datetime.fromisoformat(value).strftime("%Y-%m-%d %H:%M")
+    except (ValueError, TypeError):
+        return value
+
+
+def info_gd(ligne: str, direction: str,
+            max_age_days: int = FRAICHEUR_GD_JOURS,
+            gd_dir: Path | None = None) -> dict:
+    """Info de fraîcheur d'un fichier Gauche-Droite.
+
+    Les JSON G-D ne contiennent aucune date : la fraîcheur est basée sur le
+    mtime du fichier. Un fichier ré-importé sans changement paraîtra « frais ».
+
+    Champs retournés :
+      exists    — True si le fichier existe (bool)
+      path      — chemin du fichier (Path) ou None
+      age_days  — âge en jours entiers (int) ou None si absent
+      fresh     — True si présent et age_days <= max_age_days (bool)
+    """
+    path = chemin_gd(ligne, direction, gd_dir)
+    if not path.exists():
+        return {"exists": False, "path": None, "age_days": None, "fresh": False}
+    age_days = (datetime.now() - datetime.fromtimestamp(path.stat().st_mtime)).days
+    return {
+        "exists":   True,
+        "path":     path,
+        "age_days": age_days,
+        "fresh":    age_days <= max_age_days,
+    }
+
+
+def info_gtfs(data_dir: Path | None = None) -> dict:
+    """Métadonnées de fraîcheur GTFS statique et temps réel.
+
+    Champs retournés :
+      static_ts       — date lisible du dernier téléchargement (str)
+      static_age_days — âge en jours entiers (int) ou None si inconnu
+      rt_ts           — date lisible du dernier RT (str)
+      rt_pb           — chemin du fichier protobuf RT (Path)
+      rt_avail        — True si le fichier RT existe (bool)
+    """
+    data_dir = data_dir or DATA_DIR
+    static_manifest = data_dir / "gtfs" / "gtfs_manifest.json"
+    rt_manifest     = data_dir / "gtfs_rt" / "gtfs_rt_manifest.json"
+    rt_pb_path      = data_dir / "gtfs_rt" / "response_vehiclePositions.pb"
+
+    static_ts       = "–"
+    static_age_days = None
+    if static_manifest.exists():
+        try:
+            m = json.loads(static_manifest.read_text(encoding="utf-8"))
+            raw_date = m.get("last_update") or m.get("downloaded_at")
+            if raw_date:
+                static_ts = _fmt_iso(raw_date)
+                try:
+                    dt = datetime.fromisoformat(raw_date)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    static_age_days = (datetime.now(timezone.utc) - dt).days
+                except Exception:
+                    pass
+            else:
+                static_ts = _fmt_mtime(static_manifest)
+        except Exception:
+            static_ts = _fmt_mtime(static_manifest)
+
+    rt_ts = "–"
+    if rt_manifest.exists():
+        try:
+            m = json.loads(rt_manifest.read_text(encoding="utf-8"))
+            rt_ts = _fmt_iso(m["last_update"]) if m.get("last_update") else _fmt_mtime(rt_manifest)
+        except Exception:
+            rt_ts = _fmt_mtime(rt_manifest)
+
+    return {
+        "static_ts":       static_ts,
+        "static_age_days": static_age_days,
+        "rt_ts":           rt_ts,
+        "rt_pb":           rt_pb_path,
+        "rt_avail":        rt_pb_path.exists(),
+    }

@@ -2,17 +2,19 @@
 """
 test_depots.py — Tests unitaires chauffeur.depots
 
-Couvre les chemins canoniques (chemin_gd / chemin_evenements / chemin_journee)
-et le chargement (charger_gd : sélection par id et replis ; charger_evenements ;
-evenements_pour_date ; charger_journee) sur des fichiers synthétiques écrits
-dans un répertoire temporaire (hermétique, aucune donnée live requise).
+Couvre les chemins canoniques (chemin_gd / chemin_evenements / chemin_journee),
+le chargement (charger_gd : sélection par id et replis ; charger_evenements ;
+evenements_pour_date ; charger_journee) et la fraîcheur (info_gd par mtime,
+info_gtfs par manifestes) sur des fichiers synthétiques écrits dans un
+répertoire temporaire (hermétique, aucune donnée live requise).
 
 Usage : python3 tests/test_depots.py   (code de sortie 0 si tout passe)
 """
 import json
+import os
 import sys
 import tempfile
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -21,6 +23,7 @@ sys.path.insert(0, str(ROOT))
 from chauffeur.depots import (  # noqa: E402
     charger_evenements, charger_gd, charger_journee,
     chemin_evenements, chemin_gd, chemin_journee, evenements_pour_date,
+    info_gd, info_gtfs,
 )
 
 GD_104 = {
@@ -110,6 +113,41 @@ def main() -> int:
         check(j.get("journee_numero") == "439",
               "charger_journee: journee_numero attendu 439")
 
+        # ── info_gd (fraîcheur par mtime) ────────────────────────────────────
+        i = info_gd("999", "est", gd_dir=rep)
+        check(not i["exists"] and i["path"] is None and not i["fresh"],
+              "info_gd: fichier absent → exists=False attendu")
+
+        i = info_gd("104", "est", gd_dir=rep)   # écrit à l'instant
+        check(i["exists"] and i["fresh"] and i["age_days"] == 0,
+              f"info_gd: fichier frais attendu (age 0), obtenu {i}")
+
+        vieux = (datetime.now() - timedelta(days=200)).timestamp()
+        os.utime(chemin_gd("104", "est", rep), (vieux, vieux))
+        i = info_gd("104", "est", gd_dir=rep)
+        check(i["exists"] and not i["fresh"] and i["age_days"] >= 199,
+              f"info_gd: fichier de 200 j devrait être périmé, obtenu {i}")
+
+    # ── info_gtfs (manifestes synthétiques) ──────────────────────────────────
+    with tempfile.TemporaryDirectory() as tmp:
+        data_dir = Path(tmp)
+        i = info_gtfs(data_dir)
+        check(i["static_age_days"] is None and i["static_ts"] == "–"
+              and not i["rt_avail"] and i["rt_ts"] == "–",
+              f"info_gtfs: répertoire vide → tout inconnu attendu, obtenu {i}")
+
+        (data_dir / "gtfs").mkdir()
+        (data_dir / "gtfs_rt").mkdir()
+        il_y_a_3j = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()
+        (data_dir / "gtfs" / "gtfs_manifest.json").write_text(
+            json.dumps({"last_update": il_y_a_3j}), encoding="utf-8")
+        (data_dir / "gtfs_rt" / "response_vehiclePositions.pb").write_bytes(b"")
+        i = info_gtfs(data_dir)
+        check(i["static_age_days"] == 3,
+              f"info_gtfs: âge statique attendu 3 j, obtenu {i['static_age_days']}")
+        check(i["rt_avail"] and i["rt_pb"].name == "response_vehiclePositions.pb",
+              "info_gtfs: fichier RT présent → rt_avail=True attendu")
+
     # ── Résultat ──────────────────────────────────────────────────────────────
     if echecs:
         print("✗ test_depots")
@@ -118,7 +156,7 @@ def main() -> int:
         print("\n0/1 cas réussis")
         return 1
 
-    print("✓ chemins canoniques + charger_gd/evenements/journee + filtre date")
+    print("✓ chemins canoniques + charger_gd/evenements/journee + filtre date + info_gd/info_gtfs")
     print("\n1/1 cas réussis")
     return 0
 

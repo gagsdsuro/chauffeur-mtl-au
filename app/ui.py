@@ -18,7 +18,6 @@ import streamlit.components.v1 as components
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR  = PROJECT_ROOT / "scripts"
 DATA_DIR     = PROJECT_ROOT / "data"
-CA_DIR       = DATA_DIR / "ca"
 RAPPORTS_DIR = DATA_DIR / "rapports"
 APP_DIR      = Path(__file__).resolve().parent
 
@@ -26,11 +25,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(SCRIPTS_DIR))
 sys.path.insert(0, str(APP_DIR))
 
-# Chemins et chargement des données : source unique dans le noyau.
+# Chemins, chargement et fraîcheur des données : source unique dans le noyau.
 from chauffeur.depots import (  # noqa: E402
-    GD_DIR, EVENTS_DIR, JOURNEES_DIR,
+    CA_DIR, GD_DIR, EVENTS_DIR, JOURNEES_DIR,
+    FRAICHEUR_GD_JOURS, FRAICHEUR_GTFS_JOURS,
     charger_evenements, charger_gd, charger_journee,
     chemin_evenements, chemin_journee,
+    info_gd, info_gtfs,
 )
 
 
@@ -112,9 +113,8 @@ def _fmt_size(path: Path) -> str:
 # Tab 1 — Ma journée (orchestrateur : sélection unique + checklist + consultation)
 # ═══════════════════════════════════════════════════════════════════════════════
 with tabs[0]:
-    from dashboard import (
-        get_gtfs_info, get_gd_info, get_ca_info, parse_vehicle_positions, find_vehicle,
-    )
+    from chauffeur.ca import resoudre_ca
+    from chauffeur.gtfs_rt import parse_vehicle_positions, find_vehicle
 
     st.header("Ma journée")
 
@@ -144,7 +144,7 @@ with tabs[0]:
             st.stop()
 
         # ── Checklist de préparation ──────────────────────────────────────────
-        gtfs_info = get_gtfs_info(DATA_DIR)
+        gtfs_info = info_gtfs()
         RAPPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
         from chauffeur.journee import lignes_de_service as _lignes_de_service
@@ -158,15 +158,15 @@ with tabs[0]:
 
         # États dérivés
         _gtfs_age = gtfs_info.get("static_age_days")
-        _gtfs_ok  = _gtfs_age is not None and _gtfs_age <= 7
-        _ca_info  = get_ca_info(CA_DIR, date.fromisoformat(db_date_str),
-                                 db_j_data.get("journee_numero"))
+        _gtfs_ok  = _gtfs_age is not None and _gtfs_age <= FRAICHEUR_GTFS_JOURS
+        _ca_info  = resoudre_ca(date.fromisoformat(db_date_str),
+                                db_j_data.get("journee_numero"))
         _ca_ok    = _ca_info["annotee"] is not None
 
         _gd_missing, _gd_stale = [], []
         _ev_missing = []
         for _lg, _dr in _paires:
-            _gd = get_gd_info(GD_DIR, _lg, _dr)
+            _gd = info_gd(_lg, _dr)
             if not _gd["exists"]:
                 _gd_missing.append((_lg, _dr))
             elif not _gd["fresh"]:
@@ -365,7 +365,7 @@ with tabs[0]:
                 c2.caption("→ 📥 Gauche-Droite")
             elif _gd_stale:
                 c1.markdown(
-                    "⚠️ **G-D périmés (>90 j)** : "
+                    f"⚠️ **G-D périmés (>{FRAICHEUR_GD_JOURS} j)** : "
                     + ", ".join(f"{l} {d} ({a} j)" for l, d, a in _gd_stale))
                 c2.caption("→ 📥 Gauche-Droite")
             else:
@@ -900,7 +900,8 @@ with tabs[1]:
 
     # ── 2a — Carte Agent ──────────────────────────────────────────────────────
     with imp_tabs[0]:
-        from chauffeur.periodes import identite_ca, nom_ca
+        from chauffeur.ca import ranger_ca
+        from chauffeur.periodes import identite_ca
 
         st.markdown(
             "Déposez le PDF brut de votre carte agent. L'application l'annote (horaires "
@@ -994,33 +995,25 @@ with tabs[1]:
                         "référence — l'identité retenue reste celle du calendrier."
                     )
 
-                dest_out = CA_DIR / nom_ca(numero, groupe_id, jour_type, annotee=True)
-                dest_src = None if ca_deja_annotee else CA_DIR / nom_ca(numero, groupe_id, jour_type)
-                collision = dest_out.exists() or (dest_src is not None and dest_src.exists())
-
-                if collision and not ca_remplacer:
-                    st.error(
-                        f"Une CA existe déjà pour cette identité (n° {numero} · "
-                        f"{groupe_id} · {jour_type}). Cochez « Remplacer » ci-dessus "
-                        "pour l'écraser."
+                try:
+                    ranges = ranger_ca(
+                        numero, groupe_id, jour_type,
+                        annotee_tmp=tmp_src if ca_deja_annotee else tmp_out,
+                        brute_tmp=None if ca_deja_annotee else tmp_src,
+                        remplacer=ca_remplacer,
                     )
+                except FileExistsError as e:
+                    st.error(f"{e} Cochez « Remplacer » ci-dessus pour l'écraser.")
                     _nettoyer_tmp()
                     return
 
-                if collision:
-                    for dest in filter(None, (dest_src, dest_out)):
-                        if dest.exists():
-                            dest.replace(dest.with_name(dest.name + ".bak"))
-
+                dest_out = ranges["annotee"]
                 if ca_deja_annotee:
-                    tmp_src.replace(dest_out)
                     st.success(
                         f"Version annotée remplacée directement (sans traitement GTFS) "
                         f"— identité : n° {numero} · {groupe_id} · {jour_type}."
                     )
                 else:
-                    tmp_src.replace(dest_src)
-                    tmp_out.replace(dest_out)
                     st.success(
                         f"Carte annotée et rangée — identité : n° {numero} · "
                         f"{groupe_id} · {jour_type}."
@@ -1260,15 +1253,13 @@ with tabs[1]:
 
     # ── 2e — GTFS ────────────────────────────────────────────────────────────
     with imp_tabs[4]:
-        from dashboard import get_gtfs_info as _imp_get_gtfs_info
-
         _imp_gtfs_path     = DATA_DIR / "gtfs" / "gtfs_stm"
         _imp_gtfs_manifest = DATA_DIR / "gtfs" / "gtfs_manifest.json"
-        _imp_gtfs_info     = _imp_get_gtfs_info(DATA_DIR)
+        _imp_gtfs_info     = info_gtfs()
 
         if _imp_gtfs_manifest.exists():
             _imp_age = _imp_gtfs_info.get("static_age_days")
-            if _imp_age is not None and _imp_age > 7:
+            if _imp_age is not None and _imp_age > FRAICHEUR_GTFS_JOURS:
                 st.warning(
                     f"⚠️ GTFS statique périmé ({_imp_age} jours) — "
                     f"dernier téléchargement le {_imp_gtfs_info['static_ts']}. "
