@@ -243,12 +243,15 @@ def parse_description_gd(desc: str):
     return instructions if instructions else None
 
 
-def event_applicable_to_parcours(event: dict, stop_ids_in_rows: set,
+def event_applicable_to_parcours(event: dict, stop_ids_in_rows: set | None,
                                   gd_instructions: list) -> bool:
     """Détermine si un évènement est applicable à un parcours spécifique.
 
     Règle 1 — avec arrets_annules :
       Au moins un arrêt annulé doit figurer dans les stops GTFS de ce parcours.
+      stop_ids_in_rows=None = arrêts GTFS inconnus (GTFS absent ou en erreur) →
+      présumé applicable (fail-safe : ne jamais cacher un évènement faute de
+      données). Un set() vide, lui, signifie « le GTFS a parlé : aucun arrêt ».
 
     Règle 2 — détour sans arrêt annulé :
       Les deux bornes du détour doivent chacune figurer dans les instructions G-D :
@@ -259,6 +262,8 @@ def event_applicable_to_parcours(event: dict, stop_ids_in_rows: set,
     """
     cancelled = event.get("arrets_annules", [])
     if cancelled:
+        if stop_ids_in_rows is None:
+            return True
         return any(a["id"] in stop_ids_in_rows for a in cancelled)
 
     desc = (event.get("description_gd") or "").strip()

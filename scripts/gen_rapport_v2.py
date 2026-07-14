@@ -30,7 +30,7 @@ from chauffeur.gtfs import (
     stops_for_line, stop_names as gtfs_stop_names,
 )
 from chauffeur.effectif import parse_shift_time
-from chauffeur.evenements import applicable_au_quart
+from chauffeur.evenements import applicable_a_la_date, applicable_au_quart
 
 GD_DIR     = ROOT / "data" / "Gauche-Droite"
 EVENTS_DIR = ROOT / "data" / "Events"
@@ -107,16 +107,8 @@ def _load_all_events_for_date(ligne: str, direction: str, date_str: str) -> list
         return []
     data   = json.loads(path.read_text(encoding="utf-8"))
     target = date.fromisoformat(date_str)
-    result = []
-    for e in data.get("detours", []):
-        debut = e.get("date_heure_debut")
-        fin   = e.get("date_heure_fin")
-        if debut and datetime.fromisoformat(debut).date() > target:
-            continue
-        if fin and datetime.fromisoformat(fin).date() < target:
-            continue
-        result.append(e)
-    return result
+    return [e for e in data.get("detours", [])
+            if applicable_a_la_date(e, target)]
 
 
 def load_events_for_groupe(groupe: dict, date_str: str) -> list:
@@ -196,7 +188,11 @@ def process_groupe(groupe: dict, date_str: str, ev_all_cache: dict) -> dict:
     # Un évènement dont les arrêts annulés ou les rues de détour ne concernent
     # pas ce parcours est exclu ici — il reste visible dans le tableau des
     # évènements (events_all) comme « non-applicable ».
-    stop_ids = {r["stop_id"] for r in rows if r.get("stop_id")}
+    # GTFS indisponible (stops_ordered vide) → stop_ids=None : les arrêts du
+    # parcours sont inconnus et les évènements à arrêts annulés sont présumés
+    # applicables (fail-safe, même règle que l'onglet Ma journée).
+    stop_ids = ({r["stop_id"] for r in rows if r.get("stop_id")}
+                if stops_ordered else None)
     events = [e for e in events
               if event_applicable_to_parcours(e, stop_ids, instructions)]
 

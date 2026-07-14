@@ -34,10 +34,12 @@ sys.path.insert(0, str(APP_DIR))
 @st.cache_data(show_spinner=False)
 def _cached_stop_ids_for_parcours(
     gtfs_dir_str: str, ligne: str, direction: str, id_parcours
-) -> frozenset:
+) -> frozenset | None:
     """Ensemble des stop_ids GTFS pour un parcours (mis en cache par session).
 
-    Retourne frozenset() si le GTFS est absent ou si la ligne est inconnue.
+    Retourne None si la résolution échoue (GTFS corrompu, ligne inconnue…) :
+    « arrêts inconnus », qui déclenche le fail-safe d'applicabilité — à
+    distinguer d'un frozenset() vide (« le GTFS a parlé : aucun arrêt »).
     """
     try:
         from chauffeur.gtfs import (
@@ -50,24 +52,7 @@ def _cached_stop_ids_for_parcours(
         stops = _sfl(gtfs, r, d, shape_hint=shape)
         return frozenset(sid for _, sid in stops)
     except Exception:
-        return frozenset()
-
-
-def _ev_applicable_parcours_tb(
-    evt: dict, stop_ids, gd_instr: list
-) -> bool:
-    """Applicabilité d'un évènement à un parcours depuis le tableau de bord.
-
-    stop_ids=None = GTFS non disponible → présumer applicable pour les
-    évènements avec arrêts annulés (fail-safe).
-    """
-    from chauffeur.gd import event_applicable_to_parcours as _eap
-    cancelled = evt.get("arrets_annules", [])
-    if cancelled:
-        if stop_ids is None:
-            return True
-        return any(a["id"] in stop_ids for a in cancelled)
-    return _eap(evt, frozenset(), gd_instr)
+        return None
 
 
 # ── Config page ───────────────────────────────────────────────────────────────
@@ -122,39 +107,6 @@ def _fmt_size(path: Path) -> str:
         return ""
     b = path.stat().st_size
     return f"{b/1024:.0f} KB" if b < 1_048_576 else f"{b/1_048_576:.1f} MB"
-
-
-def _event_applies_to_date(event: dict, date_str: str) -> bool:
-    debut = event.get("date_heure_debut") or ""
-    fin   = event.get("date_heure_fin")   or ""
-    if not debut:
-        return True
-    try:
-        d      = date.fromisoformat(date_str)
-        d_deb  = datetime.fromisoformat(debut).date()
-        if fin:
-            d_fin = datetime.fromisoformat(fin).date()
-            return d_deb <= d <= d_fin
-        else:
-            return d >= d_deb
-    except Exception:
-        return True
-
-
-def _event_applies(event: dict, date_str: str, tr) -> bool:
-    """Marqueur ✅/⬜ cohérent avec gen_rapport : si la plage horaire travaillée
-    (tr = (début, fin)) est connue, évalue la plage d'effectif vs le quart ;
-    sinon repli sur la seule plage de validité (date)."""
-    if tr:
-        try:
-            from chauffeur.effectif import parse_shift_time
-            from chauffeur.evenements import applicable_au_quart
-            d = date.fromisoformat(date_str)
-            return applicable_au_quart(
-                event, parse_shift_time(tr[0], d), parse_shift_time(tr[1], d))
-        except Exception:
-            pass
-    return _event_applies_to_date(event, date_str)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -868,7 +820,8 @@ with tabs[0]:
                                     except Exception:
                                         pass
 
-                                # Stop IDs GTFS du parcours (mis en cache)
+                                # Stop IDs GTFS du parcours (mis en cache) —
+                                # None = inconnus (GTFS absent ou en erreur) → fail-safe
                                 _ev_gtfs_dir = DATA_DIR / "gtfs" / "gtfs_stm"
                                 _ev_stop_ids = (
                                     _cached_stop_ids_for_parcours(
@@ -877,6 +830,9 @@ with tabs[0]:
                                     if _ev_gtfs_dir.exists() else None
                                 )
 
+                                from chauffeur.evenements import applicable_a_la_plage
+                                from chauffeur.gd import event_applicable_to_parcours
+
                                 with st.expander(
                                     f"Évènements — {tl} {td.capitalize()} ID {tid}",
                                     expanded=True,
@@ -884,10 +840,10 @@ with tabs[0]:
                                     if not events_t:
                                         st.caption("Aucun évènement enregistré.")
                                     for evt in events_t:
-                                        applies_quart = _event_applies(
-                                            evt, db_date_str, tr_t
+                                        applies_quart = applicable_a_la_plage(
+                                            evt, date.fromisoformat(db_date_str), tr_t
                                         )
-                                        applies_parc = _ev_applicable_parcours_tb(
+                                        applies_parc = event_applicable_to_parcours(
                                             evt, _ev_stop_ids, _ev_gd_instr
                                         )
                                         applies = applies_quart and applies_parc
