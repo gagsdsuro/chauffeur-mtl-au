@@ -15,11 +15,14 @@ l'ancien format à un seul « -- » → aucun sommaire trouvé, échec total du 
 Usage : python3 tests/test_parse_journee.py   (code de sortie 0 si tout passe)
 """
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT))
 
+from chauffeur.depots import charger_journee  # noqa: E402
 from parse_journee import JourneeParser  # noqa: E402
 
 
@@ -47,6 +50,24 @@ def main() -> int:
 
         if journee.garage_id != "59200":
             echecs.append(f"garage_id={journee.garage_id!r}, attendu '59200'")
+
+        # save() délègue à chauffeur.depots.sauvegarder_journee : vérifie que
+        # le fichier écrit reste relisible et au bon format (répertoire
+        # temporaire, hermétique).
+        with tempfile.TemporaryDirectory() as tmp:
+            original_dir = JourneeParser.JOURNEES_DIR
+            JourneeParser.JOURNEES_DIR = Path(tmp)
+            try:
+                out = parser.save(journee)
+            finally:
+                JourneeParser.JOURNEES_DIR = original_dir
+
+            contenu = out.read_text(encoding="utf-8")
+            if not contenu.endswith("\n") or contenu.endswith("\n\n"):
+                echecs.append("save(): un seul saut de ligne final attendu")
+            relu = charger_journee(out)
+            if relu.get("garage_id") != "59200":
+                echecs.append(f"save()+charger_journee: garage_id={relu.get('garage_id')!r}")
 
     if echecs:
         print("✗ test_parse_journee")

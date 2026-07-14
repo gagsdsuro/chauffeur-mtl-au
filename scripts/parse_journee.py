@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from chauffeur.depots import sauvegarder_journee  # noqa: E402
 from chauffeur.modeles import Journee  # noqa: E402
 
 
@@ -366,7 +367,7 @@ class JourneeParser:
     def save(self, journee: Journee) -> Path:
         self.JOURNEES_DIR.mkdir(parents=True, exist_ok=True)
         out = self.JOURNEES_DIR / f"journee-{self.date_str}.json"
-        out.write_text(json.dumps(journee.to_dict(), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        sauvegarder_journee(out, journee.to_dict())
         return out
 
     def get_summary(self, journee: Journee | None = None, saved_path: Path | None = None) -> str:

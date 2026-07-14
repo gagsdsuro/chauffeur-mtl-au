@@ -26,6 +26,18 @@ def parse_shift_time(time_str: str, base_date: date) -> datetime:
     return base_dt + timedelta(days=extra_days)
 
 
+def bornes_quart(heures: list[str], base_date: date) -> tuple[str, str] | None:
+    """(min, max) d'une liste d'heures de quart (HH:MM, peut dépasser 24h),
+    triées par valeur réelle via parse_shift_time — pas par ordre lexical, qui
+    trie mal un H:MM non zero-paddé (ex. "9:15" > "10:00" lexicalement).
+    None si la liste est vide.
+    """
+    if not heures:
+        return None
+    par_valeur = sorted((parse_shift_time(h, base_date), h) for h in heures)
+    return par_valeur[0][1], par_valeur[-1][1]
+
+
 def parse_effectif_times(effectif: str):
     """
     Extrait une plage horaire journalière depuis le champ effectif.

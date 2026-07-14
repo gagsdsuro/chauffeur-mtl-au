@@ -26,6 +26,7 @@ from chauffeur.gd import (
 )
 from chauffeur.gtfs import stops_for_parcours, stop_names as gtfs_stop_names
 from chauffeur.depots import charger_journee, charger_gd, evenements_pour_date
+from chauffeur.effectif import bornes_quart
 from chauffeur.evenements import applicable_a_la_plage
 from chauffeur.journee import groupes_de_service
 
@@ -44,8 +45,9 @@ def load_events_for_groupe(groupe: dict, date_str: str) -> list:
         return []
     heures_deb = [t["depart_heure"]  for t in trips if t.get("depart_heure")]
     heures_fin = [t["arrivee_heure"] for t in trips if t.get("arrivee_heure")]
-    plage = ((min(heures_deb), max(heures_fin))
-             if heures_deb and heures_fin else None)
+    bornes_deb = bornes_quart(heures_deb, jour)
+    bornes_fin = bornes_quart(heures_fin, jour)
+    plage = (bornes_deb[0], bornes_fin[1]) if bornes_deb and bornes_fin else None
     return [e for e in all_ev if applicable_a_la_plage(e, jour, plage)]
 
 

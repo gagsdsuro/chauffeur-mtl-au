@@ -51,6 +51,13 @@ def charger_journee(path: Path) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def sauvegarder_journee(path: Path, journee: dict) -> None:
+    """Écrit un fichier journée JSON (convention 2 espaces, accents préservés)."""
+    Path(path).write_text(
+        json.dumps(journee, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+
+
 def charger_gd(ligne: str, direction: str, id_parcours=None,
                gd_dir: Path | None = None) -> tuple[list, dict | None]:
     """Retourne (instructions, parcours) du fichier G-D, ou ([], None) si absent.

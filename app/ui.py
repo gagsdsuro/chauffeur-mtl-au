@@ -29,10 +29,11 @@ sys.path.insert(0, str(APP_DIR))
 from chauffeur.depots import (  # noqa: E402
     CA_DIR, GD_DIR, EVENTS_DIR, JOURNEES_DIR,
     FRAICHEUR_GD_JOURS, FRAICHEUR_GTFS_JOURS,
-    charger_evenements, charger_gd, charger_journee,
+    charger_evenements, charger_gd, charger_journee, sauvegarder_journee,
     chemin_evenements, chemin_journee,
     info_gd, info_gtfs,
 )
+from chauffeur.effectif import bornes_quart  # noqa: E402
 
 
 # ── Utilitaires parcours / événements ────────────────────────────────────────
@@ -451,13 +452,15 @@ with tabs[0]:
         db_pieces = db_j_data.get("pieces", [])
         db_debut_all = [p.get("debut", "") for p in db_pieces if p.get("debut")]
         db_fin_all   = [p.get("fin",   "") for p in db_pieces if p.get("fin")]
+        db_bornes_deb = bornes_quart(db_debut_all, date.fromisoformat(db_date_str))
+        db_bornes_fin = bornes_quart(db_fin_all,   date.fromisoformat(db_date_str))
 
         mc1, mc2, mc3, mc4, mc5 = st.columns(5)
         mc1.metric("Journée n°",      db_j_data.get("journee_numero", "–"))
         mc2.metric("Garage",          db_j_data.get("garage",         "–"))
         mc3.metric("Temps travaillé", db_j_data.get("temps_travaille","–"))
-        mc4.metric("Prise début",      min(db_debut_all) if db_debut_all else "–")
-        mc5.metric("Prise fin",       max(db_fin_all)   if db_fin_all   else "–")
+        mc4.metric("Prise début",      db_bornes_deb[0] if db_bornes_deb else "–")
+        mc5.metric("Prise fin",       db_bornes_fin[1] if db_bornes_fin else "–")
 
         # ── Téléchargements ──────────────────────────────────────────────────
         annotee_file = _ca_info["annotee"]
@@ -567,10 +570,7 @@ with tabs[0]:
                         if st.button("💾", key=bus_save_key, help="Enregistrer le numéro d'autobus"):
                             val = st.session_state.get(bus_edit_key, "").strip()
                             db_j_data["pieces"][idx]["numero_autobus"] = val or None
-                            db_j_path.write_text(
-                                json.dumps(db_j_data, indent=2, ensure_ascii=False) + "\n",
-                                encoding="utf-8",
-                            )
+                            sauvegarder_journee(db_j_path, db_j_data)
                             st.success("Sauvegardé.")
                         st.markdown("</div>", unsafe_allow_html=True)
                     current_bus = (
@@ -1090,17 +1090,13 @@ with tabs[1]:
                 st.warning("Le champ est vide.")
             else:
                 from parse_gd import GDParser, split_sections
-                import io as _io
 
                 sections = split_sections(gd_text) or [gd_text]
                 all_ok = True
                 for section in sections:
-                    parser     = GDParser(section)
-                    old_stdout = sys.stdout
-                    sys.stdout = buf = _io.StringIO()
+                    parser      = GDParser(section)
                     result_data = parser.parse()
-                    sys.stdout = old_stdout
-                    rapport    = buf.getvalue()
+                    rapport     = parser.report
 
                     if result_data:
                         st.success(f"Ligne {parser.ligne} {parser.direction} — importé.")
@@ -1405,9 +1401,11 @@ with tabs[2]:
                 for p in v2_pieces for t in p.get("trajets", [])
                 if t.get("type") == "service" and t.get("arrivee", {}).get("heure")
             ]
-            if v2_debuts and v2_fins:
+            v2_bornes_deb = bornes_quart(v2_debuts, date.fromisoformat(v2_date))
+            v2_bornes_fin = bornes_quart(v2_fins,   date.fromisoformat(v2_date))
+            if v2_bornes_deb and v2_bornes_fin:
                 st.caption(
-                    f"Plage du quart : **{min(v2_debuts)} → {max(v2_fins)}**"
+                    f"Plage du quart : **{v2_bornes_deb[0]} → {v2_bornes_fin[1]}**"
                     f"  ·  Garage {v2_j_data.get('garage', '–')}"
                     f"  ·  Journée #{v2_j_data.get('journee_numero', '–')}"
                     f"  ·  Temps travaillé {v2_j_data.get('temps_travaille', '–')}"

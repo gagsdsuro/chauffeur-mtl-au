@@ -26,6 +26,7 @@ class GDParser:
         self.direction = None
         self.parcours = []
         self.errors = []
+        self.report = ""
 
     def parse(self):
         if not self._extract_header():
@@ -36,7 +37,7 @@ class GDParser:
         summary = self._generate_summary(existing_data)
         json_data = self._generate_json()
         self._save_file(json_data)
-        self._print_report(summary)
+        self.report = self._format_report(summary)
         return json_data
 
     def _filename(self) -> str:
@@ -200,35 +201,34 @@ class GDParser:
             self.errors.append(f"Erreur sauvegarde: {e}")
             return False
 
-    def _print_report(self, summary: Dict):
-        print("\n" + "="*60)
-        print("RAPPORT: STM Importer Gauche-Droite")
-        print("="*60)
+    def _format_report(self, summary: Dict) -> str:
+        lines = ["\n" + "="*60, "RAPPORT: STM Importer Gauche-Droite", "="*60]
         if self.errors:
-            print("\n[ERREURS]:")
+            lines.append("\n[ERREURS]:")
             for error in self.errors:
-                print(f"  - {error}")
-            return
+                lines.append(f"  - {error}")
+            return "\n".join(lines)
         filename = self._filename()
         if summary["status"] == "created":
-            print(f"\n[OK] Nouveau Gauche-Droite cree: {filename}")
-            print(f"   Ligne: {self.ligne}")
-            print(f"   Direction: {self.direction}")
-            print(f"   Parcours crees: {len(self.parcours)}")
+            lines.append(f"\n[OK] Nouveau Gauche-Droite cree: {filename}")
+            lines.append(f"   Ligne: {self.ligne}")
+            lines.append(f"   Direction: {self.direction}")
+            lines.append(f"   Parcours crees: {len(self.parcours)}")
         else:
-            print(f"\n[OK] Fichier mis a jour: {filename}")
-            print(f"   Ligne: {self.ligne}")
-            print(f"   Direction: {self.direction}")
-            print(f"   Total parcours: {len(self.parcours)}")
+            lines.append(f"\n[OK] Fichier mis a jour: {filename}")
+            lines.append(f"   Ligne: {self.ligne}")
+            lines.append(f"   Direction: {self.direction}")
+            lines.append(f"   Total parcours: {len(self.parcours)}")
         if summary["changes"]:
-            print(f"\n[CHANGEMENTS] ({len(summary['changes'])}):")
+            lines.append(f"\n[CHANGEMENTS] ({len(summary['changes'])}):")
             for change in summary["changes"]:
-                print(f"   - {change}")
+                lines.append(f"   - {change}")
         else:
             if summary["status"] != "created":
-                print("\n[OK] Aucun changement detecte")
-        print(f"\n[LOCALISATION] {self.GD_DIR}")
-        print("="*60 + "\n")
+                lines.append("\n[OK] Aucun changement detecte")
+        lines.append(f"\n[LOCALISATION] {self.GD_DIR}")
+        lines.append("="*60 + "\n")
+        return "\n".join(lines)
 
 def split_sections(raw_data: str) -> List[str]:
     """Decoupe l'entree en sections, une par couple (ligne, direction).
@@ -283,6 +283,7 @@ def main():
         parser = GDParser(section)
         json_data = parser.parse()
         if json_data:
+            print(parser.report)
             results.append(json_data)
         else:
             failed = True

@@ -105,9 +105,14 @@ python3 tests/test_journee.py
 python3 tests/test_evenements.py
 ```
 
-**Tests unitaires dépôts** — couvre `chauffeur.depots` (chemins canoniques, `charger_gd` avec sélection par id et replis, `charger_evenements`, `evenements_pour_date`, `charger_journee`, fraîcheur `info_gd`/`info_gtfs`) sur fichiers synthétiques en répertoire temporaire :
+**Tests unitaires dépôts** — couvre `chauffeur.depots` (chemins canoniques, `charger_gd` avec sélection par id et replis, `charger_evenements`, `evenements_pour_date`, `charger_journee`, `sauvegarder_journee`, fraîcheur `info_gd`/`info_gtfs`) sur fichiers synthétiques en répertoire temporaire :
 ```bash
 python3 tests/test_depots.py
+```
+
+**Tests unitaires effectif** — couvre `chauffeur.effectif.bornes_quart` (liste vide, heure unique, tri par valeur réelle plutôt que lexicale, quart franchissant minuit) :
+```bash
+python3 tests/test_effectif.py
 ```
 
 **Tests unitaires GTFS-RT** — couvre `chauffeur.gtfs_rt` (décodage wire-format sur messages synthétiques encodés dans le test, robustesse aux octets invalides, `find_vehicle` avec normalisation xx-xxx) :
@@ -175,7 +180,7 @@ data/journees/        ──(gen_rapport_v2.py)──►  data/rapports/rapport-
 data/Gauche-Droite/ + data/Events/ + GTFS  ──(rapport_gd.py)──►  scripts/rapport_<ligne>_<dir>_<date>.html
 ```
 
-Le package **`chauffeur/`** centralise le noyau de domaine partagé entre les scripts et l'app Streamlit : `matching` (appariement noms d'arrêts), `modeles` (dataclasses), `ca` (cartes agent : résolution par identité `resoudre_ca` avec repli legacy par date, rangement `ranger_ca` — collision refusée sauf remplacement, sauvegarde `.bak`), `depots` (chemins canoniques, chargement des fichiers G-D/évènements/journées de `data/` et fraîcheur `info_gd`/`info_gtfs` avec seuils `FRAICHEUR_*` — source unique des conventions de nommage), `effectif` (horaires), `evenements` (applicabilité au quart, à une date, à une plage de quart — source unique du marqueur ✅/⬜ de l'UI et du filtre date des rapports), `gd` (build_rows, détours, applicabilité par parcours — `stop_ids=None` = arrêts GTFS inconnus → évènement présumé applicable, fail-safe), `gtfs` (lookup arrêts GTFS, `stops_for_parcours`, index `stops_index.json`), `gtfs_rt` (décodeur protobuf minimal du flux vehiclePositions, `parse_vehicle_positions`/`find_vehicle`), `journee` (groupes/lignes de service à partir d'une journée), `periodes` (calendrier de référence STM — listes/variations/fériés — et dérivation de l'identité d'une carte agent via `identite_ca(date, numero)`), `portail` (session + appels HTTP portail employé STM). La lecture des cartes agent PDF se fait directement dans `scripts/carte_agent_stm.py` (parsing géométrique bbox via PyMuPDF).
+Le package **`chauffeur/`** centralise le noyau de domaine partagé entre les scripts et l'app Streamlit : `matching` (appariement noms d'arrêts), `modeles` (dataclasses), `ca` (cartes agent : résolution par identité `resoudre_ca` avec repli legacy par date, rangement `ranger_ca` — collision refusée sauf remplacement, sauvegarde `.bak`), `depots` (chemins canoniques, chargement et sauvegarde des fichiers G-D/évènements/journées de `data/` et fraîcheur `info_gd`/`info_gtfs` avec seuils `FRAICHEUR_*` — source unique des conventions de nommage), `effectif` (horaires, dont `bornes_quart` — min/max d'une liste d'heures de quart par valeur réelle plutôt que par tri lexical), `evenements` (applicabilité au quart, à une date, à une plage de quart — source unique du marqueur ✅/⬜ de l'UI et du filtre date des rapports), `gd` (build_rows, détours, applicabilité par parcours — `stop_ids=None` = arrêts GTFS inconnus → évènement présumé applicable, fail-safe), `gtfs` (lookup arrêts GTFS, `stops_for_parcours`, index `stops_index.json`), `gtfs_rt` (décodeur protobuf minimal du flux vehiclePositions, `parse_vehicle_positions`/`find_vehicle`), `journee` (groupes/lignes de service à partir d'une journée), `periodes` (calendrier de référence STM — listes/variations/fériés — et dérivation de l'identité d'une carte agent via `identite_ca(date, numero)`), `portail` (session + appels HTTP portail employé STM). La lecture des cartes agent PDF se fait directement dans `scripts/carte_agent_stm.py` (parsing géométrique bbox via PyMuPDF).
 
 L'application Streamlit tient dans un seul fichier de présentation, `app/ui.py` (5 onglets) : toute la logique (fraîcheur `info_gtfs`/`info_gd`, résolution/rangement des cartes agent, décodage GTFS-RT) vit dans le package `chauffeur/`.
 

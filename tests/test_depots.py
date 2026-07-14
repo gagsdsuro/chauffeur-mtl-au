@@ -4,9 +4,10 @@ test_depots.py — Tests unitaires chauffeur.depots
 
 Couvre les chemins canoniques (chemin_gd / chemin_evenements / chemin_journee),
 le chargement (charger_gd : sélection par id et replis ; charger_evenements ;
-evenements_pour_date ; charger_journee) et la fraîcheur (info_gd par mtime,
-info_gtfs par manifestes) sur des fichiers synthétiques écrits dans un
-répertoire temporaire (hermétique, aucune donnée live requise).
+evenements_pour_date ; charger_journee), l'écriture (sauvegarder_journee) et
+la fraîcheur (info_gd par mtime, info_gtfs par manifestes) sur des fichiers
+synthétiques écrits dans un répertoire temporaire (hermétique, aucune donnée
+live requise).
 
 Usage : python3 tests/test_depots.py   (code de sortie 0 si tout passe)
 """
@@ -21,7 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from chauffeur.depots import (  # noqa: E402
-    charger_evenements, charger_gd, charger_journee,
+    charger_evenements, charger_gd, charger_journee, sauvegarder_journee,
     chemin_evenements, chemin_gd, chemin_journee, evenements_pour_date,
     info_gd, info_gtfs,
 )
@@ -113,6 +114,20 @@ def main() -> int:
         check(j.get("journee_numero") == "439",
               "charger_journee: journee_numero attendu 439")
 
+        # ── sauvegarder_journee ──────────────────────────────────────────────
+        dest = rep / "journee-2026-06-16.json"
+        sauvegarder_journee(dest, {"date": "2026-06-16", "note": "été à Montréal"})
+        contenu = dest.read_text(encoding="utf-8")
+        check(contenu.endswith("\n") and not contenu.endswith("\n\n"),
+              "sauvegarder_journee: un seul saut de ligne final attendu")
+        check("  \"date\"" in contenu,
+              "sauvegarder_journee: indentation 2 espaces attendue")
+        check("été à Montréal" in contenu,
+              "sauvegarder_journee: accents devraient être préservés (ensure_ascii=False)")
+        relu = charger_journee(dest)
+        check(relu == {"date": "2026-06-16", "note": "été à Montréal"},
+              f"sauvegarder_journee: relecture inattendue : {relu}")
+
         # ── info_gd (fraîcheur par mtime) ────────────────────────────────────
         i = info_gd("999", "est", gd_dir=rep)
         check(not i["exists"] and i["path"] is None and not i["fresh"],
@@ -156,7 +171,7 @@ def main() -> int:
         print("\n0/1 cas réussis")
         return 1
 
-    print("✓ chemins canoniques + charger_gd/evenements/journee + filtre date + info_gd/info_gtfs")
+    print("✓ chemins canoniques + charger/sauvegarder_journee + evenements + info_gd/info_gtfs")
     print("\n1/1 cas réussis")
     return 0
 

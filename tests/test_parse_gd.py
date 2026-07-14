@@ -17,6 +17,7 @@ suivantes (sinon il se fait mal interpréter comme une instruction G-D, ex.
 Usage : python3 tests/test_parse_gd.py   (code de sortie 0 si tout passe)
 """
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -56,6 +57,25 @@ def main() -> int:
                     echecs.append(f"parcours secondaire: start={secondaire['start']!r}")
                 if len(secondaire["direction"]) != 6:
                     echecs.append(f"parcours secondaire: {len(secondaire['direction'])} directions, attendu 6")
+
+        # parse() complet (répertoire GD temporaire, hermétique) → parser.report
+        # doit contenir le rapport formaté (plus de _print_report interne).
+        with tempfile.TemporaryDirectory() as tmp:
+            original_gd_dir = GDParser.GD_DIR
+            GDParser.GD_DIR = Path(tmp)
+            try:
+                parser2 = GDParser(sections[0])
+                result2 = parser2.parse()
+            finally:
+                GDParser.GD_DIR = original_gd_dir
+
+        if result2 is None:
+            echecs.append(f"report: parse() complet a échoué — {parser2.errors}")
+        else:
+            if "[OK]" not in parser2.report:
+                echecs.append(f"report: '[OK]' absent du rapport : {parser2.report!r}")
+            if "gd24_est.json" not in parser2.report:
+                echecs.append(f"report: nom de fichier gd24_est.json absent du rapport")
 
     if echecs:
         print("✗ test_parse_gd")
