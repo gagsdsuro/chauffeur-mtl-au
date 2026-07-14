@@ -25,7 +25,8 @@ JOURNEE = {
         {
             "id": "A", "debut": "07:00", "fin": "10:00",
             "trajets": [
-                {"type": "service",     "ligne": "34",  "direction": "est",   "id_parcours": 2, "detour": True},
+                {"type": "service",     "ligne": "34",  "direction": "est",   "id_parcours": 2, "detour": True,
+                 "depart": {"heure": "07:10"}, "arrivee": {"heure": "08:00"}},
                 {"type": "service",     "ligne": "34",  "direction": "ouest", "id_parcours": 1, "detour": False},
                 {"type": "haut_le_pied","ligne": None,  "direction": None,    "id_parcours": None, "detour": False},
             ],
@@ -35,7 +36,8 @@ JOURNEE = {
             "trajets": [
                 {"type": "service", "ligne": "136", "direction": "nord", "id_parcours": 1, "detour": False},
                 # même groupe que le premier trajet de A — ne doit pas créer de doublon
-                {"type": "service", "ligne": "34",  "direction": "est",  "id_parcours": 2, "detour": False},
+                {"type": "service", "ligne": "34",  "direction": "est",  "id_parcours": 2, "detour": False,
+                 "depart": {"heure": "12:00"}, "arrivee": {"heure": "12:50"}},
             ],
         },
     ]
@@ -64,6 +66,26 @@ def main() -> int:
     # haut_le_pied exclu
     if any(x["ligne"] is None for x in g):
         echecs.append("groupes_de_service: haut_le_pied ne devrait pas apparaître")
+
+    # Sans avec_trips : aucune clé "trips" (sortie historique inchangée)
+    if any("trips" in x for x in g):
+        echecs.append("groupes_de_service: pas de clé trips sans avec_trips")
+
+    # ── groupes_de_service (avec_trips) ───────────────────────────────────────
+    gt = groupes_de_service(JOURNEE, avec_trips=True)
+    if len(gt) != 3:
+        echecs.append(f"avec_trips: {len(gt)} groupes, attendu 3")
+    gt34 = next((x for x in gt if x["ligne"] == "34" and x["direction"] == "est"), {})
+    # Le doublon inter-pièces accumule ses 2 trajets dans le même groupe
+    if gt34.get("trips") != [
+        {"depart_heure": "07:10", "arrivee_heure": "08:00"},
+        {"depart_heure": "12:00", "arrivee_heure": "12:50"},
+    ]:
+        echecs.append(f"avec_trips: trips 34 est inattendus : {gt34.get('trips')}")
+    # Trajet sans heures : trip accumulé avec chaînes vides
+    gt34o = next((x for x in gt if x["ligne"] == "34" and x["direction"] == "ouest"), {})
+    if gt34o.get("trips") != [{"depart_heure": "", "arrivee_heure": ""}]:
+        echecs.append(f"avec_trips: trips 34 ouest inattendus : {gt34o.get('trips')}")
 
     # ── lignes_de_service (toutes) ────────────────────────────────────────────
     l = lignes_de_service(JOURNEE)
@@ -103,7 +125,7 @@ def main() -> int:
         print(f"\n0/1 cas réussis")
         return 1
 
-    print("✓ groupes_de_service + lignes_de_service (ordre, détour, restantes, sans-fin)")
+    print("✓ groupes_de_service (+avec_trips) + lignes_de_service (ordre, détour, restantes, sans-fin)")
     print("\n1/1 cas réussis")
     return 0
 

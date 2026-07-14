@@ -20,13 +20,18 @@ SCRIPTS_DIR  = PROJECT_ROOT / "scripts"
 DATA_DIR     = PROJECT_ROOT / "data"
 CA_DIR       = DATA_DIR / "ca"
 RAPPORTS_DIR = DATA_DIR / "rapports"
-GD_DIR       = DATA_DIR / "Gauche-Droite"
-EVENTS_DIR   = DATA_DIR / "Events"
-JOURNEES_DIR = DATA_DIR / "journees"
 APP_DIR      = Path(__file__).resolve().parent
 
+sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(SCRIPTS_DIR))
 sys.path.insert(0, str(APP_DIR))
+
+# Chemins et chargement des données : source unique dans le noyau.
+from chauffeur.depots import (  # noqa: E402
+    GD_DIR, EVENTS_DIR, JOURNEES_DIR,
+    charger_evenements, charger_gd, charger_journee,
+    chemin_evenements, chemin_journee,
+)
 
 
 # ── Utilitaires parcours / événements ────────────────────────────────────────
@@ -42,14 +47,8 @@ def _cached_stop_ids_for_parcours(
     distinguer d'un frozenset() vide (« le GTFS a parlé : aucun arrêt »).
     """
     try:
-        from chauffeur.gtfs import (
-            route_id as _rid, direction_id as _did, stops_for_line as _sfl,
-        )
-        gtfs  = Path(gtfs_dir_str)
-        r     = _rid(gtfs, ligne)
-        d     = _did(gtfs, r, direction)
-        shape = f"{ligne}_{id_parcours}" if id_parcours is not None else None
-        stops = _sfl(gtfs, r, d, shape_hint=shape)
+        from chauffeur.gtfs import stops_for_parcours
+        stops = stops_for_parcours(Path(gtfs_dir_str), ligne, direction, id_parcours)
         return frozenset(sid for _, sid in stops)
     except Exception:
         return None
@@ -136,10 +135,10 @@ with tabs[0]:
         if st.session_state.get("journee_date") not in db_j_labels:
             st.session_state.pop("journee_date", None)
         db_date_str = st.selectbox("Journée", db_j_labels, key="journee_date")
-        db_j_path   = JOURNEES_DIR / f"journee-{db_date_str}.json"
+        db_j_path   = chemin_journee(db_date_str)
 
         try:
-            db_j_data = json.loads(db_j_path.read_text(encoding="utf-8"))
+            db_j_data = charger_journee(db_j_path)
         except Exception as e:
             st.error(f"Erreur lecture journée : {e}")
             st.stop()
@@ -172,7 +171,7 @@ with tabs[0]:
                 _gd_missing.append((_lg, _dr))
             elif not _gd["fresh"]:
                 _gd_stale.append((_lg, _dr, _gd["age_days"]))
-            if not (EVENTS_DIR / f"{_lg}_{_dr}.json").exists():
+            if not chemin_evenements(_lg, _dr).exists():
                 _ev_missing.append((_lg, _dr))
 
         _v2_present = bool(
@@ -785,15 +784,11 @@ with tabs[0]:
 
                     # Évènements pour ce trajet
                     if st.session_state.get(f"{t_key}_ev_open"):
-                        evt_path_t = EVENTS_DIR / f"{tl}_{td}.json"
-                        if not evt_path_t.exists():
+                        if not chemin_evenements(tl, td).exists():
                             st.info(f"Aucun fichier d'évènements pour {tl} {td}.")
                         else:
                             try:
-                                evt_data_t = json.loads(
-                                    evt_path_t.read_text(encoding="utf-8")
-                                )
-                                events_t = evt_data_t.get("detours", [])
+                                events_t = charger_evenements(tl, td)
                                 tr_t = (
                                     (dep_t.get("heure"), arr_t.get("heure"))
                                     if dep_t.get("heure") and arr_t.get("heure")
@@ -801,24 +796,10 @@ with tabs[0]:
                                 )
 
                                 # Instructions G-D du parcours (pour filtrage rues)
-                                _ev_gd_instr: list = []
-                                _ev_gd_file = GD_DIR / f"gd{tl}_{td}.json"
-                                if _ev_gd_file.exists():
-                                    try:
-                                        _ev_raw  = json.loads(
-                                            _ev_gd_file.read_text(encoding="utf-8")
-                                        )
-                                        _ev_all_p = (
-                                            _ev_raw.get("routes") or [{}]
-                                        )[0].get("parcours", [])
-                                        _ev_parc = next(
-                                            (p for p in _ev_all_p
-                                             if p.get("id") == tid),
-                                            _ev_all_p[0] if _ev_all_p else {},
-                                        )
-                                        _ev_gd_instr = _ev_parc.get("direction", [])
-                                    except Exception:
-                                        pass
+                                try:
+                                    _ev_gd_instr = charger_gd(tl, td, tid)[0]
+                                except Exception:
+                                    _ev_gd_instr = []
 
                                 # Stop IDs GTFS du parcours (mis en cache) —
                                 # None = inconnus (GTFS absent ou en erreur) → fail-safe
@@ -1160,7 +1141,7 @@ with tabs[1]:
         # Journée active partagée (choisie dans 🏠 Ma journée)
         _ref_date   = st.session_state.get("journee_date")
         _ref_j_path = (
-            JOURNEES_DIR / f"journee-{_ref_date}.json" if _ref_date else None
+            chemin_journee(_ref_date) if _ref_date else None
         )
         if _ref_j_path and _ref_j_path.exists():
             st.caption(
@@ -1403,7 +1384,7 @@ with tabs[2]:
         # Journée active partagée (choisie dans 🏠 Ma journée)
         v2_date   = st.session_state.get("journee_date")
         v2_j_path = (
-            JOURNEES_DIR / f"journee-{v2_date}.json" if v2_date else None
+            chemin_journee(v2_date) if v2_date else None
         )
 
         if not (v2_j_path and v2_j_path.exists()):
@@ -1416,7 +1397,7 @@ with tabs[2]:
                 f"Journée active : **{v2_date}** — changer dans **🏠 Ma journée**."
             )
             try:
-                v2_j_data = json.loads(v2_j_path.read_text(encoding="utf-8"))
+                v2_j_data = charger_journee(v2_j_path)
             except Exception as e:
                 st.error(f"Erreur lecture journée : {e}")
                 st.stop()
@@ -1640,7 +1621,7 @@ with tabs[3]:
                 key="fm_j_preview_sel",
             )
             try:
-                j_prev_data = json.loads(j_all[j_prev_sel].read_text(encoding="utf-8"))
+                j_prev_data = charger_journee(j_all[j_prev_sel])
                 j_pieces = j_prev_data.get("pieces", [])
                 j_trajets = [
                     t for p in j_pieces for t in p.get("trajets", [])
@@ -1698,7 +1679,7 @@ with tabs[3]:
                 if not (exp_debut <= d <= exp_fin):
                     continue
                 try:
-                    jd = json.loads(p.read_text(encoding="utf-8"))
+                    jd = charger_journee(p)
                 except Exception:
                     continue
 

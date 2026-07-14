@@ -105,6 +105,11 @@ python3 tests/test_journee.py
 python3 tests/test_evenements.py
 ```
 
+**Tests unitaires dépôts** — couvre `chauffeur.depots` (chemins canoniques, `charger_gd` avec sélection par id et replis, `charger_evenements`, `evenements_pour_date`, `charger_journee`) sur fichiers synthétiques en répertoire temporaire :
+```bash
+python3 tests/test_depots.py
+```
+
 **Tests unitaires périodes** — couvre `chauffeur.periodes` (`identite_ca` : liste/semaine/samedi/dimanche, férié isolé dans une semaine de liste, variations multi-semaines, date hors calendrier) :
 ```bash
 python3 tests/test_periodes.py
@@ -160,7 +165,7 @@ data/journees/        ──(gen_rapport_v2.py)──►  data/rapports/rapport-
 data/Gauche-Droite/ + data/Events/ + GTFS  ──(rapport_gd.py)──►  scripts/rapport_<ligne>_<dir>_<date>.html
 ```
 
-Le package **`chauffeur/`** centralise le noyau de domaine partagé entre les scripts et l'app Streamlit : `matching` (appariement noms d'arrêts), `modeles` (dataclasses), `effectif` (horaires), `evenements` (applicabilité au quart, à une date, à une plage de quart — source unique du marqueur ✅/⬜ de l'UI et du filtre date des rapports), `gd` (build_rows, détours, applicabilité par parcours — `stop_ids=None` = arrêts GTFS inconnus → évènement présumé applicable, fail-safe), `gtfs` (lookup arrêts GTFS, index `stops_index.json`), `journee` (groupes/lignes de service à partir d'une journée), `periodes` (calendrier de référence STM — listes/variations/fériés — et dérivation de l'identité d'une carte agent via `identite_ca(date, numero)`), `portail` (session + appels HTTP portail employé STM). La lecture des cartes agent PDF se fait directement dans `scripts/carte_agent_stm.py` (parsing géométrique bbox via PyMuPDF).
+Le package **`chauffeur/`** centralise le noyau de domaine partagé entre les scripts et l'app Streamlit : `matching` (appariement noms d'arrêts), `modeles` (dataclasses), `depots` (chemins canoniques et chargement des fichiers G-D/évènements/journées de `data/` — source unique des conventions de nommage), `effectif` (horaires), `evenements` (applicabilité au quart, à une date, à une plage de quart — source unique du marqueur ✅/⬜ de l'UI et du filtre date des rapports), `gd` (build_rows, détours, applicabilité par parcours — `stop_ids=None` = arrêts GTFS inconnus → évènement présumé applicable, fail-safe), `gtfs` (lookup arrêts GTFS, `stops_for_parcours`, index `stops_index.json`), `journee` (groupes/lignes de service à partir d'une journée), `periodes` (calendrier de référence STM — listes/variations/fériés — et dérivation de l'identité d'une carte agent via `identite_ca(date, numero)`), `portail` (session + appels HTTP portail employé STM). La lecture des cartes agent PDF se fait directement dans `scripts/carte_agent_stm.py` (parsing géométrique bbox via PyMuPDF).
 
 L'application Streamlit est divisée en deux fichiers : `app/ui.py` (interface complète, 5 onglets) et `app/dashboard.py` (utilitaires onglet Ma journée : fraîcheur GTFS `get_gtfs_info`, fraîcheur G-D `get_gd_info`, parsing PDF carte agent, GTFS-RT).
 

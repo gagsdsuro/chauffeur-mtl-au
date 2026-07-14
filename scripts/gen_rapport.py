@@ -31,6 +31,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from chauffeur.effectif import parse_shift_time          # noqa: E402
 from chauffeur.evenements import applicable_au_quart, raison_exclusion  # noqa: E402
+from chauffeur.journee import groupes_de_service  # noqa: E402
 from chauffeur.modeles import FichierGD  # noqa: E402
 
 try:
@@ -413,37 +414,9 @@ def find_journee(target_date: date) -> Path:
 def extract_groupes(journee: dict) -> list:
     """
     Retourne les groupes (ligne, direction, id_parcours) en ordre chronologique,
-    sans répétition. Chaque groupe accumule ses trajets de service.
+    sans répétition, avec leurs trajets de service (délégué au noyau).
     """
-    seen: dict = {}
-    groupes: list = []
-
-    for piece in journee.get("pieces", []):
-        for trajet in piece.get("trajets", []):
-            if trajet.get("type") != "service":
-                continue
-            ligne     = trajet.get("ligne") or ""
-            direction = (trajet.get("direction") or "").lower()
-            id_p      = trajet.get("id_parcours")
-            if not ligne or not direction:
-                continue
-
-            key = (ligne, direction, id_p)
-            if key not in seen:
-                seen[key] = len(groupes)
-                groupes.append({
-                    "ligne":       ligne,
-                    "direction":   direction,
-                    "id_parcours": id_p,
-                    "trips":       [],
-                })
-            g = groupes[seen[key]]
-            g["trips"].append({
-                "depart_heure":  trajet.get("depart",  {}).get("heure", ""),
-                "arrivee_heure": trajet.get("arrivee", {}).get("heure", ""),
-            })
-
-    return groupes
+    return groupes_de_service(journee, avec_trips=True)
 
 
 # ─── Lecture des données G-D ─────────────────────────────────────────────────

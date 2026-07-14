@@ -13,12 +13,14 @@ def _as_dict(journee) -> dict:
     return journee.to_dict() if hasattr(journee, "to_dict") else journee
 
 
-def groupes_de_service(journee) -> list[dict]:
+def groupes_de_service(journee, avec_trips: bool = False) -> list[dict]:
     """Retourne les groupes uniques (ligne · direction · id_parcours) de la journée.
 
     Chaque groupe : {ligne, direction, id_parcours, detour}.
     Ordre d'apparition préservé. Si un groupe apparaît avec detour=True dans
     au moins un trajet, le groupe est marqué detour=True.
+    Avec avec_trips=True, chaque groupe accumule aussi ses trajets de service
+    sous "trips" : [{depart_heure, arrivee_heure}, …] (format heure de quart).
     Accepte un objet Journee ou un dict brut.
     """
     groupes: list[dict] = []
@@ -37,12 +39,20 @@ def groupes_de_service(journee) -> list[dict]:
             key = (lg, dr, ip)
             if key not in seen:
                 seen[key] = len(groupes)
-                groupes.append({
+                groupe = {
                     "ligne": lg, "direction": dr,
                     "id_parcours": ip, "detour": bool(trajet.get("detour")),
-                })
+                }
+                if avec_trips:
+                    groupe["trips"] = []
+                groupes.append(groupe)
             elif trajet.get("detour"):
                 groupes[seen[key]]["detour"] = True
+            if avec_trips:
+                groupes[seen[key]]["trips"].append({
+                    "depart_heure":  trajet.get("depart",  {}).get("heure", ""),
+                    "arrivee_heure": trajet.get("arrivee", {}).get("heure", ""),
+                })
 
     return groupes
 

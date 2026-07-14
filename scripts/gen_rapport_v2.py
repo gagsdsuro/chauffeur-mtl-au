@@ -12,7 +12,6 @@ Usage :
 """
 
 import argparse
-import json
 import sys
 from datetime import date, datetime
 from pathlib import Path
@@ -25,106 +24,29 @@ from chauffeur.gd import (
     build_rows, annotate_events, apply_gd_detours, insert_added_stops_inline,
     event_applicable_to_parcours,
 )
-from chauffeur.gtfs import (
-    route_id as gtfs_route_id, direction_id as gtfs_dir_id,
-    stops_for_line, stop_names as gtfs_stop_names,
-)
-from chauffeur.effectif import parse_shift_time
-from chauffeur.evenements import applicable_a_la_date, applicable_au_quart
+from chauffeur.gtfs import stops_for_parcours, stop_names as gtfs_stop_names
+from chauffeur.depots import charger_journee, charger_gd, evenements_pour_date
+from chauffeur.evenements import applicable_a_la_plage
+from chauffeur.journee import groupes_de_service
 
-GD_DIR     = ROOT / "data" / "Gauche-Droite"
-EVENTS_DIR = ROOT / "data" / "Events"
 GTFS_DIR   = ROOT / "data" / "gtfs" / "gtfs_stm"
 OUTPUT_DIR = ROOT / "data" / "rapports"
 
 
-# ── Journée JSON ──────────────────────────────────────────────────────────────
-
-def load_journee(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def extract_groupes(journee: dict) -> list:
-    """
-    Retourne les groupes (ligne, direction, id_parcours) en ordre chronologique
-    d'apparition, sans répétition. Chaque groupe accumule ses trajets de service.
-    """
-    seen: dict = {}
-    groupes: list = []
-
-    for piece in journee.get("pieces", []):
-        for trajet in piece.get("trajets", []):
-            if trajet.get("type") != "service":
-                continue
-            ligne     = trajet.get("ligne") or ""
-            direction = (trajet.get("direction") or "").lower()
-            id_p      = trajet.get("id_parcours")
-            if not ligne or not direction:
-                continue
-
-            key = (ligne, direction, id_p)
-            if key not in seen:
-                seen[key] = len(groupes)
-                groupes.append({
-                    "ligne":       ligne,
-                    "direction":   direction,
-                    "id_parcours": id_p,
-                    "detour":      trajet.get("detour", False),
-                    "trips":       [],
-                })
-            g = groupes[seen[key]]
-            g["trips"].append({
-                "depart_heure":  trajet.get("depart",  {}).get("heure", ""),
-                "arrivee_heure": trajet.get("arrivee", {}).get("heure", ""),
-            })
-            if trajet.get("detour"):
-                g["detour"] = True
-
-    return groupes
-
-
-# ── Chargement G-D ────────────────────────────────────────────────────────────
-
-def load_gd_by_id(ligne: str, direction: str, id_parcours):
-    """Retourne (instructions, parcours_obj) ou ([], None) si absent."""
-    path = GD_DIR / f"gd{ligne}_{direction}.json"
-    if not path.exists():
-        return [], None
-    data = json.loads(path.read_text(encoding="utf-8"))
-    all_p = (data.get("routes") or [{}])[0].get("parcours", [])
-    if not all_p:
-        return [], None
-    parcours = next((p for p in all_p if p.get("id") == id_parcours), all_p[0])
-    return parcours.get("direction", []), parcours
-
-
 # ── Chargement événements ─────────────────────────────────────────────────────
-
-def _load_all_events_for_date(ligne: str, direction: str, date_str: str) -> list:
-    """Tous les événements valides pour la date (filtre date seulement)."""
-    path = EVENTS_DIR / f"{ligne}_{direction}.json"
-    if not path.exists():
-        return []
-    data   = json.loads(path.read_text(encoding="utf-8"))
-    target = date.fromisoformat(date_str)
-    return [e for e in data.get("detours", [])
-            if applicable_a_la_date(e, target)]
-
 
 def load_events_for_groupe(groupe: dict, date_str: str) -> list:
     """Événements applicables à la plage horaire du groupe (filtre quart)."""
-    all_ev = _load_all_events_for_date(groupe["ligne"], groupe["direction"], date_str)
+    jour   = date.fromisoformat(date_str)
+    all_ev = evenements_pour_date(groupe["ligne"], groupe["direction"], jour)
     trips  = groupe.get("trips", [])
     if not trips or not all_ev:
         return []
-    base_date   = date.fromisoformat(date_str)
-    heures_deb  = [t["depart_heure"]  for t in trips if t.get("depart_heure")]
-    heures_fin  = [t["arrivee_heure"] for t in trips if t.get("arrivee_heure")]
-    if not heures_deb:
-        return all_ev
-    shift_start = parse_shift_time(min(heures_deb), base_date)
-    shift_end   = parse_shift_time(max(heures_fin), base_date)
-    return [e for e in all_ev if applicable_au_quart(e, shift_start, shift_end)]
+    heures_deb = [t["depart_heure"]  for t in trips if t.get("depart_heure")]
+    heures_fin = [t["arrivee_heure"] for t in trips if t.get("arrivee_heure")]
+    plage = ((min(heures_deb), max(heures_fin))
+             if heures_deb and heures_fin else None)
+    return [e for e in all_ev if applicable_a_la_plage(e, jour, plage)]
 
 
 # ── GTFS ──────────────────────────────────────────────────────────────────────
@@ -133,12 +55,8 @@ def _load_gtfs_stops(ligne: str, direction: str, id_parcours=None):
     if not GTFS_DIR.exists():
         return [], {}
     try:
-        rid   = gtfs_route_id(GTFS_DIR, ligne)
-        did   = gtfs_dir_id(GTFS_DIR, rid, direction)
-        shape = f"{ligne}_{id_parcours}" if id_parcours is not None else None
-        sfl   = stops_for_line(GTFS_DIR, rid, did, shape_hint=shape)
-        snames = gtfs_stop_names(GTFS_DIR)
-        return sfl, snames
+        sfl = stops_for_parcours(GTFS_DIR, ligne, direction, id_parcours)
+        return sfl, gtfs_stop_names(GTFS_DIR)
     except Exception:
         return [], {}
 
@@ -169,13 +87,14 @@ def filter_rows_by_niveau(rows: list, niveau: str) -> list:
 
 def process_groupe(groupe: dict, date_str: str, ev_all_cache: dict) -> dict:
     ligne, direction, id_p = groupe["ligne"], groupe["direction"], groupe.get("id_parcours")
-    instructions, parcours = load_gd_by_id(ligne, direction, id_p)
+    instructions, parcours = charger_gd(ligne, direction, id_p)
     stops_ordered, snames  = _load_gtfs_stops(ligne, direction, id_p)
     events                 = load_events_for_groupe(groupe, date_str)
 
     cache_key = (ligne, direction)
     if cache_key not in ev_all_cache:
-        ev_all_cache[cache_key] = _load_all_events_for_date(ligne, direction, date_str)
+        ev_all_cache[cache_key] = evenements_pour_date(
+            ligne, direction, date.fromisoformat(date_str))
     events_all = ev_all_cache[cache_key]
 
     if not instructions:
@@ -873,9 +792,9 @@ def generer_rapport(
     if not journee_path.exists():
         raise FileNotFoundError(f"Fichier introuvable : {journee_path}")
 
-    journee  = load_journee(journee_path)
+    journee  = charger_journee(journee_path)
     date_str = journee.get("date", "inconnu")
-    groupes  = extract_groupes(journee)
+    groupes  = groupes_de_service(journee, avec_trips=True)
 
     if not groupes:
         raise ValueError("Aucun trajet de service dans le fichier journée.")

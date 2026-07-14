@@ -101,6 +101,21 @@ def stops_for_line(gtfs_dir: Path, route_id: str, dir_id: str,
     return [(seq, sid) for seq, sid in sorted(trip_stops[best])]
 
 
+def stops_for_parcours(gtfs_dir: Path, ligne: str, direction: str,
+                       id_parcours=None) -> list:
+    """Séquence d'arrêts [(seq, stop_id), …] d'un parcours (ligne/direction/id).
+
+    Encapsule la résolution route_id → direction_id → stops_for_line avec le
+    shape_hint "<ligne>_<id_parcours>". Lève ValueError/OSError si la ligne ou
+    la direction est introuvable — le repli (fail-safe ou liste vide) est la
+    décision du consommateur.
+    """
+    rid   = route_id(gtfs_dir, ligne)
+    did   = direction_id(gtfs_dir, rid, direction)
+    shape = f"{ligne}_{id_parcours}" if id_parcours is not None else None
+    return stops_for_line(gtfs_dir, rid, did, shape_hint=shape)
+
+
 def stop_names(gtfs_dir: Path) -> dict:
     stops = {}
     with open(Path(gtfs_dir) / "stops.txt") as f:
