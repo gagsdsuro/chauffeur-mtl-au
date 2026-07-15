@@ -1,0 +1,94 @@
+[
+  {
+    "evenement_id": "11205733",
+    "titre": "Détour avec annulation d'arrêt",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-07-10T21:40:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "53051",
+        "nom": "Station Papineau (Dorion / Sainte-Catherine)"
+      }
+    ],
+    "commentaire": null,
+    "arrets_ajoutes": [],
+    "description_gd": "VIA DE MAISONNEUVE G/ PAPINEAU G/ STE-CATHERINE G/ CARTIER TERMINUS TEMPORAIRE CARTIER/STE CATHERINE"
+  },
+  {
+    "evenement_id": "11270489",
+    "titre": "Détour avec annulation d'arrêt",
+    "motif": "Événement spécial",
+    "date_heure_debut": "2026-07-12T19:45:00",
+    "date_heure_fin": "2026-07-12T23:59:00",
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "52614",
+        "nom": "Rachel / Parthenais"
+      },
+      {
+        "id": "52685",
+        "nom": "Parthenais / Gauthier"
+      },
+      {
+        "id": "52742",
+        "nom": "Sherbrooke / Fullum"
+      },
+      {
+        "id": "52964",
+        "nom": "Ontario / Fullum"
+      },
+      {
+        "id": "53033",
+        "nom": "Parthenais / Logan"
+      },
+      {
+        "id": "53046",
+        "nom": "De Maisonneuve / De Lorimier"
+      },
+      {
+        "id": "53051",
+        "nom": "Station Papineau (Dorion / Sainte-Catherine)"
+      },
+      {
+        "id": "53063",
+        "nom": "Parthenais / De Maisonneuve"
+      },
+      {
+        "id": "61889",
+        "nom": "D'Iberville / de Rouen"
+      }
+    ],
+    "commentaire": "POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+    "arrets_ajoutes": [
+      {
+        "id": "52506",
+        "nom": "Station Sherbrooke (Édicule Est)"
+      }
+    ],
+    "description_gd": "VIA DE LORIMIER D/ RACHEL G/ BORDEAUX D/ SHERBROOKE D/ BERRI TERMINUS TEMPORAIRE STATION SHERBROOKE (52506)"
+  },
+  {
+    "evenement_id": "11290098",
+    "titre": "Détour avec annulation d'arrêt",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-07-10T20:37:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "52685",
+        "nom": "Parthenais / Gauthier"
+      },
+      {
+        "id": "52742",
+        "nom": "Sherbrooke / Fullum"
+      }
+    ],
+    "commentaire": null,
+    "arrets_ajoutes": [],
+    "description_gd": "VIA RACHEL D/ IBERVILLE VIA R/R"
+  }
+]

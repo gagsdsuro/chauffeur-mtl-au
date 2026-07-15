@@ -1,0 +1,214 @@
+{
+  "stops": [
+    [
+      1,
+      "53051"
+    ],
+    [
+      2,
+      "53045"
+    ],
+    [
+      3,
+      "53010"
+    ],
+    [
+      4,
+      "52895"
+    ],
+    [
+      5,
+      "52813"
+    ],
+    [
+      6,
+      "61295"
+    ],
+    [
+      7,
+      "52637"
+    ],
+    [
+      8,
+      "52561"
+    ],
+    [
+      9,
+      "52456"
+    ],
+    [
+      10,
+      "52380"
+    ],
+    [
+      11,
+      "52267"
+    ],
+    [
+      12,
+      "52220"
+    ],
+    [
+      13,
+      "52181"
+    ],
+    [
+      14,
+      "52087"
+    ],
+    [
+      15,
+      "51953"
+    ],
+    [
+      16,
+      "51858"
+    ],
+    [
+      17,
+      "51824"
+    ],
+    [
+      18,
+      "51738"
+    ],
+    [
+      19,
+      "51651"
+    ],
+    [
+      20,
+      "51579"
+    ],
+    [
+      21,
+      "51497"
+    ],
+    [
+      22,
+      "54320"
+    ],
+    [
+      23,
+      "51351"
+    ],
+    [
+      24,
+      "51308"
+    ],
+    [
+      25,
+      "51260"
+    ],
+    [
+      26,
+      "51233"
+    ]
+  ],
+  "stop_names": {
+    "53051": {
+      "code": "53051",
+      "name": "Station Papineau (Dorion / Sainte-Catherine)"
+    },
+    "53045": {
+      "code": "53045",
+      "name": "De Lorimier / De Maisonneuve"
+    },
+    "53010": {
+      "code": "53010",
+      "name": "De Lorimier / Logan"
+    },
+    "52895": {
+      "code": "52895",
+      "name": "De Lorimier / Ontario"
+    },
+    "52813": {
+      "code": "52813",
+      "name": "De Lorimier / de Rouen"
+    },
+    "61295": {
+      "code": "61295",
+      "name": "De Lorimier / Sherbrooke"
+    },
+    "52637": {
+      "code": "52637",
+      "name": "De Lorimier / Gauthier"
+    },
+    "52561": {
+      "code": "52561",
+      "name": "De Lorimier / Rachel"
+    },
+    "52456": {
+      "code": "52456",
+      "name": "De Lorimier / Marie-Anne"
+    },
+    "52380": {
+      "code": "52380",
+      "name": "De Lorimier / du Mont-Royal"
+    },
+    "52267": {
+      "code": "52267",
+      "name": "De Lorimier / Gilford"
+    },
+    "52220": {
+      "code": "52220",
+      "name": "De Lorimier / Saint-Joseph"
+    },
+    "52181": {
+      "code": "52181",
+      "name": "De Lorimier / Laurier"
+    },
+    "52087": {
+      "code": "52087",
+      "name": "De Lorimier / Masson"
+    },
+    "51953": {
+      "code": "51953",
+      "name": "De Lorimier / Holt"
+    },
+    "51858": {
+      "code": "51858",
+      "name": "De Lorimier / Rosemont"
+    },
+    "51824": {
+      "code": "51824",
+      "name": "De Lorimier / de Bellechasse"
+    },
+    "51738": {
+      "code": "51738",
+      "name": "De Lorimier / Beaubien"
+    },
+    "51651": {
+      "code": "51651",
+      "name": "De Lorimier / Saint-Zotique"
+    },
+    "51579": {
+      "code": "51579",
+      "name": "De Lorimier / Bélanger"
+    },
+    "51497": {
+      "code": "51497",
+      "name": "De Lorimier / Jean-Talon"
+    },
+    "54320": {
+      "code": "54320",
+      "name": "De Lorimier / Everett"
+    },
+    "51351": {
+      "code": "51351",
+      "name": "De Lorimier / Villeray"
+    },
+    "51308": {
+      "code": "51308",
+      "name": "De Lorimier / Tillemont"
+    },
+    "51260": {
+      "code": "51260",
+      "name": "De Lorimier / Jarry"
+    },
+    "51233": {
+      "code": "51233",
+      "name": "De Lorimier / Crémazie"
+    }
+  }
+}

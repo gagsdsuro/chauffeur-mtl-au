@@ -1,0 +1,25 @@
+{
+  "ligne": "10",
+  "direction": "nord",
+  "routes": [
+    {
+      "line_number": "10",
+      "direction": "Nord",
+      "parcours": [
+        {
+          "id": 2,
+          "name": "Parcours principal",
+          "start": "Station Papineau (Dorion / Sainte-Catherine)",
+          "start_code": 53051,
+          "end": "De Lorimier / Crémazie",
+          "end_code": 51233,
+          "direction": [
+            "Via - Dorion",
+            "Gauche - Sainte-Catherine",
+            "Gauche - De Lorimier"
+          ]
+        }
+      ]
+    }
+  ]
+}

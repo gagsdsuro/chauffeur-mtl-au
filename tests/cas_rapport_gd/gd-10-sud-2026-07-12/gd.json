@@ -1,0 +1,39 @@
+{
+  "ligne": "10",
+  "direction": "sud",
+  "routes": [
+    {
+      "line_number": "10",
+      "direction": "Sud",
+      "parcours": [
+        {
+          "id": 1,
+          "name": "Parcours principal",
+          "start": "De Lorimier / Crémazie",
+          "start_code": 51233,
+          "end": "Station Papineau (Dorion / Sainte-Catherine)",
+          "end_code": 53051,
+          "direction": [
+            "Via - De Lorimier",
+            "Gauche - Crémazie",
+            "Via - vers aut. 40 Ouest",
+            "Via - Crémazie",
+            "Gauche - vers Crémazie dir. Est",
+            "Gauche - Crémazie",
+            "Via - vers Crémazie dir. E",
+            "Via - Crémazie",
+            "Droite - De Lorimier",
+            "Gauche - Rachel",
+            "Droite - Parthenais",
+            "Gauche - Sherbrooke",
+            "Droite - D'Iberville",
+            "Droite - Ontario",
+            "Gauche - Parthenais",
+            "Droite - De Maisonneuve",
+            "Gauche - Dorion"
+          ]
+        }
+      ]
+    }
+  ]
+}

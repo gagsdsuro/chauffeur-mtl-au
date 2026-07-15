@@ -1,0 +1,262 @@
+{
+  "stops": [
+    [
+      1,
+      "51233"
+    ],
+    [
+      2,
+      "51200"
+    ],
+    [
+      3,
+      "51105"
+    ],
+    [
+      4,
+      "51178"
+    ],
+    [
+      5,
+      "51223"
+    ],
+    [
+      6,
+      "51262"
+    ],
+    [
+      7,
+      "51309"
+    ],
+    [
+      8,
+      "51353"
+    ],
+    [
+      9,
+      "54321"
+    ],
+    [
+      10,
+      "51499"
+    ],
+    [
+      11,
+      "51581"
+    ],
+    [
+      12,
+      "51652"
+    ],
+    [
+      13,
+      "51740"
+    ],
+    [
+      14,
+      "51825"
+    ],
+    [
+      15,
+      "51860"
+    ],
+    [
+      16,
+      "51954"
+    ],
+    [
+      17,
+      "52089"
+    ],
+    [
+      18,
+      "52182"
+    ],
+    [
+      19,
+      "52222"
+    ],
+    [
+      20,
+      "52268"
+    ],
+    [
+      21,
+      "52382"
+    ],
+    [
+      22,
+      "52457"
+    ],
+    [
+      23,
+      "52563"
+    ],
+    [
+      24,
+      "52614"
+    ],
+    [
+      25,
+      "52685"
+    ],
+    [
+      26,
+      "52742"
+    ],
+    [
+      27,
+      "61889"
+    ],
+    [
+      28,
+      "52964"
+    ],
+    [
+      29,
+      "53033"
+    ],
+    [
+      30,
+      "53063"
+    ],
+    [
+      31,
+      "53046"
+    ],
+    [
+      32,
+      "53051"
+    ]
+  ],
+  "stop_names": {
+    "51233": {
+      "code": "51233",
+      "name": "De Lorimier / Crémazie"
+    },
+    "51200": {
+      "code": "51200",
+      "name": "Crémazie / Chabot"
+    },
+    "51105": {
+      "code": "51105",
+      "name": "Crémazie / Fabre"
+    },
+    "51178": {
+      "code": "51178",
+      "name": "Crémazie / Papineau"
+    },
+    "51223": {
+      "code": "51223",
+      "name": "Crémazie / de Bordeaux"
+    },
+    "51262": {
+      "code": "51262",
+      "name": "De Lorimier / Jarry"
+    },
+    "51309": {
+      "code": "51309",
+      "name": "De Lorimier / Tillemont"
+    },
+    "51353": {
+      "code": "51353",
+      "name": "De Lorimier / Villeray"
+    },
+    "54321": {
+      "code": "54321",
+      "name": "De Lorimier / Everett"
+    },
+    "51499": {
+      "code": "51499",
+      "name": "De Lorimier / Jean-Talon"
+    },
+    "51581": {
+      "code": "51581",
+      "name": "De Lorimier / Bélanger"
+    },
+    "51652": {
+      "code": "51652",
+      "name": "De Lorimier / Saint-Zotique"
+    },
+    "51740": {
+      "code": "51740",
+      "name": "De Lorimier / Beaubien"
+    },
+    "51825": {
+      "code": "51825",
+      "name": "De Lorimier / de Bellechasse"
+    },
+    "51860": {
+      "code": "51860",
+      "name": "De Lorimier / Rosemont"
+    },
+    "51954": {
+      "code": "51954",
+      "name": "De Lorimier / Holt"
+    },
+    "52089": {
+      "code": "52089",
+      "name": "De Lorimier / Masson"
+    },
+    "52182": {
+      "code": "52182",
+      "name": "De Lorimier / Laurier"
+    },
+    "52222": {
+      "code": "52222",
+      "name": "De Lorimier / Saint-Joseph"
+    },
+    "52268": {
+      "code": "52268",
+      "name": "De Lorimier / Gilford"
+    },
+    "52382": {
+      "code": "52382",
+      "name": "De Lorimier / du Mont-Royal"
+    },
+    "52457": {
+      "code": "52457",
+      "name": "De Lorimier / Marie-Anne"
+    },
+    "52563": {
+      "code": "52563",
+      "name": "De Lorimier / Rachel"
+    },
+    "52614": {
+      "code": "52614",
+      "name": "Rachel / Parthenais"
+    },
+    "52685": {
+      "code": "52685",
+      "name": "Parthenais / Gauthier"
+    },
+    "52742": {
+      "code": "52742",
+      "name": "Sherbrooke / Fullum"
+    },
+    "61889": {
+      "code": "61889",
+      "name": "D'Iberville / de Rouen"
+    },
+    "52964": {
+      "code": "52964",
+      "name": "Ontario / Fullum"
+    },
+    "53033": {
+      "code": "53033",
+      "name": "Parthenais / Logan"
+    },
+    "53063": {
+      "code": "53063",
+      "name": "Parthenais / De Maisonneuve"
+    },
+    "53046": {
+      "code": "53046",
+      "name": "De Maisonneuve / De Lorimier"
+    },
+    "53051": {
+      "code": "53051",
+      "name": "Station Papineau (Dorion / Sainte-Catherine)"
+    }
+  }
+}
