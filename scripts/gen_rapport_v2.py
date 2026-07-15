@@ -27,7 +27,7 @@ from chauffeur.gd import (
 from chauffeur.gtfs import stops_for_parcours, stop_names as gtfs_stop_names
 from chauffeur.depots import charger_journee, charger_gd, evenements_pour_date
 from chauffeur.effectif import bornes_quart
-from chauffeur.evenements import applicable_a_la_plage
+from chauffeur.evenements import applicable_a_la_plage, arret_reellement_annule
 from chauffeur.journee import groupes_de_service
 
 GTFS_DIR   = ROOT / "data" / "gtfs" / "gtfs_stm"
@@ -145,6 +145,9 @@ td{padding:4px 8px;border-bottom:1px solid #ddd;vertical-align:top}
 .eid{font-size:10px;color:#555;font-weight:bold;display:block}
 .cancelled td{background:#fff0f0}
 .cancelled .stop-name{text-decoration:line-through;color:#c00}
+.maintenu td{background:#fff8e1}
+.maintenu .stop-name{color:#e65100}
+.maintenu .event-label{color:#e65100}
 .detour-removed .gd{text-decoration:line-through;color:#e65100;opacity:.7}
 .detour-added td{background:#e8f5e9}
 .detour-added .gd{color:#2e7d32}
@@ -318,15 +321,15 @@ def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé",
         eff_cell = "".join(eff_cell_bits)
         prev_ev_eids = curr_ev_eids
 
-        # Row class
+        # Row class — rouge seulement si l'arrêt disparaît vraiment ; ambre s'il
+        # reste desservi (« Arrêt déplacé », « Information chauffeur »).
         if d_added:
             cls = ' class="detour-added"'
-        elif d_removed and cancelled:
-            cls = ' class="cancelled detour-removed"'
+        elif cancelled:
+            etat = "cancelled" if arret_reellement_annule(cancelled) else "maintenu"
+            cls = f' class="{etat} detour-removed"' if d_removed else f' class="{etat}"'
         elif d_removed:
             cls = ' class="detour-removed"'
-        elif cancelled:
-            cls = ' class="cancelled"'
         else:
             cls = ""
 
@@ -439,6 +442,7 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
     BLUE  = rl_colors.HexColor("#0072CE")
     DARK  = rl_colors.HexColor("#1A1A2E")
     RED   = rl_colors.HexColor("#CC0000")
+    AMBER = rl_colors.HexColor("#E65100")
     GREEN = rl_colors.HexColor("#2e7d32")
     LGREY = rl_colors.HexColor("#CCCCCC")
 
@@ -473,6 +477,7 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
         "gd_rem" : _s("cs_gd_rem", fontSize=7, leading=9, textColor=LGREY),
         "arr"    : _s("cs_arr",    fontSize=7, leading=9),
         "arr_red": _s("cs_arr_r",  fontSize=7, leading=9, textColor=RED),
+        "arr_amb": _s("cs_arr_a",  fontSize=7, leading=9, textColor=AMBER),
         "eff"    : _s("cs_eff",    fontSize=6.5, leading=8.5, textColor=DARK),
         "seq"    : _s("cs_seq",    fontSize=7, leading=9, textColor=LGREY),
         "add_grn": _s("cs_ag",     fontSize=7, leading=9, textColor=GREEN,
@@ -615,7 +620,12 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
                 # Arrêt / Détour cell — toujours construire eff_lines (même pour ditto)
                 plain_gd = gd_txt and not d_added and not d_removed and not cancelled
                 show_stop = stop_nm and not (niveau == "standard" and plain_gd)
-                arr_style = CS["arr_red"] if cancelled else CS["arr"]
+                if not cancelled:
+                    arr_style = CS["arr"]
+                elif arret_reellement_annule(cancelled):
+                    arr_style = CS["arr_red"]
+                else:
+                    arr_style = CS["arr_amb"]
                 eff_lines = []
                 seen_eid  = set()
                 arr_lines = ([stop_nm] if show_stop else [])

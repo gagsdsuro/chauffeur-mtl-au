@@ -17,6 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from chauffeur.depots import sauvegarder_journee  # noqa: E402
+from chauffeur.journal import ecrire_bloc  # noqa: E402
 from chauffeur.modeles import Journee  # noqa: E402
 
 
@@ -405,6 +406,8 @@ def main():
                     "Déduit du texte si absent, sinon date du jour.")
     ap.add_argument("--json", action="store_true",
                     help="Affiche le JSON complet sur stdout.")
+    ap.add_argument("--log", action="store_true",
+                    help="Sauvegarde la sortie dans data/log/parse_journee.log (append).")
     args = ap.parse_args()
 
     raw    = sys.stdin.read()
@@ -412,12 +415,18 @@ def main():
     result = parser.parse()
 
     if result:
-        saved = parser.save(result)
-        print(parser.get_summary(result, saved))
+        saved   = parser.save(result)
+        summary = parser.get_summary(result, saved)
+        print(summary)
+        if args.log:
+            ecrire_bloc("parse_journee", summary)
         if args.json:
             print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
     else:
-        print(parser.get_summary())
+        summary = parser.get_summary()
+        print(summary)
+        if args.log:
+            ecrire_bloc("parse_journee", summary)
         sys.exit(1)
 
 

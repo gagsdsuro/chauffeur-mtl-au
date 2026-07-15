@@ -10,6 +10,9 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from chauffeur.journal import ecrire_ligne  # noqa: E402
+
 
 class GTFSDownloader:
     """Gestionnaire de telechargement GTFS STM."""
@@ -20,18 +23,13 @@ class GTFSDownloader:
         self.archive_dir = self.data_dir / "archives"
         self.current_dir = self.data_dir / "gtfs_stm"
         self.manifest_file = self.data_dir / "gtfs_manifest.json"
-        self.log_file = self.data_dir / "fetch_gtfs.log"
 
         sys.path.insert(0, str(self.project_root / "Skills"))
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.archive_dir.mkdir(parents=True, exist_ok=True)
 
     def log(self, message, level="INFO"):
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_msg = f"[{timestamp}] [{level}] {message}"
-        print(log_msg)
-        with open(self.log_file, 'a', encoding='utf-8') as f:
-            f.write(log_msg + "\n")
+        print(ecrire_ligne("fetch_gtfs", message, level))
 
     def get_gtfs_url(self):
         return "https://www.stm.info/sites/default/files/gtfs/gtfs_stm.zip"

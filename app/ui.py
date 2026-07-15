@@ -34,6 +34,7 @@ from chauffeur.depots import (  # noqa: E402
     info_gd, info_gtfs,
 )
 from chauffeur.effectif import bornes_quart  # noqa: E402
+from chauffeur.journal import ecrire_bloc, lister_journaux  # noqa: E402
 
 
 # ── Utilitaires parcours / événements ────────────────────────────────────────
@@ -964,8 +965,11 @@ with tabs[1]:
                     result = subprocess.run(cmd, capture_output=True, text=True)
 
                 if result.returncode != 0:
+                    sortie = result.stderr or result.stdout
                     st.error("Erreur lors du traitement.")
-                    st.code(result.stderr or result.stdout)
+                    st.code(sortie)
+                    ecrire_bloc("carte_agent",
+                                f"❌ Échec du traitement de {uploaded.name}\n{sortie}")
                     _nettoyer_tmp()
                     return
 
@@ -1019,6 +1023,16 @@ with tabs[1]:
                         f"{groupe_id} · {jour_type}."
                     )
 
+                trace = [
+                    f"✅ Carte agent n° {numero} · {groupe_id} · {jour_type}",
+                    f"  • Source : {uploaded.name}",
+                    f"  • Rangée : {dest_out}",
+                    f"  • Mode : {'remplacement direct (sans GTFS)' if ca_deja_annotee else 'annotation GTFS'}",
+                ]
+                if jt_imprime and jt_imprime != jour_type:
+                    trace.append(f"  ⚠️ Écart calendrier/carte : la carte imprime « {jt_imprime} »")
+                ecrire_bloc("carte_agent", "\n".join(trace))
+
                 st.download_button(
                     "⬇️ Télécharger la carte annotée",
                     data=dest_out.read_bytes(),
@@ -1067,12 +1081,16 @@ with tabs[1]:
 
                 if result_j:
                     saved_j = parser.save(result_j)
+                    resume_j = parser.get_summary(result_j, saved_j)
                     st.success(f"Journée du {j_imp_date} importée.")
-                    st.code(parser.get_summary(result_j, saved_j))
+                    st.code(resume_j)
+                    ecrire_bloc("parse_journee", resume_j)
                     st.balloons()
                 else:
+                    resume_j = parser.get_summary()
                     st.error("Échec du parsing.")
-                    st.code(parser.get_summary())
+                    st.code(resume_j)
+                    ecrire_bloc("parse_journee", resume_j)
 
     # ── 2c — Gauche-Droite ───────────────────────────────────────────────────
     with imp_tabs[2]:
@@ -1101,9 +1119,12 @@ with tabs[1]:
                     if result_data:
                         st.success(f"Ligne {parser.ligne} {parser.direction} — importé.")
                         st.code(rapport)
+                        ecrire_bloc("parse_gd", rapport)
                     else:
+                        erreurs = "\n".join(parser.errors)
                         st.error("Échec pour une section.")
-                        st.code("\n".join(parser.errors))
+                        st.code(erreurs)
+                        ecrire_bloc("parse_gd", erreurs)
                         all_ok = False
 
                 if all_ok:
@@ -1723,13 +1744,13 @@ with tabs[3]:
 with tabs[4]:
     st.header("Logs")
 
-    LOG_DIR = DATA_DIR / "log"
-    log_files = sorted(LOG_DIR.glob("*.log"), reverse=True) if LOG_DIR.exists() else []
+    log_files = lister_journaux()
 
     if not log_files:
         st.info(
             "Aucun fichier de log trouvé dans `data/log/`. "
-            "Les logs sont créés lors de l'exécution des scripts avec l'option `--log`."
+            "Les importations faites depuis l'onglet Importation y laissent leur trace ; "
+            "en ligne de commande, les scripts journalisent avec l'option `--log`."
         )
     else:
         log_labels = [p.name for p in log_files]

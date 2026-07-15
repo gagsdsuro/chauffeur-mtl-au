@@ -24,6 +24,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from chauffeur.effectif import parse_shift_time, event_applies_to_shift  # noqa: E402
+from chauffeur.evenements import (  # noqa: E402
+    arret_reellement_annule,
+    titre_annule_l_arret,
+)
 from chauffeur.gd import (  # noqa: E402
     _select_parcours, build_rows, filter_rows_by_stop_range, annotate_events,
     apply_gd_detours, insert_added_stops_inline,
@@ -188,6 +192,11 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, o
   .cancelled .stop-name {{ text-decoration: line-through; color: #c00; }}
   .cancelled.detour-removed td {{ background: #fff0f0; }}
   .cancelled.detour-removed .gd {{ text-decoration: line-through; color: #e65100; opacity: 0.7; }}
+  .maintenu td {{ background: #fff8e1; }}
+  .maintenu .stop-name {{ color: #e65100; }}
+  .maintenu .event-label {{ color: #e65100; }}
+  .maintenu.detour-removed td {{ background: #fff8e1; }}
+  .maintenu.detour-removed .gd {{ text-decoration: line-through; color: #e65100; opacity: 0.7; }}
   .event-label {{ font-size: 10px; color: #c00; display: block; }}
   .event-precision {{ font-size: 11px; color: #b45309; font-weight: bold; display: block; }}
   .added {{ background: #f0fff0; }}
@@ -253,12 +262,14 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, o
             cls = ' class="added-inline"'
         elif detour_added:
             cls = ' class="detour-added"'
-        elif detour_removed and cancelled:
-            cls = ' class="cancelled detour-removed"'
+        elif cancelled:
+            # Rouge seulement si l'arrêt disparaît vraiment ; ambre s'il reste
+            # desservi (« Arrêt déplacé », « Information chauffeur »).
+            etat = "cancelled" if arret_reellement_annule(cancelled) else "maintenu"
+            cls = (f' class="{etat} detour-removed"' if detour_removed
+                   else f' class="{etat}"')
         elif detour_removed:
             cls = ' class="detour-removed"'
-        elif cancelled:
-            cls = ' class="cancelled"'
         else:
             cls = ""
 
@@ -309,7 +320,8 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, o
                 # Ex. "Sherbrooke / Gascon (50 mètres après)"
                 if nom_evt and nom_evt != r["stop_name"]:
                     name_span += f'<span class="event-precision">📍 {nom_evt}</span>'
-                name_span += f'<span class="event-label">❌ {label_str}</span>'
+                sym = "❌" if titre_annule_l_arret(ev.get("type_evenement", "")) else "⚠️"
+                name_span += f'<span class="event-label">{sym} {label_str}</span>'
                 if eff_str and eff_str not in seen_eff:
                     effectif_parts.append(eff_str)
                     seen_eff.add(eff_str)
@@ -411,7 +423,12 @@ def render_md(rows, added, args, parcours, shift_start=None, shift_end=None, orp
                 if nom_evt and nom_evt != name:
                     precision_parts.append(f"📍 {nom_evt}")
             precision = " ".join(precision_parts)
-            name = f"~~{name}~~ {precision} ❌ " + " / ".join(ev_parts)
+            # Le Markdown n'a pas de teinte : c'est le barré et le symbole qui
+            # disent si l'arrêt disparaît ou s'il reste desservi.
+            if arret_reellement_annule(cancelled):
+                name = f"~~{name}~~ {precision} ❌ " + " / ".join(ev_parts)
+            else:
+                name = f"{name} {precision} ⚠️ " + " / ".join(ev_parts)
             effectif_str = " / ".join(eff_ordered)
 
         lines.append(f"| {seq} | {gd} | {code} | {name} | {effectif_str} |")

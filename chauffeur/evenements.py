@@ -1,7 +1,11 @@
-"""chauffeur.evenements — classement applicable/non-applicable des évènements.
+"""chauffeur.evenements — applicabilité et sémantique des évènements.
 
 Décision pure (sans I/O fichier) : un consommateur lit les fichiers d'évènements
 puis appelle ces fonctions avec la plage de quart de la ligne concernée.
+
+Deux familles : l'applicabilité (l'évènement joue-t-il ce jour / ce quart ?) et
+la sémantique des arrêts touchés (l'arrêt listé est-il supprimé ou maintenu ?) —
+source unique de la teinte des rapports.
 """
 from __future__ import annotations
 
@@ -13,6 +17,34 @@ from .effectif import event_applies_to_shift, parse_shift_time
 def applicable_au_quart(event: dict, shift_start: datetime, shift_end: datetime) -> bool:
     """L'évènement est-il actif pendant la plage de quart de la ligne ?"""
     return event_applies_to_shift(event, shift_start, shift_end)
+
+
+# ── Sémantique des arrêts touchés ─────────────────────────────────────────────
+#
+# Le portail STM consigne dans `arrets_annules` les arrêts CONCERNÉS par
+# l'évènement, pas seulement ceux qui disparaissent. Sous ces titres, l'arrêt
+# reste desservi — déplacé de quelques mètres, ou simple consigne au chauffeur.
+TITRES_SANS_ANNULATION = frozenset({"arrêt déplacé", "information chauffeur"})
+
+
+def titre_annule_l_arret(type_evenement: str) -> bool:
+    """L'évènement supprime-t-il l'arrêt qu'il liste, ou le maintient-il ?
+
+    Titre inconnu → présumé annulant (fail-safe : ne jamais faire manquer une
+    annulation réelle).
+    """
+    return (type_evenement or "").strip().lower() not in TITRES_SANS_ANNULATION
+
+
+def arret_reellement_annule(cancelled: list[dict]) -> bool:
+    """Au moins un des évènements couvrant l'arrêt le supprime-t-il ?
+
+    Un même arrêt peut cumuler des évènements de sémantiques opposées
+    (« Arrêt déplacé » + « Détour avec annulation d'arrêt ») : le plus grave
+    l'emporte, quel que soit leur ordre.
+    """
+    return any(titre_annule_l_arret(ev.get("type_evenement", ""))
+               for ev in cancelled or [])
 
 
 def applicable_a_la_date(event: dict, jour: date) -> bool:

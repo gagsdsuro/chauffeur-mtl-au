@@ -16,6 +16,7 @@ from typing import Dict, List, Tuple, Optional
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
+from chauffeur.journal import ecrire_bloc  # noqa: E402
 from chauffeur.modeles import FichierEvenements, Evenement  # noqa: E402
 
 
@@ -465,15 +466,9 @@ class STMEventParser:
             self.errors.append(f"❌ Erreur sauvegarde: {e}")
             return False, False
 
-    def append_log(self, summary: str) -> None:
+    def append_log(self, summary: str, log_dir: Path | None = None) -> None:
         """Sauvegarde le résumé en append dans data/log/parse_event.log."""
-        log_dir = self.PROJECT_ROOT / "data" / "log"
-        log_dir.mkdir(parents=True, exist_ok=True)
-        log_path = log_dir / "parse_event.log"
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open(log_path, "a", encoding="utf-8") as lf:
-            lf.write(f"\n{'='*60}\n{timestamp}\n{'='*60}\n")
-            lf.write(summary + "\n")
+        ecrire_bloc("parse_event", summary, log_dir)
 
     def get_summary(self) -> str:
         lines = []
