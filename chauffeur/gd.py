@@ -179,7 +179,8 @@ def annotate_events(rows, events):
             })
         for a in e.get("arrets_ajoutes", []):
             name = a if isinstance(a, str) else a.get("nom", "")
-            added.append({"name": name, "label": label,
+            code = "" if isinstance(a, str) else str(a.get("id", "") or "")
+            added.append({"name": name, "id": code, "label": label,
                           "short_label": f"{titre} ({motif})",
                           "commentaire": commentaire, "effectif": effectif,
                           "evenement_id": e.get("evenement_id", "")})
@@ -456,30 +457,123 @@ def apply_gd_detours(rows: list, events: list) -> list:
 
 # ── Placement inline des arrêts ajoutés ──────────────────────────────────────
 
+_STOP_CODE_RE = re.compile(r'^\d{5}$')
+
+# Un nom qui commence par l'un de ces mots désigne un lieu (station de métro,
+# terminus), pas la rue sur laquelle l'arrêt est planté.
+_LIEU_PREFIXES = {"station", "terminus"}
+
+
+def _split_intersection(texte: str):
+    """Découpe « Rue A / Rue B » en rues normalisées, ou None si ce n'en est pas une.
+
+    Rejette les indicateurs de quadrant que la STM accole aux noms d'arrêts
+    (« (N/O) », « (S/E) ») : ils ont la forme d'une intersection mais leurs
+    membres sont des lettres isolées.
+    """
+    parts = [normalize_street(re.sub(r'\b\d{5}\b', ' ', p)) for p in texte.split("/")]
+    parts = [p for p in parts if p]
+    if len(parts) < 2 or any(len(p) < 3 for p in parts):
+        return None
+    return parts
+
+
 def _parse_added_stop(name: str):
     """
     Extrait (rue_principale, rue_transversale) normalisées depuis le nom
-    d'un arrêt ajouté.
-    "Temp. - Clément / Lafleur"        → ("clement", "lafleur")
-    "56472 - Notre-Dame / Saint-Pierre" → ("notre dame", "saint pierre")
-    "Temp. - ST PATRICK / ST PATRICK"  → ("st patrick", "st patrick")
+    d'un arrêt ajouté, ou (None, None) si le nom ne désigne aucune rue.
+
+    Le nom d'une station nomme la station, pas la rue où l'arrêt est planté :
+    « Station Sherbrooke » est sur Berri. Or une station porte presque toujours
+    le nom d'une rue que la ligne emprunte pour de vrai — s'y fier place l'arrêt
+    au mauvais coin sans le moindre signal d'erreur. La STM donne la position
+    réelle entre parenthèses (même convention que matching.stop_tokens) : on la
+    lit en priorité, et faute d'intersection exploitable on renonce à placer
+    l'arrêt plutôt que de deviner — il ressort alors dans les alertes.
+
+    "Temp. - Clément / Lafleur"                     → ("clement", "lafleur")
+    "56472 - Notre-Dame / Saint-Pierre"             → ("notre dame", "saint pierre")
+    "Temp. - De Rouen /Bourbonnière (N/E)"          → ("de rouen", "bourbonniere")
+    "Station Papineau (Cartier / Sainte-Catherine)" → ("cartier", "sainte catherine")
+    "Station Sherbrooke (Édicule Est)"              → (None, None)
     """
     m = re.match(r'^(?:Temp\.|[\d]+)\s*[-–]\s*(.+)$', name, re.IGNORECASE)
-    clean = m.group(1).strip() if m else name.strip()
-    parts = [normalize_street(p) for p in clean.split("/")]
-    main  = parts[0] if parts else None
-    cross = parts[1] if len(parts) >= 2 else None
-    return main, cross
+    clean = (m.group(1) if m else name).strip()
+
+    paren = re.search(r'\(([^)]*)\)', clean)
+    if paren:
+        rues = _split_intersection(paren.group(1))
+        if rues:
+            return rues[0], rues[1]
+        clean = re.sub(r'\([^)]*\)', " ", clean).strip()
+
+    rues = _split_intersection(clean)
+    if rues:
+        return rues[0], rues[1]
+
+    seul = normalize_street(clean)
+    if not seul or seul.split()[0] in _LIEU_PREFIXES:
+        return None, None
+    return seul, None
+
+
+def _anchor_added_by_code(rows: list, stop_info: dict):
+    """
+    Ancre un arrêt ajouté sur l'étape de détour qui cite son code d'arrêt.
+
+    Les descriptions_gd nomment souvent le terminus temporaire avec son code :
+    « TERMINUS TEMPORAIRE STATION SHERBROOKE (52506) », « ... ARRÊT 53016 ».
+    C'est une ancre exacte, là où l'appariement par nom de rue ne peut que
+    supposer — on la préfère donc systématiquement.
+
+    Position : un terminus temporaire est le départ ou l'arrivée du détour.
+    Cité par la 1re étape, c'est le point de départ → l'arrêt la précède ; cité
+    plus loin, on l'atteint au terme de la manœuvre → l'arrêt la suit.
+
+    Retourne (index, avant) ou None si le code est absent des étapes du détour.
+    """
+    code  = (stop_info.get("id") or "").strip()
+    ev_id = stop_info.get("evenement_id", "")
+    if not _STOP_CODE_RE.match(code):
+        return None
+
+    etapes = [i for i, r in enumerate(rows)
+              if r.get("detour_added") and r.get("gd")
+              and (not ev_id or r.get("evenement_id", "") == ev_id)]
+    for rang, i in enumerate(etapes):
+        if re.search(rf'\b{code}\b', rows[i]["gd"]):
+            return i, rang == 0
+    return None
+
+
+def _added_row(stop_info: dict) -> dict:
+    """Ligne de tableau pour un arrêt ajouté placé inline."""
+    return {
+        "gd": "",
+        "seq": None,
+        "stop_id": None,
+        "stop_code": "",
+        "stop_name": stop_info["name"],
+        "cancelled": [],
+        "added_inline":  True,
+        "added_label":   stop_info.get("label", ""),
+        "added_short_label": stop_info.get("short_label", ""),
+        "commentaire":   stop_info.get("commentaire", ""),
+        "effectif":      stop_info.get("effectif", ""),
+        "evenement_id":  stop_info.get("evenement_id", ""),
+    }
 
 
 def insert_added_stops_inline(rows: list, added: list) -> tuple:
     """
-    Tente de placer chaque arrêt ajouté directement dans le tableau,
-    après l'instruction de détour qui longe la rue principale de l'arrêt.
+    Tente de placer chaque arrêt ajouté directement dans le tableau, par ordre
+    de fiabilité décroissante des ancres :
 
-    Logique de placement :
-      1. Cherche les lignes detour_added dont la rue correspond à la rue
-         principale de l'arrêt.
+      0. Code d'arrêt cité dans une étape du détour (_anchor_added_by_code) :
+         ancre exacte, elle l'emporte sur tout appariement de nom.
+      1. Sinon, cherche les lignes detour_added dont la rue correspond à la rue
+         principale de l'arrêt (_parse_added_stop, qui sait qu'une station n'est
+         pas sur la rue dont elle porte le nom).
       2. Parmi elles, préfère celle immédiatement suivie d'une instruction
          sur la rue transversale (= on est au bon coin de rue).
       3. Insère un arrêt vert juste après cette instruction.
@@ -491,6 +585,14 @@ def insert_added_stops_inline(rows: list, added: list) -> tuple:
 
     for stop_info in added:
         name = stop_info["name"]
+
+        ancre = _anchor_added_by_code(rows, stop_info)
+        if ancre is not None:
+            idx, avant = ancre
+            pos = idx if avant else idx + 1
+            rows = rows[:pos] + [_added_row(stop_info)] + rows[pos:]
+            continue
+
         main_street, cross_street = _parse_added_stop(name)
         if not main_street:
             still_added.append(stop_info)
@@ -533,21 +635,7 @@ def insert_added_stops_inline(rows: list, added: list) -> tuple:
                 best_idx = candidates[-1]  # dernier candidat sur cette rue
 
         if best_idx is not None:
-            new_row = {
-                "gd": "",
-                "seq": None,
-                "stop_id": None,
-                "stop_code": "",
-                "stop_name": name,
-                "cancelled": [],
-                "added_inline":  True,
-                "added_label":   stop_info.get("label", ""),
-                "added_short_label": stop_info.get("short_label", ""),
-                "commentaire":   stop_info.get("commentaire", ""),
-                "effectif":      stop_info.get("effectif", ""),
-                "evenement_id":  stop_info.get("evenement_id", ""),
-            }
-            rows = rows[: best_idx + 1] + [new_row] + rows[best_idx + 1 :]
+            rows = rows[: best_idx + 1] + [_added_row(stop_info)] + rows[best_idx + 1 :]
         else:
             still_added.append(stop_info)
 
