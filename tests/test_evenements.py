@@ -2,10 +2,11 @@
 """
 test_evenements.py — Tests unitaires applicabilité des évènements
 
-Couvre chauffeur.evenements (applicable_a_la_date, applicable_a_la_plage)
-et la règle 1 de chauffeur.gd.event_applicable_to_parcours, y compris la
-convention stop_ids=None (arrêts GTFS inconnus → fail-safe) sur des
-évènements synthétiques inline (pas de fichier externe requis).
+Couvre chauffeur.evenements (applicable_a_la_date, applicable_a_la_plage,
+titre_annule_l_arret, arret_reellement_annule) et la règle 1 de
+chauffeur.gd.event_applicable_to_parcours, y compris la convention
+stop_ids=None (arrêts GTFS inconnus → fail-safe) sur des évènements
+synthétiques inline (pas de fichier externe requis).
 
 Usage : python3 tests/test_evenements.py   (code de sortie 0 si tout passe)
 """
@@ -16,7 +17,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from chauffeur.evenements import applicable_a_la_date, applicable_a_la_plage  # noqa: E402
+from chauffeur.evenements import (  # noqa: E402
+    applicable_a_la_date,
+    applicable_a_la_plage,
+    arret_reellement_annule,
+    titre_annule_l_arret,
+)
 from chauffeur.gd import event_applicable_to_parcours  # noqa: E402
 
 
@@ -111,6 +117,44 @@ def main() -> int:
     check(event_applicable_to_parcours({"description_gd": ""}, None, gd_instr),
           "parcours: sans arrêt annulé ni description → applicable")
 
+    # ── titre_annule_l_arret ──────────────────────────────────────────────────
+    # Les 5 titres réellement produits par le portail STM.
+    check(titre_annule_l_arret("détour avec annulation d'arrêt"),
+          "titre: « Détour avec annulation d'arrêt » supprime l'arrêt")
+    check(titre_annule_l_arret("annulation d'arrêts"),
+          "titre: « Annulation d'arrêts » supprime l'arrêt")
+    check(not titre_annule_l_arret("arrêt déplacé"),
+          "titre: « Arrêt déplacé » maintient l'arrêt (desservi ailleurs)")
+    check(not titre_annule_l_arret("information chauffeur"),
+          "titre: « Information chauffeur » maintient l'arrêt")
+
+    # Fail-safe : ne jamais faire manquer une annulation réelle.
+    check(titre_annule_l_arret("titre inédit du portail"),
+          "titre: inconnu → présumé annulant")
+    check(titre_annule_l_arret(""), "titre: vide → présumé annulant")
+    check(titre_annule_l_arret(None), "titre: None → présumé annulant")
+
+    # Normalisation (type_evenement vient de titre.lower(), mais restons robustes).
+    check(not titre_annule_l_arret("  Arrêt Déplacé  "),
+          "titre: casse et espaces parasites ne doivent pas changer le verdict")
+
+    # ── arret_reellement_annule (agrégation) ──────────────────────────────────
+    depl = {"type_evenement": "arrêt déplacé"}
+    info = {"type_evenement": "information chauffeur"}
+    annu = {"type_evenement": "détour avec annulation d'arrêt"}
+
+    check(not arret_reellement_annule([]),
+          "agrégation: aucun évènement → rien à annuler")
+    check(arret_reellement_annule([annu]), "agrégation: un seul, annulant")
+    check(not arret_reellement_annule([depl, info]),
+          "agrégation: que des évènements maintenant l'arrêt → maintenu")
+    # Cas réel data/Events/85_ouest.json, arrêt 53038 : « Arrêt déplacé » arrive
+    # EN TÊTE de liste, mais une annulation réelle couvre le même arrêt.
+    check(arret_reellement_annule([depl, annu]),
+          "agrégation: le plus grave l'emporte, même si l'ambre est en tête")
+    check(arret_reellement_annule([annu, depl]),
+          "agrégation: ordre inverse, même verdict")
+
     # ── Résultat ──────────────────────────────────────────────────────────────
     if echecs:
         print("✗ test_evenements")
@@ -119,7 +163,8 @@ def main() -> int:
         print("\n0/1 cas réussis")
         return 1
 
-    print("✓ applicable_a_la_date + applicable_a_la_plage + event_applicable_to_parcours (None)")
+    print("✓ applicable_a_la_date + applicable_a_la_plage + event_applicable_to_parcours (None)"
+          " + titre_annule_l_arret / arret_reellement_annule")
     print("\n1/1 cas réussis")
     return 0
 

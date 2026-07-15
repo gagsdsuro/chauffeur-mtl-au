@@ -8,6 +8,10 @@ import argparse
 from pathlib import Path
 from typing import Dict, List, Optional
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from chauffeur.journal import ecrire_bloc  # noqa: E402
+
+
 class GDParser:
     """Parser pour donnees brutes Gauche-Droite"""
 
@@ -273,6 +277,8 @@ def main():
     arg_parser.add_argument("--json", action="store_true",
                             help="Affiche aussi le JSON complet sur stdout "
                                  "(par defaut: rapport seulement).")
+    arg_parser.add_argument("--log", action="store_true",
+                            help="Sauvegarde la sortie dans data/log/parse_gd.log (append).")
     args = arg_parser.parse_args()
 
     raw_data = sys.stdin.read()
@@ -284,11 +290,15 @@ def main():
         json_data = parser.parse()
         if json_data:
             print(parser.report)
+            if args.log:
+                ecrire_bloc("parse_gd", parser.report)
             results.append(json_data)
         else:
             failed = True
-            print(json.dumps({"errors": parser.errors}, indent=2, ensure_ascii=False),
-                  file=sys.stderr)
+            erreurs = json.dumps({"errors": parser.errors}, indent=2, ensure_ascii=False)
+            print(erreurs, file=sys.stderr)
+            if args.log:
+                ecrire_bloc("parse_gd", erreurs)
     if results and args.json:
         output = results if len(results) > 1 else results[0]
         print(json.dumps(output, indent=2, ensure_ascii=False))

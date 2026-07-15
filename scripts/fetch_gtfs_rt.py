@@ -24,7 +24,9 @@ import requests
 # ── Chemins ────────────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR   = PROJECT_ROOT / "data" / "gtfs_rt"
-LOG_FILE     = OUTPUT_DIR / "fetch_gtfs_rt.log"
+
+sys.path.insert(0, str(PROJECT_ROOT))
+from chauffeur.journal import ecrire_ligne  # noqa: E402
 
 # ── Endpoints GTFS-RT STM ──────────────────────────────────────────────────────
 BASE_URL  = "https://api.stm.info/pub/od/gtfs-rt/ic/v2"
@@ -37,12 +39,7 @@ ENDPOINTS = {
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 def log(message: str, level: str = "INFO") -> None:
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    line = f"[{timestamp}] [{level}] {message}"
-    print(line)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    with open(LOG_FILE, "a", encoding="utf-8") as f:
-        f.write(line + "\n")
+    print(ecrire_ligne("fetch_gtfs_rt", message, level))
 
 
 # ── Chargement de la clé API ───────────────────────────────────────────────────
