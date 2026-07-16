@@ -193,19 +193,14 @@ def _format_periode(e: dict) -> str:
 def _arr_key(r: dict) -> str:
     """Clé de l'annotation événement sous le nom d'arrêt — sert à détecter les répétitions.
 
-    Exclut volontairement le nom d'arrêt : seul le texte qui le suit
-    (label événement, commentaire) est comparé d'une ligne à l'autre.
+    Basée sur le(s) evenement_id plutôt que sur le texte affiché : deux
+    évènements distincts peuvent produire le même libellé (ex. deux "Arrêt
+    déplacé (Travaux)" sans lien) et ne doivent pas être confondus.
     """
-    cancelled = r.get("cancelled") or []
     if r.get("added_inline"):
-        return (r.get("added_short_label") or r.get("added_label", "")) + \
-               (("|" + r["commentaire"]) if r.get("commentaire") else "")
-    parts = []
-    for ev in cancelled:
-        parts.append(ev.get("short_label") or ev.get("label", ""))
-        if ev.get("commentaire"):
-            parts.append(ev["commentaire"])
-    return "|".join(parts)
+        return r.get("evenement_id", "")
+    cancelled = r.get("cancelled") or []
+    return "|".join(ev.get("evenement_id", "") for ev in cancelled)
 
 
 def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé",
