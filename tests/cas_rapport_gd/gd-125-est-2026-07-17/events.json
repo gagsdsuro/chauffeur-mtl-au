@@ -1,0 +1,149 @@
+[
+  {
+    "evenement_id": "10700602",
+    "titre": "Annulation d'arrêts",
+    "motif": "Situation Incontrôlable",
+    "date_heure_debut": "2025-12-22T08:17:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "52517",
+        "nom": "Station Place-des-Arts (Pr.-Kennedy/Bleury)"
+      }
+    ],
+    "commentaire": "***ARRÊT # 52517 PRÉSIDENT-KENNEDY/DE BLEUR ANNULÉ A/C OBILAGATION DE TOURNER À DROITE***",
+    "arrets_ajoutes": [],
+    "description_gd": null
+  },
+  {
+    "evenement_id": "11154688",
+    "titre": "Arrêt déplacé",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-03-08T12:03:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "52681",
+        "nom": "Ontario / Saint-Hubert (10 mètres avant)"
+      }
+    ],
+    "commentaire": null,
+    "arrets_ajoutes": [],
+    "description_gd": null
+  },
+  {
+    "evenement_id": "11188805",
+    "titre": "Annulation d'arrêts",
+    "motif": "Situation Incontrôlable",
+    "date_heure_debut": "2026-04-11T09:23:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "53141",
+        "nom": "Ontario / De Chambly"
+      }
+    ],
+    "commentaire": null,
+    "arrets_ajoutes": [],
+    "description_gd": null
+  },
+  {
+    "evenement_id": "11190151",
+    "titre": "Détour avec annulation d'arrêt",
+    "motif": "Événement spécial",
+    "date_heure_debut": "2026-06-17T00:01:00",
+    "date_heure_fin": "2026-09-17T23:59:00",
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "53115",
+        "nom": "Ontario / Davidson"
+      },
+      {
+        "id": "53123",
+        "nom": "Ontario / Aylwin"
+      },
+      {
+        "id": "53141",
+        "nom": "Ontario / De Chambly"
+      },
+      {
+        "id": "53155",
+        "nom": "Ontario / Valois"
+      },
+      {
+        "id": "53170",
+        "nom": "Ontario / d'Orléans"
+      },
+      {
+        "id": "53191",
+        "nom": "Ontario / Pie-IX"
+      },
+      {
+        "id": "53217",
+        "nom": "Ontario / Letourneux"
+      }
+    ],
+    "commentaire": null,
+    "arrets_ajoutes": [
+      {
+        "id": "",
+        "nom": "Temp. - de Rouen / Cuvillier"
+      },
+      {
+        "id": "53084",
+        "nom": "Joliette / de Rouen"
+      },
+      {
+        "id": "",
+        "nom": "Temp. - De Rouen /Bourbonnière (S/O)"
+      },
+      {
+        "id": "",
+        "nom": "Temp. - DE ROUEN / PIE IX"
+      },
+      {
+        "id": "",
+        "nom": "Temp. - Ontario /Morgan (S/O)"
+      }
+    ],
+    "description_gd": "VIA ONTARIO G/ ST-GERMAIN D/ DE ROUEN D/ LETOURNEUX G/ ONTARIO *** VIA ROUTE RÉGULIÈRE"
+  },
+  {
+    "evenement_id": "11190151",
+    "titre": "Arrêt déplacé",
+    "motif": "Situation Incontrôlable",
+    "date_heure_debut": "2026-04-13T08:10:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "53109",
+        "nom": "Place des Tisserandes (Ontario / Saint-Germain) (5 mètres avant)"
+      }
+    ],
+    "commentaire": null,
+    "arrets_ajoutes": [],
+    "description_gd": null
+  },
+  {
+    "evenement_id": "11191753",
+    "titre": "Arrêt déplacé",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-04-14T15:42:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "52731",
+        "nom": "Ontario / Atateken (50 mètres après)"
+      }
+    ],
+    "commentaire": null,
+    "arrets_ajoutes": [],
+    "description_gd": null
+  }
+]

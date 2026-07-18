@@ -564,6 +564,48 @@ def _added_row(stop_info: dict) -> dict:
     }
 
 
+def _anchor_added_by_streets(rows: list, ev_id: str,
+                             main_street: str, cross_street) -> int | None:
+    """
+    Cherche l'index de la ligne detour_added (du même événement) où poser un
+    arrêt ajouté circulant sur `main_street`, ou None si aucune ne correspond.
+
+    Candidats : les instructions de détour dont la rue ≈ main_street. Parmi
+    elles, préfère celle immédiatement suivie d'une instruction sur la rue
+    transversale (= on est au bon coin de rue) ; à défaut, la dernière.
+    """
+    candidates = []
+    for i, r in enumerate(rows):
+        if not r.get("detour_added") or not r.get("gd"):
+            continue
+        if ev_id and r.get("evenement_id", "") != ev_id:
+            continue
+        instr_street = normalize_street(extract_street(r["gd"]))
+        if main_street in instr_street or instr_street in main_street:
+            candidates.append(i)
+
+    if not candidates:
+        return None
+
+    if cross_street:
+        # Préfère le candidat suivi d'une instruction sur la rue transversale
+        # (du même événement).
+        for idx in candidates:
+            j = idx + 1
+            while (j < len(rows) and rows[j].get("detour_added")
+                   and rows[j].get("evenement_id", "") == rows[idx].get("evenement_id", "")
+                   and not rows[j].get("gd")):
+                j += 1
+            if (j < len(rows) and rows[j].get("detour_added")
+                    and rows[j].get("evenement_id", "") == rows[idx].get("evenement_id", "")
+                    and rows[j].get("gd")):
+                next_street = normalize_street(extract_street(rows[j]["gd"]))
+                if cross_street in next_street or next_street in cross_street:
+                    return idx
+
+    return candidates[-1]  # dernier candidat sur cette rue
+
+
 def insert_added_stops_inline(rows: list, added: list) -> tuple:
     """
     Tente de placer chaque arrêt ajouté directement dans le tableau, par ordre
@@ -577,6 +619,13 @@ def insert_added_stops_inline(rows: list, added: list) -> tuple:
       2. Parmi elles, préfère celle immédiatement suivie d'une instruction
          sur la rue transversale (= on est au bon coin de rue).
       3. Insère un arrêt vert juste après cette instruction.
+
+    L'arrêt « A / B » nomme d'ordinaire d'abord la rue qu'emprunte la ligne,
+    mais un détour peut réquisitionner un arrêt situé sur une rue perpendiculaire
+    au parcours régulier de cet arrêt : « Joliette / de Rouen » desservi par un
+    détour circulant sur de Rouen. Si la 1re rue n'ancre nulle part, on réessaie
+    donc avec la rue transversale comme rue empruntée (les rôles échangés) plutôt
+    que d'abandonner l'arrêt.
 
     Retourne (rows_mis_à_jour, still_added) où still_added contient les
     arrêts qui n'ont pas pu être positionnés inline.
@@ -598,41 +647,15 @@ def insert_added_stops_inline(rows: list, added: list) -> tuple:
             still_added.append(stop_info)
             continue
 
-        # Candidats : lignes detour_added du MÊME événement dont la rue ≈ main_street.
         # Restreindre à l'événement d'origine évite qu'un arrêt ajouté atterrisse
         # dans le détour d'un autre événement (deux détours peuvent partager un nom
         # de rue, ex. « Gauche Ste-Catherine »).
         ev_id = stop_info.get("evenement_id", "")
-        candidates = []
-        for i, r in enumerate(rows):
-            if not r.get("detour_added") or not r.get("gd"):
-                continue
-            if ev_id and r.get("evenement_id", "") != ev_id:
-                continue
-            instr_street = normalize_street(extract_street(r["gd"]))
-            if main_street in instr_street or instr_street in main_street:
-                candidates.append(i)
-
-        best_idx = None
-        if candidates:
-            if cross_street:
-                # Préfère le candidat suivi d'une instruction sur la rue transversale
-                # (du même événement).
-                for idx in candidates:
-                    j = idx + 1
-                    while (j < len(rows) and rows[j].get("detour_added")
-                           and rows[j].get("evenement_id", "") == rows[idx].get("evenement_id", "")
-                           and not rows[j].get("gd")):
-                        j += 1
-                    if (j < len(rows) and rows[j].get("detour_added")
-                            and rows[j].get("evenement_id", "") == rows[idx].get("evenement_id", "")
-                            and rows[j].get("gd")):
-                        next_street = normalize_street(extract_street(rows[j]["gd"]))
-                        if cross_street in next_street or next_street in cross_street:
-                            best_idx = idx
-                            break
-            if best_idx is None:
-                best_idx = candidates[-1]  # dernier candidat sur cette rue
+        best_idx = _anchor_added_by_streets(rows, ev_id, main_street, cross_street)
+        if best_idx is None and cross_street:
+            # La 1re rue n'ancre nulle part : l'arrêt est peut-être réquisitionné
+            # par un détour circulant sur sa rue transversale (rôles échangés).
+            best_idx = _anchor_added_by_streets(rows, ev_id, cross_street, main_street)
 
         if best_idx is not None:
             rows = rows[: best_idx + 1] + [_added_row(stop_info)] + rows[best_idx + 1 :]

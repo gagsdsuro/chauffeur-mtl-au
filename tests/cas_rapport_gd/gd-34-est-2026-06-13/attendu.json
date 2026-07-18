@@ -290,6 +290,20 @@
       "effectif": ""
     },
     {
+      "gd": "",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "Pie-IX / Adam",
+      "cancelled": [],
+      "added_inline": true,
+      "added_label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA SAINTE-CATHERINE G BOURBONNIÈRE D ADAM D DE LA SALLE G STE-CATHERINE VIA RR",
+      "added_short_label": "Détour avec annulation d'arrêt (Travaux)",
+      "commentaire": "",
+      "effectif": "En tout temps",
+      "evenement_id": "11218486"
+    },
+    {
       "gd": "Droite - DE LA SALLE",
       "seq": null,
       "stop_id": null,
@@ -490,16 +504,6 @@
       "cancelled": []
     }
   ],
-  "added": [
-    {
-      "name": "Pie-IX / Adam",
-      "id": "53238",
-      "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA SAINTE-CATHERINE G BOURBONNIÈRE D ADAM D DE LA SALLE G STE-CATHERINE VIA RR",
-      "short_label": "Détour avec annulation d'arrêt (Travaux)",
-      "commentaire": "",
-      "effectif": "En tout temps",
-      "evenement_id": "11218486"
-    }
-  ],
+  "added": [],
   "orphan_events": []
 }

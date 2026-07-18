@@ -286,6 +286,20 @@
       "effectif": ""
     },
     {
+      "gd": "",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "Temp. - Station Papineau (Caetier / Sainte-Catherine 53047)",
+      "cancelled": [],
+      "added_inline": true,
+      "added_label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA RENÉ-LÉVESQUE G CARTIER TERMINUS TEMPORAIRE CARTIER AU NORD DE STE-CATHERINE",
+      "added_short_label": "Détour avec annulation d'arrêt (Travaux)",
+      "commentaire": "",
+      "effectif": "En tout temps",
+      "evenement_id": "11205733"
+    },
+    {
       "gd": "Gauche - De Lorimier",
       "seq": 21,
       "stop_id": "53064",
@@ -379,16 +393,6 @@
       "detour_removed": true
     }
   ],
-  "added": [
-    {
-      "name": "Temp. - Station Papineau (Caetier / Sainte-Catherine 53047)",
-      "id": "",
-      "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA RENÉ-LÉVESQUE G CARTIER TERMINUS TEMPORAIRE CARTIER AU NORD DE STE-CATHERINE",
-      "short_label": "Détour avec annulation d'arrêt (Travaux)",
-      "commentaire": "",
-      "effectif": "En tout temps",
-      "evenement_id": "11205733"
-    }
-  ],
+  "added": [],
   "orphan_events": []
 }
