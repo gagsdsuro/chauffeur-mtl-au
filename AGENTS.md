@@ -19,7 +19,7 @@ python3 scripts/parse_journee.py  --date 2026-06-18 < raw.txt
 
 - Aucun framework de test/lint/typecheck configuré (pas de pyproject/pytest). Vérifier par `python3 -m py_compile <fichier>` + les suites de régression.
 - Les importeurs **lisent depuis stdin** (pas d'argument fichier). Options : `--json` (imprime le JSON), `--log` (écrit dans `data/log/<source>.log`). Depuis l'app, `--log` est toujours actif.
-- Quelques suites requièrent `PyMuPDF` (cartes agent, rapports) ; `requests`/`protobuf` pour GTFS-RT et le portail.
+- Dépendances dans `requirements.txt` (installées par le Dockerfile) : en local, `pip install -r requirements.txt` (ajouter `--break-system-packages` sur un Python système Debian/Ubuntu). Quelques suites requièrent `pymupdf` (cartes agent) ou `reportlab` (rapport v1) ; `requests` pour GTFS/GTFS-RT et le portail — **pas de dépendance protobuf**. Détail : `README.md` et section « Dépendances » de `CLAUDE.md`.
 
 ## Architecture (à ne pas se tromper)
 

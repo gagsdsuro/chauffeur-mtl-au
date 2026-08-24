@@ -463,6 +463,54 @@ with tabs[0]:
         mc4.metric("Prise début",      db_bornes_deb[0] if db_bornes_deb else "–")
         mc5.metric("Prise fin",       db_bornes_fin[1] if db_bornes_fin else "–")
 
+        # ── Notes (carte agent + journée) ─────────────────────────────────────
+        from chauffeur.ca import cle_note_carte as _cle_note_carte
+        from chauffeur.notes import (
+            note_carte as _note_carte,
+            note_journee as _note_journee,
+            sauvegarder_note_carte as _save_note_carte,
+            sauvegarder_note_journee as _save_note_journee,
+        )
+
+        nn1, nn2 = st.columns(2)
+        with nn1:
+            _cle_ca = _cle_note_carte(_ca_info)
+            if _cle_ca is None:
+                st.caption("Aucune carte agent résolue pour cette journée.")
+            else:
+                note_c = _note_carte(_cle_ca) or {}
+                st.text_area(
+                    "📝 Note carte agent",
+                    value=note_c.get("note", ""),
+                    help="Suit la carte : réutilisée aux journées partageant "
+                         "cette liste/jour-type (identité n°_liste_jour).",
+                    key=f"db_note_ca_edit_{db_date_str}_{_cle_ca}",
+                )
+                if st.button("💾 Enregistrer", key=f"db_note_ca_save_{db_date_str}_{_cle_ca}"):
+                    _save_note_carte(
+                        _cle_ca,
+                        st.session_state.get(f"db_note_ca_edit_{db_date_str}_{_cle_ca}", ""),
+                    )
+                    st.rerun()
+                if note_c.get("maj"):
+                    st.caption(f"Mise à jour : {note_c['maj']}")
+        with nn2:
+            note_j = _note_journee(db_date_str) or {}
+            st.text_area(
+                "📝 Note journée",
+                value=note_j.get("note", ""),
+                help="Note propre à cette journée.",
+                key=f"db_note_journee_edit_{db_date_str}",
+            )
+            if st.button("💾 Enregistrer", key=f"db_note_journee_save_{db_date_str}"):
+                _save_note_journee(
+                    db_date_str,
+                    st.session_state.get(f"db_note_journee_edit_{db_date_str}", ""),
+                )
+                st.rerun()
+            if note_j.get("maj"):
+                st.caption(f"Mise à jour : {note_j['maj']}")
+
         # ── Téléchargements ──────────────────────────────────────────────────
         annotee_file = _ca_info["annotee"]
         _v2_html = sorted(

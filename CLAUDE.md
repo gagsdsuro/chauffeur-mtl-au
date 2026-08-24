@@ -17,6 +17,12 @@ docker compose up --build                   # production (port 8501, volume ./da
 ```
 L'app expose 5 onglets : Ma journée (orchestrateur : sélection unique de journée, checklist de préparation, actions chaînées, consultation par pièce/trajet) · Importation (5 sous-onglets, dont GTFS) · Rapports (2 sous-onglets) · Fichiers (5 sous-onglets, avec purge des fichiers obsolètes) · Logs.
 
+**Dépendances** — listées dans `requirements.txt`, installées par le Dockerfile ; en local : `pip install -r requirements.txt` (ajouter `--break-system-packages` sur un Python système Debian/Ubuntu). Détail et tableau paquet→usage dans le `README.md`. Points à savoir :
+- `pymupdf` (`fitz`) : annotation carte agent + tests `test_carte_agent.py`/`creer_cas_test.py`.
+- `reportlab` : PDF des rapports v1/v2 + test `test_rapport.py`.
+- Pas de dépendance protobuf : le GTFS-RT est décodé en wire-format minimal par `chauffeur/gtfs_rt.py`.
+- `openpyxl` (hors requirements) : uniquement pour `scripts/import_journees_historique.py`.
+
 **Import Gauche-Droite** — lit depuis stdin, écrit dans `data/Gauche-Droite/` :
 ```bash
 python3 scripts/parse_gd.py < data/raw/new-gd.txt          # importe et écrit les fichiers
@@ -67,7 +73,7 @@ python3 tests/test_carte_agent.py carte-449    # un cas précis
 python3 tests/creer_cas_test.py --pdf data/ca/carte-agent-2026-06-09.pdf --gtfs data/gtfs/gtfs_stm/   # figer un nouveau cas (vérifier attendu.json avant de committer)
 ```
 
-**Tests de régression rapport** — rejoue des cas figés (PDF + G-D gelés dans `tests/cas_rapport/<nom>/`) et compare les lignes reconnues et leurs directions G-D appariées à `attendu.json`. Hermétique : `GD_DIR` est redirigé vers le `gd/` du cas (requiert `PyMuPDF`) :
+**Tests de régression rapport** — rejoue des cas figés (PDF + G-D gelés dans `tests/cas_rapport/<nom>/`) et compare les lignes reconnues et leurs directions G-D appariées à `attendu.json`. Hermétique : `GD_DIR` est redirigé vers le `gd/` du cas (requiert `reportlab`) :
 ```bash
 python3 tests/test_rapport.py                          # tous les cas
 python3 tests/test_rapport.py carte-455-2026-06-11     # un cas précis
@@ -224,5 +230,6 @@ Racine : `{ ligne, direction, routes: [ { line_number, direction, parcours: [...
 - **Teinte des arrêts touchés** : rouge barré = l'arrêt disparaît (« Détour avec annulation d'arrêt », « Annulation d'arrêts ») ; ambre non barré = l'arrêt reste desservi (« Arrêt déplacé », « Information chauffeur » — le portail STM les liste dans `arrets_annules` alors que le chauffeur doit s'y arrêter). Titre inconnu → rouge (fail-safe).
 - **Rapports journaliers v1** : `data/rapports/rapport-YYYY-MM-DD.pdf`.
 - **Rapports journaliers v2** : `data/rapports/rapport-v2-YYYY-MM-DD.{html,pdf}` (ou `rapport-v2-DATE-LIGNE-DIR-idN.html` pour un rapport mono-groupe).
+- **Notes** (`chauffeur.notes`) : fichiers indexés par clé → `{"note": str, "maj": "YYYY-MM-DD"}` (entrée retirée si texte vide) — `data/notes/carte_agent.json` (clé = identité de la carte `numero_groupe_id_jour_type` via `chauffeur.ca.cle_note_carte()` ; la note suit la carte réutilisée d'une journée à l'autre, listes/variations/fériés donnant des identités distinctes ; repli sur le nom legacy `carte-agent-YYYY-MM-DD` si l'identité n'est pas calculable) et `data/notes/journee.json` (clé = date ISO, note propre à la journée). Éditées dans l'onglet Ma journée.
 - JSON écrit avec indentation 2 espaces et accents préservés (`ensure_ascii=False`).
 - Préférer l'import via les scripts à l'édition manuelle, pour garantir la normalisation et le rapport de changements.

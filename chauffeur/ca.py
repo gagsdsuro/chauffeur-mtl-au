@@ -64,6 +64,27 @@ def resoudre_ca(jour: date, numero, ca_dir: Path | None = None) -> dict:
     return {"identite": identite, "brute": brute, "annotee": annotee, "legacy": legacy}
 
 
+def cle_note_carte(info: dict) -> str | None:
+    """Clé de note (chauffeur.notes) pour un résultat de resoudre_ca().
+
+    Identité « numero_groupe_id_jour_type » si calculable — la note suit la
+    carte réutilisée d'une journée à l'autre, listes/variations/fériés
+    distingués par identite_ca ; sinon nom du fichier legacy résolu sans
+    suffixe d'annotation (note spécifique à la date). None si aucune CA.
+    """
+    if info.get("identite"):
+        n, g, j = info["identite"]
+        return f"{n}_{g}_{j}"
+    p = info.get("annotee") or info.get("brute")
+    if p is None:
+        return None
+    stem = Path(p).stem
+    for suffixe in ("-annotee", "-surligné"):
+        if stem.endswith(suffixe):
+            return stem[: -len(suffixe)]
+    return stem
+
+
 def ranger_ca(numero: str, groupe_id: str, jour_type: str,
               annotee_tmp: Path, brute_tmp: Path | None = None,
               remplacer: bool = False, ca_dir: Path | None = None) -> dict:

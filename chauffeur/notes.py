@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Notes libres sur autobus et matricules (data/notes/voiture.json, matricule.json).
+"""Notes libres sur autobus, matricules, cartes agent et journées
+(data/notes/voiture.json, matricule.json, carte_agent.json, journee.json).
 
-Fichiers indexés par clé (numéro d'autobus ou matricule) -> {"note": str,
-"maj": "YYYY-MM-DD"} (+ "nom" pour les matricules). Édités manuellement ou
-via l'onglet Ma journée de l'app.
+Fichiers indexés par clé (numéro d'autobus, matricule, identité de carte
+agent ou date ISO de journée) -> {"note": str, "maj": "YYYY-MM-DD"}
+(+ "nom" pour les matricules). Édités manuellement ou via l'onglet
+Ma journée de l'app.
 """
 from __future__ import annotations
 
@@ -67,3 +69,40 @@ def sauvegarder_note_matricule(matricule: str, texte: str, nom: str | None = Non
     else:
         notes.pop(matricule, None)
     _sauvegarder("matricule", notes)
+
+
+def note_carte(cle: str) -> dict | None:
+    """Note de la carte agent `cle` (clé produite par chauffeur.ca.cle_note_carte)."""
+    return _charger("carte_agent").get(cle)
+
+
+def sauvegarder_note_carte(cle: str, texte: str) -> None:
+    """Écrit (ou retire si texte vide) la note de la carte agent `cle`.
+
+    La clé est l'identité de la carte (numero_groupe_id_jour_type) : la note
+    suit la carte réutilisée d'une journée à l'autre — listes, variations et
+    fériés donnant des identités distinctes (cf. chauffeur.periodes.identite_ca).
+    """
+    notes = _charger("carte_agent")
+    texte = texte.strip()
+    if texte:
+        notes[cle] = {"note": texte, "maj": date.today().isoformat()}
+    else:
+        notes.pop(cle, None)
+    _sauvegarder("carte_agent", notes)
+
+
+def note_journee(date_str: str) -> dict | None:
+    """Note de la journée `date_str` (date ISO), propre à cette date."""
+    return _charger("journee").get(date_str)
+
+
+def sauvegarder_note_journee(date_str: str, texte: str) -> None:
+    """Écrit (ou retire si texte vide) la note de la journée `date_str`."""
+    notes = _charger("journee")
+    texte = texte.strip()
+    if texte:
+        notes[date_str] = {"note": texte, "maj": date.today().isoformat()}
+    else:
+        notes.pop(date_str, None)
+    _sauvegarder("journee", notes)
