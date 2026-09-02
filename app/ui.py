@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Interface Streamlit — Chauffeur STM
-Onglets : Ma journée · Importation · Rapports · Fichiers · Logs
+Onglets : Ma journée · Préparation d'une journée · Rapports · Fichiers · Logs
 """
 
 import json
@@ -31,10 +31,18 @@ from chauffeur.depots import (  # noqa: E402
     FRAICHEUR_GD_JOURS, FRAICHEUR_GTFS_JOURS,
     charger_evenements, charger_gd, charger_journee, sauvegarder_journee,
     chemin_evenements, chemin_journee,
-    info_gd, info_gtfs,
+    info_gd, info_gtfs, lister_journees_fenetre,
 )
 from chauffeur.effectif import bornes_quart  # noqa: E402
 from chauffeur.journal import ecrire_bloc, lister_journaux  # noqa: E402
+from chauffeur.preparation import (  # noqa: E402
+    ResultatRafraichissement, etat_rapport, finaliser_rapports,
+    fusionner_rafraichissements, generer_v2_et_marquer,
+    marquer_rapport_a_jour, rafraichir_evenements_journee,
+)
+from chauffeur.portail import (  # noqa: E402
+    etat_session, valider_et_sauvegarder_session,
+)
 
 
 # ── Utilitaires parcours / événements ────────────────────────────────────────
@@ -89,7 +97,7 @@ st.title("🚌 Chauffeur STM")
 
 tabs = st.tabs([
     "🏠 Ma journée",
-    "📥 Importation",
+    "🧰 Préparation d'une journée",
     "📊 Rapports",
     "🗂️ Fichiers",
     "📋 Logs",
@@ -111,6 +119,51 @@ def _fmt_size(path: Path) -> str:
     return f"{b/1024:.0f} KB" if b < 1_048_576 else f"{b/1_048_576:.1f} MB"
 
 
+def _afficher_resultat_rafraichissement(resultat: ResultatRafraichissement) -> None:
+    for ligne in resultat.lignes:
+        icone = "✅" if ligne.succes else "❌"
+        changement = " — modifié" if ligne.modifie else ""
+        st.write(f"{icone} {ligne.ligne} {ligne.direction}{changement}")
+        for detail in ligne.changements:
+            st.caption(f"• {detail}")
+        if not ligne.succes and ligne.message:
+            st.caption(ligne.message)
+
+
+@st.dialog("Renouveler la session employé STM")
+def _dialog_session_portail() -> None:
+    st.caption(
+        "Reconnectez-vous sur employe.stm.info, puis copiez la valeur complète "
+        "de l'en-tête `cookie` depuis les outils réseau du navigateur."
+    )
+    cookie = st.text_input(
+        "Cookie",
+        type="password",
+        key="session_cookie_dialog",
+        placeholder="TS01846…; laravel_session=…",
+    )
+    c1, c2 = st.columns(2)
+    if c1.button("Valider et reprendre", type="primary", use_container_width=True):
+        if not cookie.strip():
+            st.warning("Le champ est vide.")
+        else:
+            with st.spinner("Validation de la session…"):
+                ok, message = valider_et_sauvegarder_session(cookie.strip())
+            if ok:
+                st.session_state.pop("session_cookie_dialog", None)
+                pending = st.session_state.get("operation_portail")
+                if pending:
+                    pending["reprendre"] = True
+                st.session_state["ouvrir_dialog_session"] = False
+                st.rerun()
+            else:
+                st.error(message)
+    if c2.button("Annuler", use_container_width=True):
+        st.session_state.pop("operation_portail", None)
+        st.session_state["ouvrir_dialog_session"] = False
+        st.rerun()
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Tab 1 — Ma journée (orchestrateur : sélection unique + checklist + consultation)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -120,15 +173,13 @@ with tabs[0]:
 
     st.header("Ma journée")
 
-    db_j_files = (
-        sorted(JOURNEES_DIR.glob("journee-*.json"), reverse=True)
-        if JOURNEES_DIR.exists() else []
-    )
+    _journees_fenetre = lister_journees_fenetre(date.today()) if JOURNEES_DIR.exists() else []
+    db_j_files = [path for _, path in _journees_fenetre]
 
     if not db_j_files:
         st.info(
             "Aucune journée enregistrée. "
-            "Importez-en une dans **📥 Importation › Journée**."
+            "Importez-en une dans **🧰 Préparation d'une journée**."
         )
     else:
         # ── Sélecteur UNIQUE de journée (source partagée journee_date) ─────────
@@ -136,7 +187,18 @@ with tabs[0]:
         # Purge d'une sélection périmée (journée supprimée entre deux reruns)
         if st.session_state.get("journee_date") not in db_j_labels:
             st.session_state.pop("journee_date", None)
-        db_date_str = st.selectbox("Journée", db_j_labels, key="journee_date")
+        _today_label = date.today().isoformat()
+        _default_idx = (
+            db_j_labels.index(_today_label)
+            if _today_label in db_j_labels
+            else min(
+                range(len(db_j_labels)),
+                key=lambda i: abs((date.fromisoformat(db_j_labels[i]) - date.today()).days),
+            )
+        )
+        db_date_str = st.selectbox(
+            "Journée", db_j_labels, index=_default_idx, key="journee_date"
+        )
         db_j_path   = chemin_journee(db_date_str)
 
         try:
@@ -145,307 +207,101 @@ with tabs[0]:
             st.error(f"Erreur lecture journée : {e}")
             st.stop()
 
-        # ── Checklist de préparation ──────────────────────────────────────────
+        # ── Rafraîchissement du jour ─────────────────────────────────────────
         gtfs_info = info_gtfs()
         RAPPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
         from chauffeur.journee import lignes_de_service as _lignes_de_service
         _paires = _lignes_de_service(db_j_data)
-
-        db_rpt_niveau = st.radio(
-            "Niveau des rapports G-D",
-            ["standard", "détaillé", "compact"],
-            index=0, horizontal=True, key="db_rpt_niveau",
+        db_rpt_niveau = "détaillé"
+        _ca_info = resoudre_ca(
+            date.fromisoformat(db_date_str), db_j_data.get("journee_numero")
         )
 
-        # États dérivés
-        _gtfs_age = gtfs_info.get("static_age_days")
-        _gtfs_ok  = _gtfs_age is not None and _gtfs_age <= FRAICHEUR_GTFS_JOURS
-        _ca_info  = resoudre_ca(date.fromisoformat(db_date_str),
-                                db_j_data.get("journee_numero"))
-        _ca_ok    = _ca_info["annotee"] is not None
+        st.subheader("Rafraîchir les données du jour")
+        _session_info = etat_session()
+        _session_icon = {
+            "absente": "⬜", "non_verifiee": "🟡",
+            "valide": "✅", "expiree": "❌",
+        }.get(_session_info.statut, "⬜")
+        st.caption(
+            f"{_session_icon} Session portail — {_session_info.message}. "
+            "La validité est contrôlée juste avant la récupération."
+        )
 
-        _gd_missing, _gd_stale = [], []
-        _ev_missing = []
-        for _lg, _dr in _paires:
-            _gd = info_gd(_lg, _dr)
-            if not _gd["exists"]:
-                _gd_missing.append((_lg, _dr))
-            elif not _gd["fresh"]:
-                _gd_stale.append((_lg, _dr, _gd["age_days"]))
-            if not chemin_evenements(_lg, _dr).exists():
-                _ev_missing.append((_lg, _dr))
+        _est_aujourdhui = db_date_str == date.today().isoformat()
+        _pending = st.session_state.get("operation_portail")
+        _reprendre_db = bool(
+            _pending
+            and _pending.get("type") == "ma_journee"
+            and _pending.get("date") == db_date_str
+            and _pending.get("reprendre")
+        )
+        _refresh_clicked = st.button(
+            "🔄 Rafraîchir les lignes restantes",
+            type="primary",
+            key="db_refresh_events",
+            disabled=not _est_aujourdhui or not _paires,
+            help=(
+                "" if _est_aujourdhui
+                else "Le rafraîchissement des lignes restantes est réservé à aujourd’hui."
+            ),
+        )
 
-        _v2_present = bool(
-            [p for p in RAPPORTS_DIR.glob(f"rapport-v2-{db_date_str}-*.html")
-             if not re.search(r"-id\d+", p.stem)]
-            + [p for p in RAPPORTS_DIR.glob(f"rapport-v2-{db_date_str}-*.pdf")
-               if not re.search(r"-id\d+", p.stem)]
-        ) if RAPPORTS_DIR.exists() else False
-        _v1_present = (RAPPORTS_DIR / f"rapport-{db_date_str}.pdf").exists()
-
-        with st.expander("✅ Préparation de la journée", expanded=False):
-            from chauffeur.portail import SESSION_PATH as _CHK_SESS
-            _sess_ok = _CHK_SESS.exists()
-            _gtfs_present = (DATA_DIR / "gtfs" / "gtfs_stm").exists()
-
-            # ── Actions chaînées ──────────────────────────────────────────────
-            def _chain_gtfs():
-                _r = subprocess.run(
-                    [sys.executable, str(SCRIPTS_DIR / "fetch_gtfs.py")],
-                    capture_output=True, text=True)
-                return _r.returncode == 0, _r
-
-            def _chain_refresh_events():
-                _r = subprocess.run(
-                    [sys.executable, str(SCRIPTS_DIR / "refresh_events.py"),
-                     "--journee", str(db_j_path), "--log"],
-                    capture_output=True, text=True)
-                st.session_state["ref_result_code"] = _r.returncode
-                st.session_state["ref_result_out"] = (
-                    _r.stdout + ("\n" + _r.stderr if _r.stderr else ""))
-                return _r.returncode, _r
-
-            def _check_cookie() -> bool:
-                """Vérifie la validité du cookie (appel live) et l'affiche. True si valide."""
-                with st.spinner("Vérification du cookie…"):
-                    try:
-                        from chauffeur.portail import is_session_valid
-                        _ok, _msg = is_session_valid()
-                    except Exception as _e:
-                        _ok, _msg = False, str(_e)
-                st.write(("✅ Cookie valide" if _ok else f"❌ Cookie invalide — {_msg}"))
-                return _ok
-
-            def _chain_gen_v2():
-                from gen_rapport_v2 import generer_rapport as _gv2
-                _gv2(db_j_path, fmt="html",
-                     output=RAPPORTS_DIR / f"rapport-v2-{db_date_str}-{db_rpt_niveau}.html",
-                     niveau=db_rpt_niveau)
-
-            def _chain_gen_v1():
-                _r = subprocess.run(
-                    [sys.executable, str(SCRIPTS_DIR / "gen_rapport.py"),
-                     "--date", db_date_str,
-                     "--output", str(RAPPORTS_DIR / f"rapport-{db_date_str}.pdf")],
-                    capture_output=True, text=True)
-                return _r.returncode == 0, _r
-
-            def _diff_summary(out: str) -> None:
-                """Résumé compact des changements d'événements depuis le stdout."""
-                retires  = [l for l in out.splitlines() if "🗑️" in l]
-                remplaces = [l for l in out.splitlines()
-                             if "remplacé" in l or "champs modifiés" in l]
-                if not (retires or remplaces):
-                    st.caption("Aucun changement d'événement détecté.")
-                    return
-                st.markdown(
-                    f"**Changements :** {len(retires)} retiré·s · "
-                    f"{len(remplaces)} remplacé·s / modifié·s")
-                for l in retires + remplaces:
-                    st.text(f"  {l.strip()}")
-
-            ca1, ca2 = st.columns(2)
-            with ca1:
-                if st.button("🌙 Tout préparer (veille)", key="chk_prep_all",
-                             use_container_width=True):
-                    with st.status("Préparation de la journée…", expanded=False) as _stt:
-                        if not _gtfs_ok:
-                            st.write("① GTFS statique…")
-                            ok, _r = _chain_gtfs()
-                            if not ok:
-                                _stt.update(label="Échec GTFS", state="error")
-                                st.code(_r.stderr or _r.stdout)
-                                st.stop()
-                        if not _ca_ok:
-                            st.write("② Carte agent : 🔒 upload requis (📥 Carte Agent) — ignoré.")
-                        st.write(f"③ Journée : ✅ {db_date_str}")
-                        if _gd_missing or _gd_stale:
-                            st.write("④ G-D manquants/périmés : 🔒 collage requis (📥 Gauche-Droite) — ignoré.")
-                        if _sess_ok:
-                            st.write("⑤ Cookie…")
-                            if not _check_cookie():
-                                _stt.update(label="Cookie invalide", state="error")
-                                st.error("Renouvelez vos cookies (📥 Évènements).")
-                                st.stop()
-                            st.write("⑤ Événements…")
-                            rc, _r = _chain_refresh_events()
-                            if rc == 2:
-                                _stt.update(label="Session expirée", state="error")
-                                st.error("Renouvelez vos cookies (📥 Évènements).")
-                                st.stop()
-                            _diff_summary(st.session_state.get("ref_result_out", ""))
-                        else:
-                            st.write("⑤ Événements : 🔒 session requise (📥 Évènements) — ignoré.")
-                        if _gtfs_present:
-                            st.write("⑥ Rapport v2…")
-                            try:
-                                _chain_gen_v2()
-                            except Exception as _e:
-                                st.warning(f"Rapport v2 non généré : {_e}")
-                            st.write("⑦ Rapport journalier…")
-                            ok, _r = _chain_gen_v1()
-                            if not ok:
-                                st.warning("Rapport journalier non généré.")
-                        else:
-                            st.write("⑥⑦ Rapports : GTFS requis — ignorés.")
-                        _stt.update(label="Préparation terminée", state="complete")
-                    st.rerun()
-            with ca2:
-                if st.button("🚀 Tout rafraîchir (avant départ)", key="chk_refresh_all",
-                             use_container_width=True, disabled=not _sess_ok,
-                             help="" if _sess_ok else "Session requise (📥 Évènements)."):
-                    with st.status("Rafraîchissement…", expanded=True) as _stt:
-                        st.write("⑤ Cookie…")
-                        if not _check_cookie():
-                            _stt.update(label="Cookie invalide", state="error")
-                            st.error("Renouvelez vos cookies (📥 Évènements).")
-                            st.stop()
-                        st.write("⑤ Événements…")
-                        rc, _r = _chain_refresh_events()
-                        if rc == 2:
-                            _stt.update(label="Session expirée", state="error")
-                            st.error("Renouvelez vos cookies (📥 Évènements).")
-                            st.stop()
-                        _diff_summary(st.session_state.get("ref_result_out", ""))
-                        if _gtfs_present:
-                            st.write("⑥ Rapport v2…")
-                            try:
-                                _chain_gen_v2()
-                            except Exception as _e:
-                                st.warning(f"Rapport v2 non généré : {_e}")
-                        else:
-                            st.write("⑥ Rapport v2 : GTFS requis — ignoré.")
-                        _stt.update(label="Rafraîchissement terminé", state="complete")
-                    st.rerun()
-
-            st.markdown("---")
-
-            # 1 — GTFS
-            c1, c2 = st.columns([7, 2])
-            if _gtfs_ok:
-                c1.markdown(f"✅ **GTFS statique frais** ({_gtfs_age} j)")
-            elif _gtfs_age is not None:
-                c1.markdown(f"⚠️ **GTFS statique périmé** ({_gtfs_age} j)")
-            else:
-                c1.markdown("⬜ **GTFS statique absent**")
-            if not _gtfs_ok and c2.button("⬇️ GTFS", key="chk_gtfs"):
-                with st.spinner("Téléchargement GTFS…"):
-                    _r = subprocess.run(
-                        [sys.executable, str(SCRIPTS_DIR / "fetch_gtfs.py")],
-                        capture_output=True, text=True,
-                    )
-                (st.success if _r.returncode == 0 else st.error)(
-                    "GTFS mis à jour." if _r.returncode == 0 else "Échec GTFS.")
-                st.code(_r.stdout + ("\n" + _r.stderr if _r.stderr else ""))
-
-            # 2 — Carte agent annotée (action manuelle : upload)
-            c1, c2 = st.columns([7, 2])
-            if _ca_ok:
-                _ca_msg = "✅ **Carte agent annotée présente**"
-                if _ca_info["legacy"]:
-                    _ca_msg += " (ancien import par date)"
-                elif _ca_info["identite"]:
-                    _n, _g, _j = _ca_info["identite"]
-                    _ca_msg += f" (n° {_n} · {_g} · {_j} — réutilisable)"
-                c1.markdown(_ca_msg)
-            else:
-                c1.markdown("🔒 **Carte agent non annotée**")
-                c2.caption("→ 📥 Carte Agent")
-
-            # 3 — Journée chargée
-            st.markdown(f"✅ **Journée chargée** ({db_date_str})")
-
-            # 4 — Gauche-Droite disponibles et récents (<90 j)
-            c1, c2 = st.columns([7, 2])
-            if not _paires:
-                c1.markdown("⬜ **Aucune ligne de service**")
-            elif _gd_missing:
-                c1.markdown(
-                    "🔒 **G-D manquants** : "
-                    + ", ".join(f"{l} {d}" for l, d in _gd_missing))
-                c2.caption("→ 📥 Gauche-Droite")
-            elif _gd_stale:
-                c1.markdown(
-                    f"⚠️ **G-D périmés (>{FRAICHEUR_GD_JOURS} j)** : "
-                    + ", ".join(f"{l} {d} ({a} j)" for l, d, a in _gd_stale))
-                c2.caption("→ 📥 Gauche-Droite")
-            else:
-                c1.markdown(f"✅ **Gauche-Droite à jour** ({len(_paires)} ligne·s)")
-
-            # 5 — Événements extraits (fichier absent = « à extraire », pas « manquant » :
-            #     un refresh valide sans évènement matérialise un fichier vide)
-            c1, c2 = st.columns([7, 2])
-            if not _paires:
-                c1.markdown("⬜ **Aucune ligne de service**")
-            elif _ev_missing:
-                c1.markdown(
-                    "⬜ **Événements à extraire** : "
-                    + ", ".join(f"{l} {d}" for l, d in _ev_missing))
-            else:
-                c1.markdown(f"✅ **Événements extraits** ({len(_paires)} ligne·s)")
-            if _paires and c2.button(
-                "🔄 Événements", key="chk_events", disabled=not _sess_ok,
-                help="" if _sess_ok else "Session requise (📥 Évènements).",
-            ):
-                if not _check_cookie():
-                    st.error("Renouvelez vos cookies (📥 Évènements).")
+        if _refresh_clicked or _reprendre_db:
+            _precedent = None
+            _paires_refresh = None
+            if _reprendre_db:
+                _precedent = ResultatRafraichissement.from_dict(
+                    _pending.get("resultat", {})
+                )
+                _paires_refresh = _precedent.restantes
+                _pending["reprendre"] = False
+            with st.status("Rafraîchissement des événements…", expanded=True) as _status:
+                _nouveau = rafraichir_evenements_journee(
+                    db_j_data,
+                    restantes_seulement=True,
+                    paires=_paires_refresh,
+                    log=True,
+                )
+                _resultat = fusionner_rafraichissements(_precedent, _nouveau)
+                _afficher_resultat_rafraichissement(_nouveau)
+                if _nouveau.session_expiree:
+                    st.session_state["operation_portail"] = {
+                        "type": "ma_journee",
+                        "date": db_date_str,
+                        "resultat": _resultat.to_dict(),
+                        "reprendre": False,
+                    }
+                    st.session_state["ouvrir_dialog_session"] = True
+                    _status.update(label="Session à renouveler", state="error")
+                elif not _resultat.succes_complet:
+                    st.session_state.pop("operation_portail", None)
+                    st.session_state["db_refresh_result"] = _resultat.to_dict()
+                    _status.update(label="Rafraîchissement partiel", state="error")
                 else:
-                    _rc = [
-                        sys.executable, str(SCRIPTS_DIR / "refresh_events.py"),
-                        "--journee", str(db_j_path), "--log",
-                    ]
-                    with st.spinner("Rafraîchissement des événements…"):
-                        _r = subprocess.run(_rc, capture_output=True, text=True)
-                    st.session_state["ref_result_code"] = _r.returncode
-                    st.session_state["ref_result_out"] = (
-                        _r.stdout + ("\n" + _r.stderr if _r.stderr else ""))
-                    if _r.returncode == 2:
-                        st.error("Session expirée — renouvelez vos cookies (📥 Évènements).")
-                    elif _r.returncode == 0:
-                        st.success("Événements rafraîchis.")
+                    st.session_state.pop("operation_portail", None)
+                    if _resultat.modifie:
+                        st.write("Des événements ont changé — génération du v2 détaillé…")
+                        _rapport = generer_v2_et_marquer(
+                            db_j_path, niveau="détaillé", rapports_dir=RAPPORTS_DIR
+                        )
+                        st.session_state["db_refresh_report"] = {
+                            "statut": _rapport.statut, "message": _rapport.message
+                        }
+                        if _rapport.statut == "erreur":
+                            st.error(_rapport.message)
                     else:
-                        st.warning("Rafraîchissement partiel.")
-                    if st.session_state["ref_result_out"].strip():
-                        st.code(st.session_state["ref_result_out"])
+                        st.caption("Aucun changement — le rapport existant est conservé.")
+                    st.session_state["db_refresh_result"] = _resultat.to_dict()
+                    _status.update(label="Rafraîchissement terminé", state="complete")
 
-            # 6 — Rapport v2
-            c1, c2 = st.columns([7, 2])
-            c1.markdown(
-                "✅ **Rapport v2 présent**" if _v2_present
-                else "⬜ **Rapport v2 non généré**")
-            if c2.button("📊 Rapport v2", key="chk_v2",
-                         disabled=not (DATA_DIR / "gtfs" / "gtfs_stm").exists(),
-                         help="" if (DATA_DIR / "gtfs" / "gtfs_stm").exists()
-                              else "GTFS requis."):
-                from gen_rapport_v2 import generer_rapport as _gen_v2
-                _v2_out = RAPPORTS_DIR / f"rapport-v2-{db_date_str}-{db_rpt_niveau}.html"
-                with st.spinner("Génération du rapport v2…"):
-                    try:
-                        _gen_v2(db_j_path, fmt="html", output=_v2_out,
-                                niveau=db_rpt_niveau)
-                        st.success("Rapport v2 généré.")
-                    except Exception as _e:
-                        st.error(f"Erreur génération v2 : {_e}")
-
-            # 7 — Rapport journalier (v1)
-            c1, c2 = st.columns([7, 2])
-            c1.markdown(
-                "✅ **Rapport journalier présent**" if _v1_present
-                else "⬜ **Rapport journalier non généré**")
-            if c2.button("📄 Rapport v1", key="chk_v1"):
-                _v1_out = RAPPORTS_DIR / f"rapport-{db_date_str}.pdf"
-                with st.spinner("Génération du rapport journalier…"):
-                    _r = subprocess.run(
-                        [sys.executable, str(SCRIPTS_DIR / "gen_rapport.py"),
-                         "--date", db_date_str, "--output", str(_v1_out)],
-                        capture_output=True, text=True,
-                    )
-                if _r.returncode == 0 and _v1_out.exists():
-                    st.success("Rapport journalier généré.")
-                else:
-                    st.error("Échec de la génération.")
-                    st.code(_r.stdout + ("\n" + _r.stderr if _r.stderr else ""))
+        if st.session_state.get("db_refresh_result"):
+            _afficher_resultat_rafraichissement(
+                ResultatRafraichissement.from_dict(
+                    st.session_state["db_refresh_result"]
+                )
+            )
 
         st.divider()
 
@@ -511,63 +367,13 @@ with tabs[0]:
             if note_j.get("maj"):
                 st.caption(f"Mise à jour : {note_j['maj']}")
 
-        # ── Téléchargements ──────────────────────────────────────────────────
-        annotee_file = _ca_info["annotee"]
+        # ── Aperçu du dernier rapport v2 complet ─────────────────────────────
         _v2_html = sorted(
             RAPPORTS_DIR.glob(f"rapport-v2-{db_date_str}-*.html"),
             key=lambda p: p.stat().st_mtime, reverse=True,
         ) if RAPPORTS_DIR.exists() else []
-        _v2_pdf = sorted(
-            RAPPORTS_DIR.glob(f"rapport-v2-{db_date_str}-*.pdf"),
-            key=lambda p: p.stat().st_mtime, reverse=True,
-        ) if RAPPORTS_DIR.exists() else []
-        latest_rpt = (_v2_html + _v2_pdf)[0] if (_v2_html or _v2_pdf) else None
-        # Rapport complet (journée entière) — exclut les rapports per-trajet (-idN)
         _v2_html_jour = [p for p in _v2_html if not re.search(r"-id\d+", p.stem)]
         latest_html_jour = _v2_html_jour[0] if _v2_html_jour else None
-
-        rj_file = RAPPORTS_DIR / f"rapport-{db_date_str}.pdf" if RAPPORTS_DIR else None
-        rj_file = rj_file if (rj_file and rj_file.exists()) else None
-
-        dl1, dl2, dl3 = st.columns(3)
-        with dl1:
-            if annotee_file:
-                st.download_button(
-                    "⬇️ Carte annotée",
-                    data=annotee_file.read_bytes(),
-                    file_name=annotee_file.name,
-                    mime="application/pdf",
-                    key="db_ca_dl",
-                )
-            else:
-                st.button("⬇️ Carte annotée (non disponible)", disabled=True,
-                          key="db_ca_dl_dis")
-        with dl2:
-            if rj_file:
-                st.download_button(
-                    "⬇️ Rapport journalier",
-                    data=rj_file.read_bytes(),
-                    file_name=rj_file.name,
-                    mime="application/pdf",
-                    key="db_rj_dl",
-                )
-            else:
-                st.button("⬇️ Rapport journalier (non généré)", disabled=True,
-                          key="db_rj_dl_dis")
-        with dl3:
-            if latest_rpt:
-                _rpt_mime = "text/html" if latest_rpt.suffix == ".html" else "application/pdf"
-                _rpt_label = latest_rpt.stem[len(f"rapport-v2-{db_date_str}-"):]
-                st.download_button(
-                    f"⬇️ Rapport v2 ({_rpt_label})",
-                    data=latest_rpt.read_bytes(),
-                    file_name=latest_rpt.name,
-                    mime=_rpt_mime,
-                    key="db_rpt_v2_dl",
-                )
-            else:
-                st.button("⬇️ Rapport v2 (non généré)", disabled=True,
-                          key="db_rpt_v2_dis")
 
         if latest_html_jour:
             with st.expander(f"📊 Rapport v2 — Aperçu  ({latest_html_jour.name})"):
@@ -575,6 +381,8 @@ with tabs[0]:
                     latest_html_jour.read_text(encoding="utf-8"),
                     height=600, scrolling=True,
                 )
+        else:
+            st.caption("Aucun rapport v2 complet à prévisualiser pour cette journée.")
 
         st.divider()
 
@@ -941,14 +749,148 @@ with tabs[0]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Tab 2 — Importation
+# Tab 2 — Préparation d'une journée
 # ═══════════════════════════════════════════════════════════════════════════════
 with tabs[1]:
-    st.header("Importation")
-    imp_tabs = st.tabs(["📋 Carte Agent", "📅 Journée", "↔️ Gauche-Droite", "⚠️ Évènements", "📡 GTFS"])
+    st.header("Préparation d'une journée")
+    if st.session_state.get("prep_flash"):
+        st.success(st.session_state.pop("prep_flash"))
+    _prep_date = st.date_input(
+        "Date à préparer", value=date.today(), key="prep_date"
+    )
+    _prep_date_str = str(_prep_date)
+    _prep_path = chemin_journee(_prep_date_str)
+    _prep_data = None
+    _prep_error = None
+    if _prep_path.exists():
+        try:
+            _prep_data = charger_journee(_prep_path)
+        except Exception as _e:
+            _prep_error = str(_e)
 
-    # ── 2a — Carte Agent ──────────────────────────────────────────────────────
-    with imp_tabs[0]:
+    from chauffeur.ca import resoudre_ca as _prep_resoudre_ca
+    from chauffeur.journee import lignes_de_service as _prep_lignes
+    _prep_paires = _prep_lignes(_prep_data) if _prep_data else []
+    _prep_ca = (
+        _prep_resoudre_ca(_prep_date, _prep_data.get("journee_numero"))
+        if _prep_data else {"annotee": None}
+    )
+    _prep_gd_missing = [
+        (ligne, direction) for ligne, direction in _prep_paires
+        if not info_gd(ligne, direction)["exists"]
+    ]
+    _prep_gd_stale = [
+        (ligne, direction, info_gd(ligne, direction)["age_days"])
+        for ligne, direction in _prep_paires
+        if info_gd(ligne, direction)["exists"] and not info_gd(ligne, direction)["fresh"]
+    ]
+    _prep_events_missing = [
+        (ligne, direction) for ligne, direction in _prep_paires
+        if not chemin_evenements(ligne, direction).exists()
+    ]
+    _prep_gtfs = info_gtfs()
+    _prep_gtfs_present = (DATA_DIR / "gtfs" / "gtfs_stm").exists()
+    _prep_session = etat_session()
+    _prep_rj = _prep_v2 = None
+    if _prep_data and not _prep_error:
+        try:
+            _prep_rj = etat_rapport(_prep_path, "journalier", rapports_dir=RAPPORTS_DIR)
+            _prep_v2 = etat_rapport(
+                _prep_path, "v2", niveau="standard", rapports_dir=RAPPORTS_DIR
+            )
+        except Exception as _e:
+            _prep_error = str(_e)
+
+    st.subheader("État de la préparation")
+    _s1, _s2, _s3, _s4 = st.columns(4)
+    _s1.markdown("✅ **Journée**" if _prep_data else "⬜ **Journée absente**")
+    _s2.markdown("✅ **Carte agent**" if _prep_ca.get("annotee") else "⚠️ **Carte agent absente**")
+    if _prep_gtfs_present:
+        _gtfs_age = _prep_gtfs.get("static_age_days")
+        _s3.markdown(
+            f"{'✅' if _gtfs_age is not None and _gtfs_age <= FRAICHEUR_GTFS_JOURS else '⚠️'} "
+            f"**GTFS statique**" + (f" ({_gtfs_age} j)" if _gtfs_age is not None else "")
+        )
+    else:
+        _s3.markdown("⛔ **GTFS absent**")
+    _prep_session_icon = {
+        "valide": "✅", "non_verifiee": "🟡", "expiree": "❌", "absente": "⬜",
+    }.get(_prep_session.statut, "⬜")
+    _s4.markdown(
+        f"{_prep_session_icon} **Session portail** — {_prep_session.message}"
+    )
+    _s5, _s6, _s7 = st.columns(3)
+    if _prep_gd_missing:
+        _s5.markdown("⛔ **G-D manquants** — " + ", ".join(f"{l} {d}" for l, d in _prep_gd_missing))
+    elif _prep_gd_stale:
+        _s5.markdown("⚠️ **G-D périmés** — " + ", ".join(f"{l} {d}" for l, d, _ in _prep_gd_stale))
+    else:
+        _s5.markdown("✅ **G-D disponibles**" if _prep_paires else "⬜ **G-D à déterminer**")
+    _s6.markdown(
+        "⚠️ **Événements incomplets**" if _prep_events_missing
+        else ("✅ **Événements présents**" if _prep_paires else "⬜ **Événements à déterminer**")
+    )
+    _statut_lisible = {
+        "a_jour": "à jour", "obsolete": "obsolète", "absent": "absent",
+    }
+    _s7.markdown(
+        f"**Rapports** — journalier: "
+        f"{_statut_lisible.get(_prep_rj.statut, _prep_rj.statut) if _prep_rj else 'à déterminer'}; "
+        f"v2: {_statut_lisible.get(_prep_v2.statut, _prep_v2.statut) if _prep_v2 else 'à déterminer'}"
+    )
+    if _prep_error:
+        st.error(f"Erreur de préparation : {_prep_error}")
+    st.divider()
+
+    # ── 2a — Journée ─────────────────────────────────────────────────────────
+    with st.expander("1 — Importer la journée", expanded=not bool(_prep_data)):
+        st.markdown(
+            "Collez le texte brut du **Détail de ma journée** (copié depuis l'interface STM). "
+            "Le fichier `journee-YYYY-MM-DD.json` sera créé dans `data/journees/`. "
+            "La journée importée apparaît ensuite dans le **Tableau de bord**."
+        )
+
+        j_imp_date = _prep_date
+        st.caption(f"Date de la journée : **{j_imp_date}**")
+
+        j_text = st.text_area(
+            "Texte brut",
+            height=400,
+            placeholder=(
+                "Détail de ma journée\n"
+                "Hier59200 - Frontenac\n"
+                "Journée439\n"
+                "Temps travaillé7:30\n"
+                "Temps supplémentaire0:00\n"
+                "Mis à jour le 17 juin 2026 00:32\n"
+                "Sommaire24 - 1538013--3:18Horaire\n..."
+            ),
+            key="j_text",
+        )
+
+        if st.button("Importer", type="primary", key="j_imp_btn"):
+            if not j_text.strip():
+                st.warning("Le champ est vide.")
+            else:
+                from parse_journee import JourneeParser
+
+                parser = JourneeParser(j_text, date_str=str(j_imp_date))
+                result_j = parser.parse()
+
+                if result_j:
+                    saved_j = parser.save(result_j)
+                    resume_j = parser.get_summary(result_j, saved_j)
+                    ecrire_bloc("parse_journee", resume_j)
+                    st.session_state["prep_flash"] = f"Journée du {j_imp_date} importée."
+                    st.rerun()
+                else:
+                    resume_j = parser.get_summary()
+                    st.error("Échec du parsing.")
+                    st.code(resume_j)
+                    ecrire_bloc("parse_journee", resume_j)
+
+    # ── 2b — Carte Agent ──────────────────────────────────────────────────────
+    with st.expander("2 — Importer ou vérifier la carte agent", expanded=bool(_prep_data and not _prep_ca.get("annotee"))):
         from chauffeur.ca import ranger_ca
         from chauffeur.periodes import identite_ca
 
@@ -961,13 +903,10 @@ with tabs[1]:
 
         uploaded = st.file_uploader("Fichier carte agent (PDF)", type="pdf", key="ca_upload")
 
+        ca_date = _prep_date
         col1, col2 = st.columns(2)
         with col1:
-            ca_date = st.date_input(
-                "Date représentative de la carte", value=date.today(), key="ca_date",
-                help="Sert à calculer la liste et le jour-type (semaine/samedi/dimanche/"
-                     "variation) via le calendrier de référence — pas seulement à nommer le fichier.",
-            )
+            st.caption(f"Date représentative de la carte : **{ca_date}**")
         with col2:
             no_gtfs = st.checkbox("Sans GTFS (surlignage seulement)", value=False, key="ca_no_gtfs")
 
@@ -1091,57 +1030,9 @@ with tabs[1]:
 
             _traiter_upload()
 
-    # ── 2b — Journée ─────────────────────────────────────────────────────────
-    with imp_tabs[1]:
-        st.markdown(
-            "Collez le texte brut du **Détail de ma journée** (copié depuis l'interface STM). "
-            "Le fichier `journee-YYYY-MM-DD.json` sera créé dans `data/journees/`. "
-            "La journée importée apparaît ensuite dans le **Tableau de bord**."
-        )
-
-        col_jd, _ = st.columns([1, 3])
-        with col_jd:
-            j_imp_date = st.date_input("Date de la journée", value=date.today(), key="j_imp_date")
-
-        j_text = st.text_area(
-            "Texte brut",
-            height=400,
-            placeholder=(
-                "Détail de ma journée\n"
-                "Hier59200 - Frontenac\n"
-                "Journée439\n"
-                "Temps travaillé7:30\n"
-                "Temps supplémentaire0:00\n"
-                "Mis à jour le 17 juin 2026 00:32\n"
-                "Sommaire24 - 1538013--3:18Horaire\n..."
-            ),
-            key="j_text",
-        )
-
-        if st.button("Importer", type="primary", key="j_imp_btn"):
-            if not j_text.strip():
-                st.warning("Le champ est vide.")
-            else:
-                from parse_journee import JourneeParser
-
-                parser = JourneeParser(j_text, date_str=str(j_imp_date))
-                result_j = parser.parse()
-
-                if result_j:
-                    saved_j = parser.save(result_j)
-                    resume_j = parser.get_summary(result_j, saved_j)
-                    st.success(f"Journée du {j_imp_date} importée.")
-                    st.code(resume_j)
-                    ecrire_bloc("parse_journee", resume_j)
-                    st.balloons()
-                else:
-                    resume_j = parser.get_summary()
-                    st.error("Échec du parsing.")
-                    st.code(resume_j)
-                    ecrire_bloc("parse_journee", resume_j)
 
     # ── 2c — Gauche-Droite ───────────────────────────────────────────────────
-    with imp_tabs[2]:
+    with st.expander("3 — Importer les Gauche-Droite", expanded=bool(_prep_data and _prep_gd_missing)):
         st.markdown("Collez le texte brut copié depuis l'interface STM. Le fichier `gd<ligne>_<direction>.json` sera créé ou mis à jour.")
 
         gd_text = st.text_area(
@@ -1176,107 +1067,15 @@ with tabs[1]:
                         all_ok = False
 
                 if all_ok:
-                    st.balloons()
+                    st.session_state["prep_flash"] = "Gauche-Droite importés."
+                    st.rerun()
 
     # ── 2d — Évènements ──────────────────────────────────────────────────────
-    with imp_tabs[3]:
-        # --- Rafraîchissement depuis le portail ---
-        from chauffeur.portail import save_session, SESSION_PATH as _SESS_PATH
-
-        st.subheader("Rafraîchissement depuis le portail")
-
-        # Badge session (lecture fichier uniquement, pas d'appel HTTP)
-        if _SESS_PATH.exists():
-            try:
-                _sess_data = json.loads(_SESS_PATH.read_text(encoding="utf-8"))
-                _saved_at  = _sess_data.get("saved_at", "?")
-                st.success(f"Session enregistrée le {_saved_at}")
-            except Exception:
-                st.warning("Fichier de session illisible")
-        else:
-            st.warning("Aucune session enregistrée")
-
-        # Journée active partagée (choisie dans 🏠 Ma journée)
-        _ref_date   = st.session_state.get("journee_date")
-        _ref_j_path = (
-            chemin_journee(_ref_date) if _ref_date else None
+    with st.expander("4 — Importer manuellement des événements (facultatif)", expanded=False):
+        st.caption(
+            "Option de secours : collez ici les événements obtenus manuellement. "
+            "La finalisation pourra ensuite utiliser ces fichiers sans session portail."
         )
-        if _ref_j_path and _ref_j_path.exists():
-            st.caption(
-                f"Journée active : **{_ref_date}** — changer dans **🏠 Ma journée**."
-            )
-            _rc2, _rc3 = st.columns([2, 2])
-            with _rc2:
-                _ref_restantes = st.checkbox(
-                    "Restantes seulement",
-                    value=True,
-                    key="ref_restantes",
-                    help="Saute les pièces dont l'heure de fin est dépassée.",
-                )
-            with _rc3:
-                st.markdown("<div style='margin-top:1.75rem'>", unsafe_allow_html=True)
-                _ref_disabled = not _SESS_PATH.exists()
-                if st.button(
-                    "🔄 Rafraîchir",
-                    type="primary",
-                    key="ref_btn",
-                    disabled=_ref_disabled,
-                    help="Session requise — enregistrez vos cookies ci-dessous." if _ref_disabled else "",
-                ):
-                    _ref_cmd = [
-                        sys.executable, str(SCRIPTS_DIR / "refresh_events.py"),
-                        "--journee", str(_ref_j_path),
-                        "--log",
-                    ]
-                    if _ref_restantes:
-                        _ref_cmd.append("--restantes")
-                    with st.spinner("Rafraîchissement en cours…"):
-                        _ref_res = subprocess.run(_ref_cmd, capture_output=True, text=True)
-                    _ref_out = _ref_res.stdout + ("\n" + _ref_res.stderr if _ref_res.stderr else "")
-                    st.session_state["ref_result_code"] = _ref_res.returncode
-                    st.session_state["ref_result_out"]  = _ref_out
-                st.markdown("</div>", unsafe_allow_html=True)
-
-            # Résultat pleine largeur — affiché après le bloc de colonnes
-            if "ref_result_code" in st.session_state:
-                _rc = st.session_state["ref_result_code"]
-                if _rc == 2:
-                    st.error("Session expirée — renouvelez vos cookies ci-dessous.")
-                elif _rc == 0:
-                    st.success("Rafraîchissement terminé.")
-                else:
-                    st.warning("Rafraîchissement partiel (certaines lignes ont échoué).")
-                _ref_out_saved = st.session_state.get("ref_result_out", "")
-                if _ref_out_saved.strip():
-                    st.code(_ref_out_saved)
-        else:
-            st.info(
-                "Aucune journée active. Sélectionnez-en une dans **🏠 Ma journée** "
-                "(ou importez-en une dans **📅 Journée**)."
-            )
-
-        with st.expander("🔑 Renouveler la session", expanded=not _SESS_PATH.exists()):
-            st.caption(
-                "Connectez-vous sur `employe.stm.info` dans votre navigateur, puis ouvrez les "
-                "DevTools (F12) → onglet **Réseau** → cliquez sur n'importe quelle requête → "
-                "onglet **En-têtes** → copiez la valeur complète du champ **cookie**."
-            )
-            _cookie_input = st.text_area(
-                "Cookie (chaîne brute)",
-                height=100,
-                key="ref_cookie_input",
-                placeholder="TS01846...=...; laravel_session=eyJ...; remember_web_...=eyJ...",
-            )
-            if st.button("Enregistrer la session", key="ref_cookie_save"):
-                if _cookie_input.strip():
-                    save_session(_cookie_input.strip())
-                    st.success("Session enregistrée.")
-                    st.rerun()
-                else:
-                    st.warning("Le champ est vide.")
-
-        st.divider()
-
         # --- Import manuel (texte brut) ---
         st.subheader("Import manuel (texte brut)")
         st.markdown("Collez le texte brut des évènements / détours STM. Le fichier `<ligne>_<direction>.json` sera créé ou mis à jour.")
@@ -1316,8 +1115,91 @@ with tabs[1]:
                 if all_ok:
                     st.balloons()
 
+    # ── Finalisation ─────────────────────────────────────────────────────────
+    st.subheader("Finaliser la préparation")
+    _prep_blocked = (
+        not _prep_data or not _prep_paires
+        or bool(_prep_gd_missing) or bool(_prep_error)
+    )
+    if _prep_blocked:
+        st.warning(
+            "Importez une journée contenant des trajets de service et tous ses G-D "
+            "avant de finaliser."
+        )
+    _fc1, _fc2 = st.columns(2)
+    _auto_clicked = _fc1.button(
+        "🌐 Récupérer les événements et finaliser",
+        type="primary",
+        use_container_width=True,
+        disabled=_prep_blocked,
+    )
+    _local_clicked = _fc2.button(
+        "📁 Finaliser avec les événements présents",
+        use_container_width=True,
+        disabled=_prep_blocked,
+    )
+    _prep_pending = st.session_state.get("operation_portail")
+    _reprendre_prep = bool(
+        _prep_pending
+        and _prep_pending.get("type") == "preparation"
+        and _prep_pending.get("date") == _prep_date_str
+        and _prep_pending.get("reprendre")
+    )
+
+    def _afficher_finalisation(_resultats):
+        for _resultat in _resultats:
+            _icone = {
+                "genere": "✅", "ignore": "↪️", "bloque": "⛔", "erreur": "❌",
+            }.get(_resultat.statut, "•")
+            st.write(f"{_icone} {_resultat.variante} — {_resultat.message}")
+
+    if _local_clicked and _prep_data:
+        with st.status("Évaluation des rapports…", expanded=True) as _status:
+            _final = finaliser_rapports(
+                _prep_path, niveau_v2="standard", rapports_dir=RAPPORTS_DIR
+            )
+            _afficher_finalisation(_final)
+            _status.update(label="Finalisation terminée", state="complete")
+
+    if (_auto_clicked or _reprendre_prep) and _prep_data:
+        _precedent = None
+        _paires_resume = None
+        if _reprendre_prep:
+            _precedent = ResultatRafraichissement.from_dict(
+                _prep_pending.get("resultat", {})
+            )
+            _paires_resume = _precedent.restantes
+            _prep_pending["reprendre"] = False
+        with st.status("Récupération et finalisation…", expanded=True) as _status:
+            _nouveau = rafraichir_evenements_journee(
+                _prep_data, paires=_paires_resume, log=True
+            )
+            _refresh_total = fusionner_rafraichissements(_precedent, _nouveau)
+            _afficher_resultat_rafraichissement(_nouveau)
+            if _nouveau.session_expiree:
+                st.session_state["operation_portail"] = {
+                    "type": "preparation",
+                    "date": _prep_date_str,
+                    "resultat": _refresh_total.to_dict(),
+                    "reprendre": False,
+                }
+                st.session_state["ouvrir_dialog_session"] = True
+                _status.update(label="Session à renouveler", state="error")
+            elif not _refresh_total.succes_complet:
+                st.session_state.pop("operation_portail", None)
+                _status.update(label="Récupération partielle — rapports non générés", state="error")
+            else:
+                st.session_state.pop("operation_portail", None)
+                _final = finaliser_rapports(
+                    _prep_path, niveau_v2="standard", rapports_dir=RAPPORTS_DIR
+                )
+                _afficher_finalisation(_final)
+                _status.update(label="Préparation finalisée", state="complete")
+
+    st.divider()
+
     # ── 2e — GTFS ────────────────────────────────────────────────────────────
-    with imp_tabs[4]:
+    with st.expander("Outils avancés — GTFS", expanded=False):
         _imp_gtfs_path     = DATA_DIR / "gtfs" / "gtfs_stm"
         _imp_gtfs_manifest = DATA_DIR / "gtfs" / "gtfs_manifest.json"
         _imp_gtfs_info     = info_gtfs()
@@ -1413,6 +1295,12 @@ with tabs[2]:
             st.code(output_text)
             if result.returncode == 0 and rj_out.exists():
                 rj_generated = True
+                _rj_journee = chemin_journee(str(rj_date))
+                if _rj_journee.exists():
+                    _rj_etat = etat_rapport(
+                        _rj_journee, "journalier", rapports_dir=RAPPORTS_DIR
+                    )
+                    marquer_rapport_a_jour(_rj_journee, _rj_etat, RAPPORTS_DIR)
             else:
                 st.error(
                     "Erreur lors de la génération. "
@@ -1522,6 +1410,12 @@ with tabs[2]:
                             niveau=v2_niveau,
                             show_code=v2_code,
                         )
+                        if v2_fmt == "html" and not v2_code:
+                            _v2_etat = etat_rapport(
+                                v2_j_path, "v2", niveau=v2_niveau,
+                                rapports_dir=RAPPORTS_DIR,
+                            )
+                            marquer_rapport_a_jour(v2_j_path, _v2_etat, RAPPORTS_DIR)
                         st.success("Rapport généré.")
                         v2_mime = "text/html" if v2_fmt == "html" else "application/pdf"
                         st.download_button(
@@ -1547,7 +1441,7 @@ with tabs[2]:
 with tabs[3]:
     st.header("Gestion des fichiers")
 
-    def _file_manager(label: str, files: list[Path], mime: str = "application/octet-stream") -> None:
+    def _file_manager(label: str, files: list[Path], mime: str | None = "application/octet-stream") -> None:
         """Affiche une liste de fichiers avec téléchargement et suppression (avec confirmation)."""
         if not files:
             st.caption(f"Aucun fichier {label}.")
@@ -1560,11 +1454,14 @@ with tabs[3]:
             col_size.caption(_fmt_size(path))
 
             with col_dl:
+                _mime = mime or {
+                    ".pdf": "application/pdf", ".html": "text/html", ".json": "application/json",
+                }.get(path.suffix.lower(), "application/octet-stream")
                 st.download_button(
                     "⬇️",
                     data=path.read_bytes(),
                     file_name=path.name,
-                    mime=mime,
+                    mime=_mime,
                     key=f"fm_dl_{label}_{idx}",
                     help=f"Télécharger {path.name}",
                 )
@@ -1629,7 +1526,7 @@ with tabs[3]:
         "📋 Cartes agent",
         "↔️ Gauche-Droite",
         "⚠️ Évènements",
-        "📄 Rapports journaliers",
+        "📄 Rapports",
         "📅 Journées",
     ])
 
@@ -1656,9 +1553,13 @@ with tabs[3]:
 
     # ── Rapports journaliers ──────────────────────────────────────────────────
     with fm_tabs[3]:
-        rp_all = sorted(RAPPORTS_DIR.glob("rapport-*.pdf"), reverse=True) if RAPPORTS_DIR.exists() else []
+        rp_all = sorted(
+            list(RAPPORTS_DIR.glob("rapport-*.pdf"))
+            + list(RAPPORTS_DIR.glob("rapport-*.html")),
+            reverse=True,
+        ) if RAPPORTS_DIR.exists() else []
         st.caption(f"{len(rp_all)} fichier(s) dans `data/rapports/`")
-        _file_manager("rp", rp_all, mime="application/pdf")
+        _file_manager("rp", rp_all, mime=None)
         _purge_ui("rp", rp_all, days=90)
 
     # ── Journées ──────────────────────────────────────────────────────────────
@@ -1797,7 +1698,7 @@ with tabs[4]:
     if not log_files:
         st.info(
             "Aucun fichier de log trouvé dans `data/log/`. "
-            "Les importations faites depuis l'onglet Importation y laissent leur trace ; "
+            "Les imports faits depuis **Préparation d'une journée** y laissent leur trace ; "
             "en ligne de commande, les scripts journalisent avec l'option `--log`."
         )
     else:
@@ -1834,3 +1735,9 @@ with tabs[4]:
             st.code("\n".join(display_lines), language=None)
         except Exception as e:
             st.error(f"Erreur lecture log : {e}")
+
+
+# La boîte de renouvellement est déclenchée après le rendu de l'opération qui
+# l'a demandée. La reprise se fera automatiquement au prochain rerun.
+if st.session_state.get("ouvrir_dialog_session"):
+    _dialog_session_portail()

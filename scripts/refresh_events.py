@@ -12,59 +12,14 @@ Codes de sortie :
     2  session expirée ou absente (renouveler les cookies)
 """
 import argparse
-import json
 import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from chauffeur.journee import lignes_de_service
-from chauffeur.modeles import Journee
-from chauffeur.portail import fetch_detours, SessionExpiredError, PortailError
-from scripts.parse_event import STMEventParser
-
-
-def _refresh_one(ligne: str, sens: str, log: bool = False) -> bool:
-    """Rafraîchit une ligne/direction. Retourne True si succès.
-
-    Lève SessionExpiredError si la session est expirée — l'appelant décide
-    du code de sortie.
-    """
-    print(f"⟳  {ligne} {sens}...", end=" ", flush=True)
-    try:
-        raw = fetch_detours(ligne, sens)
-    except PortailError as exc:
-        print(f"\n❌ Erreur portail ({ligne} {sens}) : {exc}", file=sys.stderr)
-        return False
-
-    parser = STMEventParser.from_portal_json(json.dumps(raw), ligne, sens)
-
-    if parser.errors:
-        print()
-        summary = parser.get_summary()
-        print(summary)
-        if log:
-            parser.append_log(summary)
-        return False
-
-    success, _ = parser.save_json()
-    # Un fetch réussi sans évènement matérialise tout de même un fichier vide,
-    # pour distinguer « vérifié : aucun évènement » de « jamais vérifié ».
-    if success and not parser.events:
-        out = parser.events_dir / f"{parser.ligne}_{parser.direction}.json"
-        if not out.exists():
-            out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text(
-                json.dumps(parser.to_fichier().to_dict(), indent=2, ensure_ascii=False),
-                encoding="utf-8",
-            )
-    print()
-    summary = parser.get_summary()
-    print(summary)
-    if log:
-        parser.append_log(summary)
-    return success
+from chauffeur.depots import charger_journee
+from chauffeur.preparation import rafraichir_evenements_journee
 
 
 def main():
@@ -87,38 +42,35 @@ def main():
     if args.ligne:
         if not args.sens:
             ap.error("--sens est requis avec --ligne")
-        try:
-            ok = _refresh_one(args.ligne, args.sens, log=args.log)
-        except SessionExpiredError as exc:
-            print(f"\n🔒 Session expirée : {exc}", file=sys.stderr)
-            sys.exit(2)
-        sys.exit(0 if ok else 1)
+        journee_data = {"pieces": [{"trajets": [{
+            "type": "service", "ligne": args.ligne, "direction": args.sens,
+        }]}]}
+        pairs = [(args.ligne, args.sens.lower())]
+    else:
+        if not args.journee.exists():
+            print(f"❌ Fichier journée introuvable : {args.journee}", file=sys.stderr)
+            sys.exit(1)
+        journee_data = charger_journee(args.journee)
+        pairs = None
 
-    # Mode journée
-    if not args.journee.exists():
-        print(f"❌ Fichier journée introuvable : {args.journee}", file=sys.stderr)
-        sys.exit(1)
-
-    journee_data = Journee.from_dict(json.loads(args.journee.read_text(encoding="utf-8")))
-    pairs = lignes_de_service(journee_data, restantes_seulement=args.restantes)
-    if not pairs:
-        label = "restantes" if args.restantes else "de la journée"
-        print(f"Aucune ligne {label} à rafraîchir.")
-        sys.exit(0)
-
-    label = "restantes" if args.restantes else "journée"
-    print(f"🔄 {len(pairs)} ligne(s) à rafraîchir ({label}) :\n")
-
-    failed = False
-    try:
-        for ligne, sens in pairs:
-            if not _refresh_one(ligne, sens, log=args.log):
-                failed = True
-    except SessionExpiredError as exc:
-        print(f"\n🔒 Session expirée : {exc}", file=sys.stderr)
+    resultat = rafraichir_evenements_journee(
+        journee_data,
+        restantes_seulement=args.restantes,
+        paires=pairs,
+        log=args.log,
+    )
+    for ligne in resultat.lignes:
+        print(f"⟳  {ligne.ligne} {ligne.direction}")
+        print(ligne.message)
+    if resultat.session_expiree:
+        print("🔒 Session expirée — renouveler les cookies.", file=sys.stderr)
         sys.exit(2)
-
-    sys.exit(1 if failed else 0)
+    if resultat.restantes:
+        print("❌ Rafraîchissement interrompu avant toutes les lignes.", file=sys.stderr)
+        sys.exit(1)
+    if not resultat.lignes:
+        print("Aucune ligne à rafraîchir.")
+    sys.exit(0 if resultat.succes_complet else 1)
 
 
 if __name__ == "__main__":

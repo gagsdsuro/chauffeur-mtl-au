@@ -10,7 +10,7 @@ pour permettre des tests hermétiques sur des fichiers gelés.
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from .evenements import applicable_a_la_date
@@ -56,6 +56,30 @@ def sauvegarder_journee(path: Path, journee: dict) -> None:
     Path(path).write_text(
         json.dumps(journee, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
+
+
+def lister_journees_fenetre(
+    reference: date | None = None,
+    jours_avant: int = 2,
+    jours_apres: int = 5,
+    journees_dir: Path | None = None,
+) -> list[tuple[date, Path]]:
+    """Journées existantes dans la fenêtre inclusive J-avant à J+après.
+
+    Les entrées invalides sont ignorées et le résultat est chronologique.
+    """
+    reference = reference or date.today()
+    debut = reference - timedelta(days=jours_avant)
+    fin = reference + timedelta(days=jours_apres)
+    resultats: list[tuple[date, Path]] = []
+    for path in (journees_dir or JOURNEES_DIR).glob("journee-*.json"):
+        try:
+            jour = date.fromisoformat(path.stem.removeprefix("journee-"))
+        except ValueError:
+            continue
+        if debut <= jour <= fin:
+            resultats.append((jour, path))
+    return sorted(resultats)
 
 
 def charger_gd(ligne: str, direction: str, id_parcours=None,
