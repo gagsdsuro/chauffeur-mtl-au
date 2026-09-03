@@ -18,6 +18,10 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 from chauffeur.journal import ecrire_bloc  # noqa: E402
 from chauffeur.modeles import FichierEvenements, Evenement  # noqa: E402
+from chauffeur.evenements import comparer_evenements  # noqa: E402
+from chauffeur.presentation_evenements import (  # noqa: E402
+    formater_evenement_modifie, formater_evenement_retire,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -240,7 +244,7 @@ class STMEventParser:
         )
         if desc_gd_match:
             gd_lines = [l.strip() for l in desc_gd_match.group(1).strip().split('\n') if l.strip()]
-            event['description_gd'] = ' '.join(gd_lines) if gd_lines else None
+            event['description_gd'] = '\n'.join(gd_lines) if gd_lines else None
         else:
             event['description_gd'] = None
 
@@ -308,7 +312,7 @@ class STMEventParser:
                 ev["arrets_annules"] = arrets
             elif "Gauche-Droite" in terme:
                 lines = _lines_br(dd)
-                ev["description_gd"] = " ".join(lines) if lines else None
+                ev["description_gd"] = "\n".join(lines) if lines else None
             elif terme == "Commentaire":
                 commentaire_raw = "\n".join(_lines_br(dd))
                 split = re.split(r"Arrêt\(s\)\s+ajouté\(s\)\s*:", commentaire_raw, flags=re.IGNORECASE)
@@ -393,40 +397,25 @@ class STMEventParser:
         La comparaison se fait par groupe d'ID, pas événement par événement.
         """
         existing_detours = existing_data.get('detours', [])
-        new_ids = {e['evenement_id'] for e in self.events}
+        comparaison = comparer_evenements(existing_detours, self.events)
 
-        # Grouper par ID pour gérer les doublons légitimes
-        existing_by_id: Dict[str, List] = {}
-        for e in existing_detours:
-            existing_by_id.setdefault(e['evenement_id'], []).append(e)
-        new_by_id: Dict[str, List] = {}
-        for e in self.events:
-            new_by_id.setdefault(e['evenement_id'], []).append(e)
-
-        # Événements retirés (ID entièrement absent de la nouvelle liste)
-        seen_removed: set = set()
-        for old_event in existing_detours:
-            eid = old_event['evenement_id']
-            if eid not in new_ids and eid not in seen_removed:
-                seen_removed.add(eid)
-                if self.verbose:
-                    titre = old_event.get('titre', '(sans titre)')
-                    motif = old_event.get('motif', '')
-                    detail = f" — {titre}" + (f" — Motif : {motif}" if motif else "")
-                    self.warnings.append(f"🗑️ Événement {eid} retiré{detail}")
-                else:
-                    self.warnings.append(f"🗑️ Événement {eid} retiré")
+        # Événements retirés (ID entièrement absent de la nouvelle liste).
+        # Chaque variante est détaillée : un même ID peut légitimement porter
+        # plusieurs plages horaires ou types d'impact.
+        for eid, old_evts, _ in comparaison["retires"]:
+            if self.verbose:
+                self.warnings.extend(formater_evenement_retire(e) for e in old_evts)
+            else:
+                self.warnings.append(f"🗑️ Événement {eid} retiré")
 
         # Événements modifiés (groupe différent pour le même ID)
-        for eid, new_evts in new_by_id.items():
-            old_evts = existing_by_id.get(eid)
-            if old_evts is not None and old_evts != new_evts:
-                if self.verbose and len(old_evts) == 1 and len(new_evts) == 1:
-                    changed_fields = [k for k in new_evts[0] if new_evts[0].get(k) != old_evts[0].get(k)]
-                    fields_str = ", ".join(changed_fields) if changed_fields else "contenu"
-                    self.warnings.append(f"⚠️ Événement {eid} remplacé — champs modifiés : {fields_str}")
-                else:
-                    self.warnings.append(f"⚠️ Événement {eid} remplacé")
+        for eid, old_evts, new_evts in comparaison["modifies"]:
+            if self.verbose:
+                self.warnings.append(
+                    formater_evenement_modifie(eid, old_evts, new_evts)
+                )
+            else:
+                self.warnings.append(f"⚠️ Événement {eid} remplacé")
 
         changed = self.events != existing_detours
         return self.events, changed
@@ -494,7 +483,7 @@ class STMEventParser:
         if self.warnings:
             lines.append("")
             for w in self.warnings:
-                lines.append(f"  {w}")
+                lines.extend(f"  {part}" for part in w.splitlines())
 
         filename = f"{self.ligne}_{self.direction}.json"
         if self.no_changes:

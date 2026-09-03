@@ -1,0 +1,36 @@
+{
+  "ligne": "XXX",
+  "direction": "est",
+  "routes": [
+    {
+      "line_number": "XXX",
+      "direction": "Est",
+      "parcours": [
+        {
+          "id": 1,
+          "name": "Parcours principal",
+          "start": "Station ou intersection de départ",
+          "start_code": 12345,
+          "end": "Station ou intersection d'arrivée",
+          "end_code": 54321,
+          "direction": [
+            "Via - Rue principale",
+            "Gauche - Rue secondaire",
+            "Droite - Rue tertiaire"
+          ]
+        },
+        {
+          "id": 2,
+          "name": "Parcours secondaire",
+          "start": "Autre point de départ",
+          "start_code": 11111,
+          "end": "Autre point d'arrivée",
+          "end_code": 22222,
+          "direction": [
+            "Via - Rue alternative"
+          ]
+        }
+      ]
+    }
+  ]
+}

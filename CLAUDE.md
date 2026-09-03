@@ -18,8 +18,8 @@ docker compose up --build                   # production (port 8501, volume ./da
 L'app expose 5 onglets : Ma journée (fenêtre J−2/J+5, rafraîchissement des lignes restantes, consultation par pièce/trajet) · Préparation d'une journée (état synthétique, imports manuels, récupération des événements et rapports conditionnels) · Rapports (2 sous-onglets) · Fichiers (5 sous-onglets, avec purge des fichiers obsolètes) · Logs.
 
 **Dépendances** — listées dans `requirements.txt`, installées par le Dockerfile ; en local : `pip install -r requirements.txt` (ajouter `--break-system-packages` sur un Python système Debian/Ubuntu). Détail et tableau paquet→usage dans le `README.md`. Points à savoir :
-- `pymupdf` (`fitz`) : annotation carte agent + tests `test_carte_agent.py`/`creer_cas_test.py`.
-- `reportlab` : PDF des rapports v1/v2 + test `test_rapport.py`.
+- `pymupdf` (`fitz`) : annotation carte agent + tests `test_carte_agent.py`/`test_rapport_evenements.py`/`creer_cas_test.py`.
+- `reportlab` : PDF des rapports v1/v2 + tests `test_rapport.py`/`test_rapport_evenements.py`.
 - Pas de dépendance protobuf : le GTFS-RT est décodé en wire-format minimal par `chauffeur/gtfs_rt.py`.
 - `openpyxl` (hors requirements) : uniquement pour `scripts/import_journees_historique.py`.
 
@@ -216,9 +216,9 @@ Racine : `{ ligne, direction, routes: [ { line_number, direction, parcours: [...
 ### Documentation des formats de données
 
 - `data/Gauche-Droite/CLAUDE.md` — spécification détaillée du format JSON G-D (nommage, sémantique, FAQ). Note : elle documente `{ligne}_{direction}.json` mais les fichiers réels utilisent le préfixe `gd` → `gd<ligne>_<direction>.json`.
-- `data/Gauche-Droite/GABARIT_NOUVEAU_FICHIER.json` — gabarit pour créer un fichier G-D manuellement.
-- `data/Events/CLAUDE.md` — spécification détaillée du format JSON des événements (champs `evenement_id`, `titre`, `motif`, `effectif`, `arrets_annules`, `arrets_ajoutes`, dates ISO 8601). Nommage : `{ligne}_{direction}.json` (sans préfixe, contrairement aux G-D).
-- `data/Events/GABARIT_NOUVEAU_FICHIER.json` — gabarit pour créer un fichier d'événements manuellement.
+- `docs/gabarits/gauche-droite.json` — gabarit versionné pour créer un fichier G-D manuellement.
+- `docs/format-evenements.md` — spécification versionnée du format JSON des événements (champs `evenement_id`, `titre`, `motif`, `effectif`, `arrets_annules`, `arrets_ajoutes`, `description_gd`, dates ISO 8601 et variantes d'un même ID). Nommage : `{ligne}_{direction}.json` (sans préfixe, contrairement aux G-D).
+- `docs/gabarits/evenements.json` — gabarit versionné pour créer un fichier d'événements manuellement.
 
 ## Conventions
 

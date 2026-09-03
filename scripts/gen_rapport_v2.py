@@ -27,7 +27,10 @@ from chauffeur.gd import (
 from chauffeur.gtfs import stops_for_parcours, stop_names as gtfs_stop_names
 from chauffeur.depots import charger_journee, charger_gd, evenements_pour_date
 from chauffeur.effectif import bornes_quart
-from chauffeur.evenements import applicable_a_la_plage, arret_reellement_annule
+from chauffeur.evenements import (
+    applicable_a_la_plage, arret_reellement_annule,
+    trier_evenements_par_arrets,
+)
 from chauffeur.journee import groupes_de_service
 
 GTFS_DIR   = ROOT / "data" / "gtfs" / "gtfs_stm"
@@ -97,7 +100,10 @@ def process_groupe(groupe: dict, date_str: str, ev_all_cache: dict) -> dict:
     if cache_key not in ev_all_cache:
         ev_all_cache[cache_key] = evenements_pour_date(
             ligne, direction, date.fromisoformat(date_str))
-    events_all = ev_all_cache[cache_key]
+    events_all = trier_evenements_par_arrets(
+        ev_all_cache[cache_key], stops_ordered
+    )
+    events = trier_evenements_par_arrets(events, stops_ordered)
 
     if not instructions:
         return dict(groupe=groupe, rows=[], added=[], events=events,

@@ -78,6 +78,8 @@ def main() -> int:
         gd = sans.get("description_gd") or ""
         if "VIA DE MAISONNEUVE" not in gd:
             echecs.append(f"description_gd 11205733/sans inattendue : {gd!r}")
+        if "\n" not in gd:
+            echecs.append("description_gd 11205733/sans : retours de ligne perdus")
         if sans["arrets_annules"]:
             echecs.append(f"11205733/sans : arrets_annules devrait être vide, obtenu {sans['arrets_annules']}")
     else:

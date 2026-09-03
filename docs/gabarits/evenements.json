@@ -1,0 +1,28 @@
+{
+  "ligne": "XXX",
+  "direction": "est",
+  "detours": [
+    {
+      "evenement_id": "1234567",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-01-01T06:00:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "12345",
+          "nom": "Nom du lieu / Intersection"
+        }
+      ],
+      "commentaire": "Informations supplémentaires pour le chauffeur",
+      "arrets_ajoutes": [
+        {
+          "id": "",
+          "nom": "Arrêt temporaire / Intersection"
+        }
+      ],
+      "description_gd": "VIA RUE PRINCIPALE\nG/ RUE SECONDAIRE\nD/ RUE TERTIAIRE\nVIA RR"
+    }
+  ]
+}

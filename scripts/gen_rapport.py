@@ -18,30 +18,37 @@ import re
 import sys
 from datetime import date, datetime
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 # ─── Chemins ────────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR     = PROJECT_ROOT / "data"
 GD_DIR       = DATA_DIR / "Gauche-Droite"
 EVENTS_DIR   = DATA_DIR / "Events"
+GTFS_DIR     = DATA_DIR / "gtfs" / "gtfs_stm"
 JOURNEES_DIR = DATA_DIR / "journees"
 OUTPUT_DIR   = DATA_DIR / "rapports"
 
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from chauffeur.effectif import parse_shift_time          # noqa: E402
-from chauffeur.evenements import applicable_au_quart, raison_exclusion  # noqa: E402
+from chauffeur.evenements import (  # noqa: E402
+    applicable_au_quart, raison_exclusion, trier_evenements_par_arrets,
+)
+from chauffeur.gtfs import stops_for_parcours  # noqa: E402
 from chauffeur.journee import groupes_de_service  # noqa: E402
 from chauffeur.modeles import FichierGD  # noqa: E402
+from chauffeur.presentation_evenements import presenter_evenement  # noqa: E402
 
 try:
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.pagesizes import landscape, letter
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import mm
     from reportlab.platypus import (
-        HRFlowable, KeepInFrame, KeepTogether, PageBreak, Paragraph,
-        SimpleDocTemplate, Spacer, Table, TableStyle,
+        BaseDocTemplate, Frame, HRFlowable, KeepInFrame, KeepTogether,
+        LongTable, NextPageTemplate, PageBreak, PageTemplate, Paragraph,
+        Spacer, Table, TableStyle,
     )
 except ImportError:
     print("reportlab non installé. Exécute: pip install reportlab --break-system-packages")
@@ -208,30 +215,13 @@ def page2_detours(data):
     story = []
     date_str = data.get('date_travail', '')
     jour_str = data.get('jour_semaine', '')
-    doc_width = letter[0] - 30*mm
+    doc_width = landscape(letter)[0] - 30*mm
 
     story.append(Paragraph(
         f'DÉTOURS & ARRÊTS MODIFIÉS — {jour_str.upper()} {date_str}',
         S['title']
     ))
     story.append(HRFlowable(width='100%', thickness=2, color=BLUE, spaceAfter=5))
-
-    # NB : '⚠' (U+26A0) ne se rend pas avec la police Helvetica de reportlab
-    # (carré noir) — on utilise '▲', qui se rend correctement. Les autres
-    # symboles (✗ ! • → ← ↑ ●) passent bien.
-    TYPE_SYMBOL = {
-        "annulation d'arrêts"            : '✗',
-        "arrêt déplacé"                  : '!',
-        "détour avec annulation d'arrêt" : '▲',
-        "détour"                         : '▲',
-    }
-
-    def _symbol(titre):
-        tl = titre.lower()
-        for k, v in TYPE_SYMBOL.items():
-            if k in tl:
-                return v
-        return '•'
 
     HDR_STYLE = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), BLUE),
@@ -244,8 +234,12 @@ def page2_detours(data):
         ('TOPPADDING', (0, 0), (-1, -1), 3),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
         ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
     ])
-    COL_W = [38*mm, 52*mm, 72*mm, 22*mm]
+    COL_W = [36*mm, 31*mm, 73*mm, 80*mm, 29*mm]
+
+    def _paragraph(texte, style=None):
+        return Paragraph(escape(str(texte)).replace('\n', '<br/>'), style or S['body'])
 
     any_applicable = False
 
@@ -267,6 +261,11 @@ def page2_detours(data):
             evs = dirs_avec.get(sens, [])
             if not evs:
                 continue
+            ordre_arrets = []
+            for direction in ligne.get('directions', []):
+                if direction.get('sens', '') == sens:
+                    ordre_arrets.extend(direction.get('ordre_arrets', []))
+            evs = trier_evenements_par_arrets(evs, ordre_arrets)
             any_applicable = True
             label = f'Direction {sens}' if sens else 'Toutes directions'
             story.append(Paragraph(
@@ -275,38 +274,59 @@ def page2_detours(data):
             ))
             story.append(Spacer(1, 3))
 
-            rows = [['Évènement / Titre', 'Arrêts', 'Détour & Commentaires', 'Effectif']]
+            rows = [[
+                'Évènement / Titre', 'Période', 'Détour & Commentaires',
+                'Arrêts', 'Effectif',
+            ]]
             for ev in evs:
-                ev_id    = ev.get('evenement_id', '')
-                titre    = ev.get('titre', '')
-                motif    = ev.get('motif', '')
-                sym      = _symbol(titre)
-                arrets   = ev.get('arrets_annules', [])
-                gd       = ev.get('description_gd') or ''
-                comm     = ev.get('commentaire') or ''
-                effectif = ev.get('effectif', '')
+                affichage = presenter_evenement(ev)
 
-                ev_text = (f'<b>#{ev_id}</b><br/>{titre}<br/><i>{motif}</i>'
-                           if ev_id else f'{titre}<br/><i>{motif}</i>')
-                arrets_txt = '<br/>'.join(
-                    f'{sym} {a.get("id", "")} {a.get("nom", "")}'
-                    for a in arrets
-                ) or '—'
-                parts = []
-                if gd:
-                    parts.append(f'<b>G-D :</b> {gd}')
-                if comm:
-                    parts.append(comm)
-                detail = '<br/>'.join(parts) if parts else '—'
+                identite = f'<b>#{escape(affichage.evenement_id)}</b><br/>' \
+                           f'{escape(affichage.titre)}'
+                if affichage.motif:
+                    identite += f'<br/><i>{escape(affichage.motif)}</i>'
+
+                details = []
+                if affichage.instructions_gd:
+                    instructions = '<br/>'.join(
+                        escape(instruction) for instruction in affichage.instructions_gd
+                    )
+                    details.append(f'<b>G-D :</b><br/>{instructions}')
+                if affichage.commentaire:
+                    commentaire = escape(affichage.commentaire).replace('\n', '<br/>')
+                    details.append(f'<b>Commentaire :</b><br/>{commentaire}')
+                detail = '<br/>'.join(details) if details else '—'
+
+                arrets_parts = []
+                if affichage.arrets_annules:
+                    valeurs = '<br/>'.join(
+                        escape(arret.texte) for arret in affichage.arrets_annules
+                    )
+                    arrets_parts.append(
+                        f'<b>Annulés ou concernés :</b><br/>{valeurs}'
+                    )
+                if affichage.arrets_ajoutes:
+                    valeurs = '<br/>'.join(
+                        escape(arret.texte) for arret in affichage.arrets_ajoutes
+                    )
+                    arrets_parts.append(f'<b>Ajoutés :</b><br/>{valeurs}')
+                arrets_txt = '<br/>'.join(arrets_parts) if arrets_parts else '—'
 
                 rows.append([
-                    Paragraph(ev_text,    S['body']),
+                    Paragraph(identite, S['body']),
+                    _paragraph(affichage.periode),
+                    Paragraph(detail, S['body']),
                     Paragraph(arrets_txt, S['body']),
-                    Paragraph(detail,     S['body']),
-                    Paragraph(effectif,   S['body']),
+                    _paragraph(affichage.effectif),
                 ])
 
-            t = Table(rows, colWidths=COL_W)
+            t = LongTable(
+                rows,
+                colWidths=COL_W,
+                repeatRows=1,
+                splitByRow=1,
+                splitInRow=1,
+            )
             t.setStyle(HDR_STYLE)
             story.append(t)
             story.append(Spacer(1, 5))
@@ -370,7 +390,7 @@ def generate(data: dict, output_path: str):
     if not output_path:
         output_path = f'rapport-journalier-{date_str}.pdf'
 
-    doc = SimpleDocTemplate(
+    doc = BaseDocTemplate(
         output_path,
         pagesize=letter,
         leftMargin=15*mm,
@@ -379,7 +399,25 @@ def generate(data: dict, output_path: str):
         bottomMargin=12*mm,
     )
 
+    portrait_w, portrait_h = letter
+    paysage_w, paysage_h = landscape(letter)
+    cadre_portrait = Frame(
+        15*mm, 12*mm, portrait_w - 30*mm, portrait_h - 24*mm,
+        id='cadre_portrait',
+    )
+    cadre_paysage = Frame(
+        15*mm, 12*mm, paysage_w - 30*mm, paysage_h - 24*mm,
+        id='cadre_paysage',
+    )
+    doc.addPageTemplates([
+        PageTemplate(id='gd', frames=[cadre_portrait], pagesize=letter),
+        PageTemplate(
+            id='detours', frames=[cadre_paysage], pagesize=landscape(letter)
+        ),
+    ])
+
     story = page1_gd(data)
+    story.append(NextPageTemplate('detours'))
     story.append(PageBreak())
     story += page2_detours(data)
 
@@ -447,7 +485,23 @@ def load_gd_direction_by_id(ligne: str, direction: str, id_parcours) -> dict | N
                 instructions.append({'type': m.group(1).lower(), 'texte': m.group(2)})
         instructions.append({'type': 'terminus', 'texte': parcours.end, 'arret': str(parcours.end_code)})
 
-        return {'sens': route.direction, 'parcours_nom': parcours.name, 'instructions': instructions}
+        ordre_arrets = []
+        if GTFS_DIR.exists():
+            try:
+                ordre_arrets = [
+                    stop_id for _, stop_id in stops_for_parcours(
+                        GTFS_DIR, ligne, route.direction, parcours.id
+                    )
+                ]
+            except (OSError, ValueError, KeyError):
+                pass
+
+        return {
+            'sens': route.direction,
+            'parcours_nom': parcours.name,
+            'instructions': instructions,
+            'ordre_arrets': ordre_arrets,
+        }
     return None
 
 

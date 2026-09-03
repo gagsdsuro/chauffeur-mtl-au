@@ -34,6 +34,7 @@ from chauffeur.depots import (  # noqa: E402
     info_gd, info_gtfs, lister_journees_fenetre,
 )
 from chauffeur.effectif import bornes_quart  # noqa: E402
+from chauffeur.evenements import trier_evenements_par_arrets  # noqa: E402
 from chauffeur.journal import ecrire_bloc, lister_journaux  # noqa: E402
 from chauffeur.preparation import (  # noqa: E402
     ResultatRafraichissement, etat_rapport, finaliser_rapports,
@@ -43,24 +44,27 @@ from chauffeur.preparation import (  # noqa: E402
 from chauffeur.portail import (  # noqa: E402
     etat_session, valider_et_sauvegarder_session,
 )
+from chauffeur.presentation_evenements import (  # noqa: E402
+    presenter_evenement, rendre_table_evenements_html,
+)
 
 
 # ── Utilitaires parcours / événements ────────────────────────────────────────
 
 @st.cache_data(show_spinner=False)
-def _cached_stop_ids_for_parcours(
+def _cached_arrets_pour_parcours(
     gtfs_dir_str: str, ligne: str, direction: str, id_parcours
-) -> frozenset | None:
-    """Ensemble des stop_ids GTFS pour un parcours (mis en cache par session).
+) -> tuple[str, ...] | None:
+    """Séquence des stop_ids GTFS d'un parcours (mise en cache par session).
 
     Retourne None si la résolution échoue (GTFS corrompu, ligne inconnue…) :
     « arrêts inconnus », qui déclenche le fail-safe d'applicabilité — à
-    distinguer d'un frozenset() vide (« le GTFS a parlé : aucun arrêt »).
+    distinguer d'un tuple vide (« le GTFS a parlé : aucun arrêt »).
     """
     try:
         from chauffeur.gtfs import stops_for_parcours
         stops = stops_for_parcours(Path(gtfs_dir_str), ligne, direction, id_parcours)
-        return frozenset(sid for _, sid in stops)
+        return tuple(sid for _, sid in stops)
     except Exception:
         return None
 
@@ -126,6 +130,40 @@ def _afficher_resultat_rafraichissement(resultat: ResultatRafraichissement) -> N
         st.write(f"{icone} {ligne.ligne} {ligne.direction}{changement}")
         for detail in ligne.changements:
             st.caption(f"• {detail}")
+        if ligne.evenements_retires:
+            with st.expander(
+                f"Évènements retirés — {ligne.ligne} {ligne.direction.capitalize()}",
+                expanded=True,
+            ):
+                st.markdown(
+                    rendre_table_evenements_html([
+                        presenter_evenement(event)
+                        for event in ligne.evenements_retires
+                    ]),
+                    unsafe_allow_html=True,
+                )
+        for modification in ligne.evenements_modifies:
+            identifiant = modification.get("evenement_id", "?")
+            with st.expander(
+                f"Évènement modifié #{identifiant} — avant / après",
+                expanded=True,
+            ):
+                st.markdown("**Avant**")
+                st.markdown(
+                    rendre_table_evenements_html([
+                        presenter_evenement(event)
+                        for event in modification.get("avant", [])
+                    ]),
+                    unsafe_allow_html=True,
+                )
+                st.markdown("**Après**")
+                st.markdown(
+                    rendre_table_evenements_html([
+                        presenter_evenement(event)
+                        for event in modification.get("apres", [])
+                    ]),
+                    unsafe_allow_html=True,
+                )
         if not ligne.succes and ligne.message:
             st.caption(ligne.message)
 
@@ -661,11 +699,18 @@ with tabs[0]:
                                 # Stop IDs GTFS du parcours (mis en cache) —
                                 # None = inconnus (GTFS absent ou en erreur) → fail-safe
                                 _ev_gtfs_dir = DATA_DIR / "gtfs" / "gtfs_stm"
-                                _ev_stop_ids = (
-                                    _cached_stop_ids_for_parcours(
+                                _ev_arrets_ordonnes = (
+                                    _cached_arrets_pour_parcours(
                                         str(_ev_gtfs_dir), tl, td, tid
                                     )
                                     if _ev_gtfs_dir.exists() else None
+                                )
+                                _ev_stop_ids = (
+                                    frozenset(_ev_arrets_ordonnes)
+                                    if _ev_arrets_ordonnes is not None else None
+                                )
+                                events_t = trier_evenements_par_arrets(
+                                    events_t, _ev_arrets_ordonnes or ()
                                 )
 
                                 from chauffeur.evenements import applicable_a_la_plage
@@ -677,6 +722,7 @@ with tabs[0]:
                                 ):
                                     if not events_t:
                                         st.caption("Aucun évènement enregistré.")
+                                    affichages = []
                                     for evt in events_t:
                                         applies_quart = applicable_a_la_plage(
                                             evt, date.fromisoformat(db_date_str), tr_t
@@ -685,58 +731,28 @@ with tabs[0]:
                                             evt, _ev_stop_ids, _ev_gd_instr
                                         )
                                         applies = applies_quart and applies_parc
-                                        eid   = evt.get("evenement_id", "?")
-                                        titre = evt.get("titre", "(sans titre)")
-                                        eff   = evt.get("effectif", "")
-                                        d_deb = (evt.get("date_heure_debut") or "")[:10]
-                                        d_fin = (evt.get("date_heure_fin")   or "")[:10]
-                                        label = (
-                                            f"{'✅' if applies else '⬜'}"
-                                            f" #{eid} — {titre}"
+                                        if not applies_quart:
+                                            raison = (
+                                                "Hors plage de validité ou d'effectif "
+                                                "du trajet."
+                                            )
+                                        elif not applies_parc:
+                                            raison = (
+                                                "Les arrêts ou les rues ne correspondent "
+                                                "pas à ce parcours."
+                                            )
+                                        else:
+                                            raison = ""
+                                        affichages.append(presenter_evenement(
+                                            evt,
+                                            applicable=applies,
+                                            raison_exclusion=raison,
+                                        ))
+                                    if affichages:
+                                        st.markdown(
+                                            rendre_table_evenements_html(affichages),
+                                            unsafe_allow_html=True,
                                         )
-                                        with st.expander(label, expanded=applies):
-                                            if not applies_quart:
-                                                st.caption(
-                                                    "⚠️ Non applicable à ce trajet "
-                                                    "(plage de validité ou d'effectif)."
-                                                )
-                                            elif not applies_parc:
-                                                st.caption(
-                                                    "⚠️ Non applicable à ce parcours "
-                                                    "(arrêts ou rues ne correspondent pas)."
-                                                )
-                                            if eff:
-                                                st.caption(f"Effectif : {eff}")
-                                            if d_deb:
-                                                st.caption(
-                                                    f"Période : {d_deb} → {d_fin or '?'}"
-                                                )
-                                            ann = evt.get("arrets_annules", [])
-                                            ajt = evt.get("arrets_ajoutes", [])
-                                            if ann:
-                                                st.markdown("**Arrêts annulés :**")
-                                                for a in ann:
-                                                    if isinstance(a, str):
-                                                        st.text(f"  ✖ {a}")
-                                                    else:
-                                                        nm = a.get("nom", a.get("code", "?"))
-                                                        cd = a.get("code", "")
-                                                        st.text(
-                                                            f"  ✖ {nm}"
-                                                            + (f" ({cd})" if cd else "")
-                                                        )
-                                            if ajt:
-                                                st.markdown("**Arrêts ajoutés :**")
-                                                for a in ajt:
-                                                    if isinstance(a, str):
-                                                        st.text(f"  ✚ {a}")
-                                                    else:
-                                                        nm = a.get("nom", a.get("code", "?"))
-                                                        cd = a.get("code", "")
-                                                        st.text(
-                                                            f"  ✚ {nm}"
-                                                            + (f" ({cd})" if cd else "")
-                                                        )
                             except Exception as e:
                                 st.error(f"Erreur lecture évènements : {e}")
 

@@ -38,6 +38,8 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 * [ ] **P2** — Évaluer l'ajout d'un `pyproject.toml` pour moderniser la gestion du projet Python.
 
+* [ ] **P3** - Évaluer le message au runtime: `st.components.v1.html` will be removed after 2026-06-01. ... Please replace `st.components.v1.html` with `st.iframe`.
+
 ## Code
 
 * [ ] **P2** — Uniformiser progressivement le typage Python.
@@ -84,15 +86,34 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 ## Génération
 
+* [x] **P1** — Normaliser le tableau « Détours & arrêts modifiés » du rapport journalier.
+
+  * Conserver la page G-D en portrait et afficher les pages d'événements en paysage.
+  * Présenter un événement par ligne avec les colonnes « Événement / titre », « Période », « Détour & commentaires », « Arrêts » et « Effectif ».
+  * Afficher chaque instruction G-D sur une ligne distincte.
+  * Séparer le commentaire, les arrêts annulés ou concernés et les arrêts ajoutés.
+  * Répéter l'en-tête du tableau et permettre le fractionnement des événements longs.
+
+* [ ] **P3** - "Rapport journalier" et "Rapport V2": Remplacer le sélecteur de date par une liste [j-5, aujourd'hui, j+7], n'afficher que les date où un fichier journée json est présent. Par défaut, la date du jour ou la journée la plus proche valide.
 
 ## Qualité
 
-* [ ] **P1** — Ajouter des cas de test pour les rapports complexes.
+* [x] **P1** — Ajouter un cas de test de rapport complexe couvrant les événements de la ligne 10, les arrêts ajoutés, une fin indéterminée et la pagination paysage.
 
 ---
 
 # 6. Scripts d'import et de traitement
 
+* [x] **P1** — Uniformiser le compte rendu des événements ajoutés, modifiés et retirés.
+
+  * Utiliser la même comparaison structurée pour l'import manuel, le rafraîchissement portail, l'UI et les journaux.
+  * Afficher l'ancien G-D, le commentaire et les arrêts de chaque événement retiré.
+  * Afficher les versions avant et après du G-D, du commentaire et des arrêts de chaque événement modifié.
+  * Trier les tableaux de plusieurs événements selon le premier arrêt annulé ou concerné, sinon le premier arrêt ajouté, dans l'ordre du parcours; conserver les événements sans ancre connue à la fin dans leur ordre d'origine.
+  * Conserver les variantes légitimes partageant un même `evenement_id`.
+  * Respecter l'option CLI qui masque les détails et l'encadrement historique des journaux.
+
+* [x] **P1** — Préserver les retours à la ligne des G-D lors de l'import, avec repli compatible pour les anciennes chaînes aplaties.
 * [ ] **P2** — Uniformiser les conventions de ligne de commande.
 * [ ] **P1** — Ajouter une gestion d'erreur cohérente.
 * [ ] **P3** — Adapter `parse_journee.py` au format multiligne produit par un copier-coller depuis Firefox, si ce navigateur devient officiellement pris en charge par `employe.stm.info`.
@@ -122,6 +143,8 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 # 10. Documentation
 
+
+* [x] **P2** — Documenter le format réel des fichiers d'événements et les ID dupliqués légitimes.
 * [ ] **P2** — Documenter les formats de données importants.
 
 ---
@@ -135,6 +158,7 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 * [ ] **P2** — Identifier les traitements manuels pouvant être automatisés.
 * [ ] **P2** — Identifier les informations actuellement difficiles à consulter dans l'interface.
+  * "Fichiers"/"Gestion des fichiers"/"Journée" déplacer les sections "Aperçu" et "Export" devant la liste de fichier ou mettre la liste de fichier dans une section refermable.
 
 ---
 
@@ -147,7 +171,7 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 ---
 
 # 14. UI
-* [ ] **P1** - Réorganisation de la page "Ma journée"
+* [x] **P1** - Réorganisation de la page "Ma journée"
 
   * Limité le contenu de la liste déroulante "Journée" à [-2, aujourd'hui, +5]
   * Retirer le selecteur "Niveau des rapport". Garder "Détaillé" comme valeur par défaut.
@@ -158,7 +182,7 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
   * Garder l'aperçu du dernier rapport v2
   * Garder la section "Pièces de travail" tel quel. 
 
-* [ ] **P1** - Réorganisation de la section import pour devenir "Préparation d'une journée"
+* [x] **P1** - Réorganisation de la section import pour devenir "Préparation d'une journée"
 
   * Flux de travail typique:
     * Sélectionne une date 
@@ -170,3 +194,11 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
       * 4a- Récupérer les événements des routes de la journée, 
       * 4b- Générer le rapport Journalier, 
       * 4c- Générer la version standard du rapport v2. 
+
+* [x] **P1** — Réutiliser la présentation normalisée des événements dans « Pièces de travail ».
+
+  * Remplacer les accordéons individuels par un tableau multiligne adapté à la largeur disponible.
+  * Afficher tous les événements avec leur état applicable ou non applicable et la raison d'exclusion.
+  * Conserver le filtrage par date, plage horaire et correspondance avec le parcours.
+  * Afficher G-D, commentaire, arrêts concernés et ajoutés, identifiants, période et effectif.
+  * Prévoir un défilement horizontal sur les écrans étroits.

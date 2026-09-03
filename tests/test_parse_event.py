@@ -63,6 +63,8 @@ def main() -> int:
             echecs.append(f"'sans annulation': arrets_annules devrait être vide, obtenu {sans['arrets_annules']}")
         if not (sans.get("description_gd") or "").startswith("VIA DE MAISONNEUVE"):
             echecs.append(f"'sans annulation': description_gd inattendue: {sans.get('description_gd')!r}")
+        if "\n" not in (sans.get("description_gd") or ""):
+            echecs.append("'sans annulation': les retours de ligne G-D doivent être conservés")
 
     # 3. « Détour avec annulation » : 6 arrêts annulés + 2 ajoutés, non pollués.
     avec = _trouver(ouest, "11205733", "Détour avec annulation d'arrêt")
@@ -75,6 +77,43 @@ def main() -> int:
             echecs.append(f"'avec annulation': arrets_ajoutes={aj}")
     else:
         echecs.append("34 ouest: évènement 'Détour avec annulation' introuvable")
+
+    # 4. Le compte rendu d'un retrait restitue le G-D et les deux groupes d'arrêts.
+    if avec:
+        retire = STMEventParser("", verbose=True)
+        retire.ligne, retire.direction = "34", "ouest"
+        retire.merge_events({"detours": [avec]})
+        resume = retire.get_summary()
+        for attendu in (
+            "Détour & commentaires", "VIA FRONTENAC",
+            "Annulés ou concernés", "53046", "Ajoutés", "53016",
+        ):
+            if attendu not in resume:
+                echecs.append(f"résumé de retrait incomplet: {attendu}")
+
+        retire_court = STMEventParser("", verbose=False)
+        retire_court.merge_events({"detours": [avec]})
+        if "Détour & commentaires" in "\n".join(retire_court.warnings):
+            echecs.append("verbose=False devrait masquer les détails du retrait")
+
+        version_apres = {
+            **avec,
+            "description_gd": "VIA NOUVELLE RUE\nG/ APRÈS",
+            "commentaire": "Nouveau commentaire",
+            "arrets_annules": [{"id": "33333", "nom": "Nouvel arrêt"}],
+            "arrets_ajoutes": [{"id": "44444", "nom": "Nouvel ajout"}],
+        }
+        modifie = STMEventParser("", verbose=True)
+        modifie.ligne, modifie.direction = "34", "ouest"
+        modifie.events = [version_apres]
+        modifie.merge_events({"detours": [avec]})
+        resume_modifie = modifie.get_summary()
+        for attendu in (
+            "Avant", "VIA FRONTENAC", "53046", "53016",
+            "Après", "VIA NOUVELLE RUE", "Nouveau commentaire", "33333", "44444",
+        ):
+            if attendu not in resume_modifie:
+                echecs.append(f"résumé de modification incomplet: {attendu}")
 
     if echecs:
         print("✗ test_parse_event")

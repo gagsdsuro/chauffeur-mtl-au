@@ -3,6 +3,9 @@
 Dépôt de données d'itinéraires d'autobus de la STM (Montréal) + scripts d'import
 et génération de rapports. Langue de travail : français.
 Voir `CLAUDE.md` pour la spécification détaillée des formats et des commandes.
+Le format JSON des événements est documenté dans
+[`docs/format-evenements.md`](docs/format-evenements.md); les exemples prêts à
+adapter se trouvent dans [`docs/gabarits/`](docs/gabarits/).
 
 ## Installation
 
@@ -27,8 +30,8 @@ pip install --break-system-packages -r requirements.txt
 |---|---|
 | `streamlit` | l'app (`app/ui.py`) |
 | `requests` | imports GTFS/GTFS-RT (`scripts/fetch_gtfs*.py`) et portail STM (`chauffeur/portail.py`) |
-| `pymupdf` (importé sous le nom `fitz`) | annotation des cartes agent (`scripts/carte_agent_stm.py`), tests `test_carte_agent.py` et outil `creer_cas_test.py` |
-| `reportlab` | PDF des rapports v1/v2 (`scripts/gen_rapport.py`, `gen_rapport_v2.py`) et test `test_rapport.py` |
+| `pymupdf` (importé sous le nom `fitz`) | annotation des cartes agent (`scripts/carte_agent_stm.py`), tests `test_carte_agent.py`/`test_rapport_evenements.py` et outil `creer_cas_test.py` |
+| `reportlab` | PDF des rapports v1/v2 (`scripts/gen_rapport.py`, `gen_rapport_v2.py`) et tests `test_rapport.py`/`test_rapport_evenements.py` |
 
 Remarques :
 

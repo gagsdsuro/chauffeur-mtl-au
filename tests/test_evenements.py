@@ -22,6 +22,7 @@ from chauffeur.evenements import (  # noqa: E402
     applicable_a_la_plage,
     arret_reellement_annule,
     titre_annule_l_arret,
+    trier_evenements_par_arrets,
 )
 from chauffeur.gd import event_applicable_to_parcours  # noqa: E402
 
@@ -117,6 +118,20 @@ def main() -> int:
     check(event_applicable_to_parcours({"description_gd": ""}, None, gd_instr),
           "parcours: sans arrêt annulé ni description → applicable")
 
+    # ── tri des tableaux d'évènements selon le parcours ─────────────────────
+    par_300 = {"evenement_id": "300", "arrets_annules": [{"id": "30000"}]}
+    par_100 = {"evenement_id": "100", "arrets_annules": [{"id": "10000"}]}
+    ajout_200 = {"evenement_id": "200", "arrets_ajoutes": ["20000 - Temporaire"]}
+    inconnu_a = {"evenement_id": "x", "arrets_annules": [{"id": "99999"}]}
+    inconnu_b = {"evenement_id": "y"}
+    source = [par_300, inconnu_a, ajout_200, par_100, inconnu_b]
+    tries = trier_evenements_par_arrets(
+        source, [(1, "10000"), (2, "20000"), (3, "30000")]
+    )
+    check([e["evenement_id"] for e in tries] == ["100", "200", "300", "x", "y"],
+          "tri: ordre du premier arrêt, puis inconnus en ordre stable")
+    check(source[0] is par_300, "tri: la liste source ne doit pas être modifiée")
+
     # ── titre_annule_l_arret ──────────────────────────────────────────────────
     # Les 5 titres réellement produits par le portail STM.
     check(titre_annule_l_arret("détour avec annulation d'arrêt"),
@@ -163,8 +178,7 @@ def main() -> int:
         print("\n0/1 cas réussis")
         return 1
 
-    print("✓ applicable_a_la_date + applicable_a_la_plage + event_applicable_to_parcours (None)"
-          " + titre_annule_l_arret / arret_reellement_annule")
+    print("✓ applicabilité + tri par arrêts du parcours + sémantique des annulations")
     print("\n1/1 cas réussis")
     return 0
 

@@ -15,6 +15,9 @@ from .depots import (
     DATA_DIR, EVENTS_DIR, GD_DIR, charger_journee, chemin_evenements, chemin_gd,
 )
 from .journee import lignes_de_service
+from .evenements import (
+    evenements_modifies, evenements_retires, resumer_changements_evenements,
+)
 from .portail import PortailClient, PortailError, SessionExpiredError
 
 RAPPORTS_DIR = DATA_DIR / "rapports"
@@ -32,6 +35,8 @@ class ResultatLigneEvenements:
     modifie: bool = False
     message: str = ""
     changements: list[str] = field(default_factory=list)
+    evenements_retires: list[dict] = field(default_factory=list)
+    evenements_modifies: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -98,6 +103,8 @@ def _traiter_ligne(client: PortailClient, ligne: str, direction: str, log: bool)
     avant = parser.load_existing_events().get("detours", [])
     saved, changed = parser.save_json()
     changements = _decrire_changements(avant, parser.events) if changed else []
+    retires = evenements_retires(avant, parser.events) if changed else []
+    modifies = evenements_modifies(avant, parser.events) if changed else []
     # Un appel valide sans événement matérialise un fichier vide, mais ne rend
     # pas un rapport obsolète si le contenu métier demeure [].
     path = chemin_evenements(ligne, direction)
@@ -111,30 +118,20 @@ def _traiter_ligne(client: PortailClient, ligne: str, direction: str, log: bool)
     if log:
         parser.append_log(message)
     return ResultatLigneEvenements(
-        ligne, direction, saved, changed, message, changements
+        ligne=ligne,
+        direction=direction,
+        succes=saved,
+        modifie=changed,
+        message=message,
+        changements=changements,
+        evenements_retires=retires,
+        evenements_modifies=modifies,
     )
 
 
 def _decrire_changements(avant: list[dict], apres: list[dict]) -> list[str]:
     """Résumé structuré par ID, y compris les doublons légitimes d'un événement."""
-    def grouper(items: list[dict]) -> dict[str, list[dict]]:
-        groupes: dict[str, list[dict]] = {}
-        for item in items:
-            groupes.setdefault(str(item.get("evenement_id", "?")), []).append(item)
-        return groupes
-
-    anciens, nouveaux = grouper(avant), grouper(apres)
-    changements: list[str] = []
-    for identifiant in sorted(nouveaux.keys() - anciens.keys()):
-        titre = nouveaux[identifiant][0].get("titre", "sans titre")
-        changements.append(f"Nouveau #{identifiant} — {titre}")
-    for identifiant in sorted(anciens.keys() - nouveaux.keys()):
-        titre = anciens[identifiant][0].get("titre", "sans titre")
-        changements.append(f"Retiré #{identifiant} — {titre}")
-    for identifiant in sorted(anciens.keys() & nouveaux.keys()):
-        if anciens[identifiant] != nouveaux[identifiant]:
-            changements.append(f"Modifié #{identifiant}")
-    return changements
+    return resumer_changements_evenements(avant, apres)
 
 
 def rafraichir_evenements_journee(
