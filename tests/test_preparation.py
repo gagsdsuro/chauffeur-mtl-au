@@ -32,6 +32,18 @@ class ClientFaux:
         return None
 
 
+class ClientImportFaux(ClientFaux):
+    def __init__(self, *, journee=None, gd=None):
+        self.journee = journee
+        self.gd = gd
+
+    def fetch_journee(self, _):
+        return self.journee
+
+    def fetch_gd(self, _, __):
+        return self.gd
+
+
 def main() -> int:
     echecs = []
     with tempfile.TemporaryDirectory() as tmp:
@@ -166,12 +178,69 @@ def main() -> int:
         finally:
             preparation._traiter_ligne = original_traiter
 
+        # Import automatique d'une journée HTML puis d'un G-D HTML.
+        brut = (ROOT / "tests" / "cas_journee" / "440-continu-id-duplique.txt").read_text(
+            encoding="utf-8"
+        )
+        sommaire, details = brut.split("Détails 136 - 01", 1)
+        en_html = lambda texte: "".join(
+            f"<div>{ligne}</div>" for ligne in texte.splitlines() if ligne
+        )
+        payload_journee = {
+            "date": "2026-08-22",
+            "journeeHtml": en_html(sommaire),
+            "voyagesHtml": en_html("Détails 136 - 01\n" + details),
+        }
+        original_chemin_journee = preparation.chemin_journee
+        preparation.chemin_journee = lambda d: root / f"journee-{d}.json"
+        try:
+            imp = preparation.importer_journee_portail(
+                "2026-08-22", client=ClientImportFaux(journee=payload_journee), log=False
+            )
+            if not imp.succes or not imp.modifie or imp.chemin is None:
+                echecs.append(f"import journée portail échoué: {imp}")
+            else:
+                chargee = json.loads(imp.chemin.read_text(encoding="utf-8"))
+                if [p.get("type_horaire") for p in chargee["pieces"]] != [
+                    "horaire", "horaire", "continu"
+                ]:
+                    echecs.append("import journée: pièce continue non conservée")
+        finally:
+            preparation.chemin_journee = original_chemin_journee
+
+        payload_gd = {"html": """
+          <h2>Gauche-Droite / 24 Est</h2>
+          <div id="leftright-panel">{"content":[{"text":"G - pollution"}]}</div>
+          <ol><li>
+            <span>Parcours principal</span><span>ID 24</span>
+            <span>Date de mise à jour: 2026-09-03 12:45:15</span>
+            <span>Station Villa-Maria</span><span>51241</span>
+            <span>Via - Terminus Villa-Maria</span><span>Gauche - Décarie</span>
+            <span>Montgomery / Sherbrooke</span><span>52819</span>
+          </li></ol>
+        """}
+        original_gd_dir = preparation.GD_DIR
+        preparation.GD_DIR = root / "gd-auto"
+        try:
+            resultat_gd = preparation.rafraichir_gd_journee(
+                JOURNEE,
+                paires=[("24", "est")],
+                client=ClientImportFaux(gd=payload_gd),
+                log=False,
+            )
+            if not resultat_gd.succes_complet or not resultat_gd.modifie:
+                echecs.append(f"import G-D portail échoué: {resultat_gd}")
+            elif not (preparation.GD_DIR / "gd24_est.json").exists():
+                echecs.append("import G-D: fichier attendu absent")
+        finally:
+            preparation.GD_DIR = original_gd_dir
+
     if echecs:
         print("✗ test_preparation")
         for erreur in echecs:
             print(f"    {erreur}")
         return 1
-    print("✓ préparation (fenêtre, empreintes, génération conditionnelle, reprise)")
+    print("✓ préparation (fenêtre, imports portail, empreintes, reprise)")
     return 0
 
 

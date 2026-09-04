@@ -77,14 +77,79 @@ def main() -> int:
             if "gd24_est.json" not in parser2.report:
                 echecs.append(f"report: nom de fichier gd24_est.json absent du rapport")
 
+    # Réponse réelle simplifiée de /listeBus : le PDFMake caché doit être
+    # ignoré au profit de la liste HTML sémantique multi-parcours.
+    portail_html = """
+      <h2>Gauche-Droite / 24 Est</h2>
+      <div id="leftright-panel" style="display:none">
+        {"content":[{"text":"G - NE DOIT PAS ÊTRE IMPORTÉ"}]}
+      </div>
+      <a id="btnLR">Imprimer</a>
+      <ol>
+        <li><span>Parcours principal</span><span>ID 24</span>
+          <span>Date de mise à jour: 2026-09-03 12:45:15</span>
+          <span>Station Villa-Maria</span><span class="stop-code">51241</span>
+          <span>Via - Terminus Villa-Maria</span><span>Gauche - Décarie</span>
+          <span>Montgomery / Sherbrooke</span><span class="stop-code">52819</span>
+        </li>
+        <li><span>Parcours secondaire</span><span>ID 21</span>
+          <span>Date de mise à jour: 2026-09-03 12:45:15</span>
+          <span>Station Sherbrooke</span><span class="stop-code">52508</span>
+          <span>Droite - Cherrier</span><span>Gauche - Sherbrooke</span>
+          <span>Montgomery / Sherbrooke</span><span class="stop-code">52819</span>
+        </li>
+      </ol>
+      <script>pdfMake.createPdf({"text":"Droite - POLLUTION"});</script>
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        portail = GDParser.from_portal_json(
+            {"html": portail_html}, "24", "est", gd_dir=Path(tmp)
+        )
+        resultat_portail = portail.parse()
+        if resultat_portail is None:
+            echecs.append(f"portail G-D: parsing échoué — {portail.errors}")
+        else:
+            parcours = resultat_portail["routes"][0]["parcours"]
+            if [p["id"] for p in parcours] != [24, 21]:
+                echecs.append(f"portail G-D: IDs inattendus {[p['id'] for p in parcours]}")
+            if [p["start_code"] for p in parcours] != [51241, 52508]:
+                echecs.append("portail G-D: codes de départ incorrects")
+            instructions = [i for p in parcours for i in p["direction"]]
+            if any("POLLUTION" in i or "NE DOIT" in i for i in instructions):
+                echecs.append("portail G-D: contenu PDFMake/script importé par erreur")
+
+        mauvais = GDParser.from_portal_json(
+            {"html": portail_html}, "24", "ouest", gd_dir=Path(tmp)
+        )
+        if mauvais.parse() is not None:
+            echecs.append("portail G-D: direction discordante acceptée")
+
+        chemin_existant = Path(tmp) / "gd24_est.json"
+        avant_indisponible = chemin_existant.read_bytes()
+        indisponible = GDParser.from_portal_json(
+            {
+                "html": (
+                    "<h2>Gauche-Droite / 24 Est</h2>"
+                    "<p>Désolé, le gauche-droite n'est pas encore disponible.</p>"
+                )
+            },
+            "24",
+            "est",
+            gd_dir=Path(tmp),
+        )
+        if indisponible.parse() is not None:
+            echecs.append("portail G-D: réponse indisponible acceptée")
+        if chemin_existant.read_bytes() != avant_indisponible:
+            echecs.append("portail G-D: réponse invalide a écrasé le fichier existant")
+
     if echecs:
         print("✗ test_parse_gd")
         for e in echecs:
             print(f"    {e}")
         print("\n0/1 cas réussis")
         return 1
-    print("✓ cas-24-est-multi-parcours (2 parcours fusionnés, en-tête répété sans pollution)")
-    print("\n1/1 cas réussis")
+    print("✓ G-D manuel multi-parcours + HTML portail sans PDFMake")
+    print("\n2/2 cas réussis")
     return 0
 
 

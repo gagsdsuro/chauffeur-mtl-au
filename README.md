@@ -29,7 +29,7 @@ pip install --break-system-packages -r requirements.txt
 | Paquet | Requis par |
 |---|---|
 | `streamlit` | l'app (`app/ui.py`) |
-| `requests` | imports GTFS/GTFS-RT (`scripts/fetch_gtfs*.py`) et portail STM (`chauffeur/portail.py`) |
+| `requests` | imports GTFS/GTFS-RT et imports automatiques journée/G-D/événements depuis le portail STM |
 | `pymupdf` (importé sous le nom `fitz`) | annotation des cartes agent (`scripts/carte_agent_stm.py`), tests `test_carte_agent.py`/`test_rapport_evenements.py` et outil `creer_cas_test.py` |
 | `reportlab` | PDF des rapports v1/v2 (`scripts/gen_rapport.py`, `gen_rapport_v2.py`) et tests `test_rapport.py`/`test_rapport_evenements.py` |
 
@@ -48,6 +48,10 @@ Remarques :
 streamlit run app/ui.py      # développement local
 docker compose up --build    # production (port 8501, volume ./data)
 ```
+
+Dans « Préparation d'une journée », une session employé STM valide permet de
+récupérer automatiquement la journée sélectionnée, ses G-D manquants ou périmés
+et ses événements. Les trois imports manuels restent disponibles en secours.
 
 ## Tests
 

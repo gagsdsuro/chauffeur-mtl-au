@@ -9,7 +9,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from chauffeur.depots import sauvegarder_gd  # noqa: E402
 from chauffeur.journal import ecrire_bloc  # noqa: E402
+from chauffeur.portail import texte_visible_html  # noqa: E402
 
 
 class GDParser:
@@ -24,15 +26,55 @@ class GDParser:
     # Lignes a ignorer dans un bloc de parcours
     SKIP_PATTERNS = ("Imprimer", "Date de mise à jour", "Date de mise a jour")
 
-    def __init__(self, raw_data: str):
+    def __init__(self, raw_data: str, gd_dir: Path | None = None):
         self.raw_data = raw_data
+        self.gd_dir = Path(gd_dir) if gd_dir is not None else self.GD_DIR
         self.ligne = None
         self.direction = None
         self.parcours = []
         self.errors = []
         self.report = ""
+        self._expected_ligne: str | None = None
+        self._expected_direction: str | None = None
+
+    @classmethod
+    def from_portal_json(
+        cls, payload: dict, ligne: str, direction: str, gd_dir: Path | None = None
+    ) -> "GDParser":
+        """Construit le parseur depuis le HTML sémantique de `/listeBus`."""
+        html = payload.get("html") if isinstance(payload, dict) else None
+        if not isinstance(html, str):
+            parser = cls("", gd_dir=gd_dir)
+            parser.errors.append("Réponse G-D du portail invalide")
+            return parser
+
+        texte = texte_visible_html(html, ids_ignores={"leftright-panel"})
+        lignes = texte.splitlines()
+        normalisees: list[str] = []
+        i = 0
+        while i < len(lignes):
+            courant = lignes[i].strip()
+            if courant.startswith("Parcours ") and i + 1 < len(lignes):
+                suivant = lignes[i + 1].strip()
+                if re.fullmatch(r"ID\s*\d+", suivant, re.IGNORECASE):
+                    normalisees.append(courant + suivant)
+                    i += 2
+                    continue
+            if i + 1 < len(lignes) and re.fullmatch(r"\d{5}", lignes[i + 1].strip()):
+                normalisees.append(f"{courant} {lignes[i + 1].strip()}")
+                i += 2
+                continue
+            normalisees.append(courant)
+            i += 1
+
+        parser = cls("\n".join(normalisees), gd_dir=gd_dir)
+        parser._expected_ligne = str(ligne).lower()
+        parser._expected_direction = (direction or "").lower()
+        return parser
 
     def parse(self):
+        if self.errors:
+            return None
         if not self._extract_header():
             return None
         if not self._parse_parcours():
@@ -40,7 +82,8 @@ class GDParser:
         existing_data = self._load_existing_file()
         summary = self._generate_summary(existing_data)
         json_data = self._generate_json()
-        self._save_file(json_data)
+        if not self._save_file(json_data):
+            return None
         self.report = self._format_report(summary)
         return json_data
 
@@ -57,6 +100,20 @@ class GDParser:
         self.direction = header_match.group(2).lower()
         if self.direction not in self.VALID_DIRECTIONS:
             self.errors.append(f"Direction non reconnue: {self.direction}")
+            return False
+        if self._expected_ligne is not None and self.ligne != self._expected_ligne:
+            self.errors.append(
+                f"Ligne retournée inattendue: {self.ligne}, attendu {self._expected_ligne}"
+            )
+            return False
+        if (
+            self._expected_direction is not None
+            and self.direction != self._expected_direction
+        ):
+            self.errors.append(
+                f"Direction retournée inattendue: {self.direction}, "
+                f"attendu {self._expected_direction}"
+            )
             return False
         return True
 
@@ -128,7 +185,7 @@ class GDParser:
         }
 
     def _load_existing_file(self) -> Optional[Dict]:
-        filepath = self.GD_DIR / self._filename()
+        filepath = self.gd_dir / self._filename()
         if filepath.exists():
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
@@ -195,11 +252,9 @@ class GDParser:
         }
 
     def _save_file(self, json_data: Dict) -> bool:
-        filepath = self.GD_DIR / self._filename()
+        filepath = self.gd_dir / self._filename()
         try:
-            self.GD_DIR.mkdir(parents=True, exist_ok=True)
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(json_data, f, indent=2, ensure_ascii=False)
+            sauvegarder_gd(filepath, json_data)
             return True
         except Exception as e:
             self.errors.append(f"Erreur sauvegarde: {e}")
@@ -230,7 +285,7 @@ class GDParser:
         else:
             if summary["status"] != "created":
                 lines.append("\n[OK] Aucun changement detecte")
-        lines.append(f"\n[LOCALISATION] {self.GD_DIR}")
+        lines.append(f"\n[LOCALISATION] {self.gd_dir}")
         lines.append("="*60 + "\n")
         return "\n".join(lines)
 

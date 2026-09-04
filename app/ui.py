@@ -37,9 +37,11 @@ from chauffeur.effectif import bornes_quart  # noqa: E402
 from chauffeur.evenements import trier_evenements_par_arrets  # noqa: E402
 from chauffeur.journal import ecrire_bloc, lister_journaux  # noqa: E402
 from chauffeur.preparation import (  # noqa: E402
-    ResultatRafraichissement, etat_rapport, finaliser_rapports,
-    fusionner_rafraichissements, generer_v2_et_marquer,
-    marquer_rapport_a_jour, rafraichir_evenements_journee,
+    ResultatRafraichissement, ResultatRafraichissementGD,
+    etat_rapport, finaliser_rapports, fusionner_rafraichissements,
+    fusionner_rafraichissements_gd, generer_v2_et_marquer,
+    importer_journee_portail, marquer_rapport_a_jour,
+    rafraichir_evenements_journee, rafraichir_gd_journee,
 )
 from chauffeur.portail import (  # noqa: E402
     etat_session, valider_et_sauvegarder_session,
@@ -164,6 +166,15 @@ def _afficher_resultat_rafraichissement(resultat: ResultatRafraichissement) -> N
                     ]),
                     unsafe_allow_html=True,
                 )
+        if not ligne.succes and ligne.message:
+            st.caption(ligne.message)
+
+
+def _afficher_resultat_gd(resultat: ResultatRafraichissementGD) -> None:
+    for ligne in resultat.lignes:
+        icone = "✅" if ligne.succes else "❌"
+        etat = "modifié" if ligne.modifie else "vérifié"
+        st.write(f"{icone} {ligne.ligne} {ligne.direction} — {etat}")
         if not ligne.succes and ligne.message:
             st.caption(ligne.message)
 
@@ -429,8 +440,9 @@ with tabs[0]:
 
         for idx, piece in enumerate(db_pieces):
             pid = piece.get("id", f"pièce-{idx + 1}")
+            type_piece = " — TS continu" if piece.get("type_horaire") == "continu" else ""
             with st.expander(
-                f"Pièce {pid}  —  {piece.get('debut', '?')} → {piece.get('fin', '?')}"
+                f"Pièce {pid}{type_piece}  —  {piece.get('debut', '?')} → {piece.get('fin', '?')}"
                 f"  ({piece.get('duree', '?')})",
                 expanded=False,
             ):
@@ -570,8 +582,11 @@ with tabs[0]:
                         r = releve.get(_rk)
                         if not r:
                             continue
-                        st.caption(f"{_label} : {r['nom']} ({r['matricule']})")
-                        _mat = r["matricule"]
+                        _mat = r.get("matricule") or ""
+                        _suffixe_mat = f" ({_mat})" if _mat else ""
+                        st.caption(f"{_label} : {r['nom']}{_suffixe_mat}")
+                        if not _mat:
+                            continue
                         note_m = _note_matricule(_mat)
                         note_m_key  = f"db_note_mat_edit_{db_date_str}_{idx}_{_rk}"
                         note_m_save = f"db_note_mat_save_{db_date_str}_{idx}_{_rk}"
@@ -861,13 +876,51 @@ with tabs[1]:
     # ── 2a — Journée ─────────────────────────────────────────────────────────
     with st.expander("1 — Importer la journée", expanded=not bool(_prep_data)):
         st.markdown(
-            "Collez le texte brut du **Détail de ma journée** (copié depuis l'interface STM). "
-            "Le fichier `journee-YYYY-MM-DD.json` sera créé dans `data/journees/`. "
-            "La journée importée apparaît ensuite dans le **Tableau de bord**."
+            "Récupérez le **Détail de ma journée** depuis une session STM valide. "
+            "Le fichier `journee-YYYY-MM-DD.json` sera créé dans `data/journees/`."
         )
 
         j_imp_date = _prep_date
         st.caption(f"Date de la journée : **{j_imp_date}**")
+
+        _j_pending = st.session_state.get("operation_portail")
+        _j_reprende = bool(
+            _j_pending
+            and _j_pending.get("type") == "import_journee"
+            and _j_pending.get("date") == _prep_date_str
+            and _j_pending.get("reprendre")
+        )
+        _j_auto = st.button(
+            "🌐 Récupérer depuis STM", type="primary", key="j_auto_btn"
+        )
+        if _j_auto or _j_reprende:
+            if _j_reprende:
+                _j_pending["reprendre"] = False
+            with st.spinner("Récupération de la journée…"):
+                _j_resultat = importer_journee_portail(j_imp_date, log=True)
+            if _j_resultat.session_expiree:
+                st.session_state["operation_portail"] = {
+                    "type": "import_journee",
+                    "date": _prep_date_str,
+                    "reprendre": False,
+                }
+                st.session_state["ouvrir_dialog_session"] = True
+                st.warning("Session expirée — renouvellement requis.")
+            elif _j_resultat.succes:
+                st.session_state.pop("operation_portail", None)
+                st.session_state["prep_flash"] = (
+                    f"Journée du {j_imp_date} récupérée depuis STM."
+                )
+                st.rerun()
+            else:
+                st.session_state.pop("operation_portail", None)
+                st.error(_j_resultat.message or "Échec de la récupération.")
+
+        st.divider()
+        st.caption("Import manuel de secours")
+        st.markdown(
+            "Collez le texte brut du **Détail de ma journée** copié depuis l'interface STM."
+        )
 
         j_text = st.text_area(
             "Texte brut",
@@ -1049,7 +1102,69 @@ with tabs[1]:
 
     # ── 2c — Gauche-Droite ───────────────────────────────────────────────────
     with st.expander("3 — Importer les Gauche-Droite", expanded=bool(_prep_data and _prep_gd_missing)):
-        st.markdown("Collez le texte brut copié depuis l'interface STM. Le fichier `gd<ligne>_<direction>.json` sera créé ou mis à jour.")
+        st.markdown(
+            "Récupérez les G-D manquants ou périmés depuis la section `/listeBus` du portail STM."
+        )
+
+        _gd_cibles = list(_prep_gd_missing) + [
+            (ligne, direction) for ligne, direction, _ in _prep_gd_stale
+        ]
+        _gd_pending = st.session_state.get("operation_portail")
+        _gd_reprende = bool(
+            _gd_pending
+            and _gd_pending.get("type") == "import_gd"
+            and _gd_pending.get("date") == _prep_date_str
+            and _gd_pending.get("reprendre")
+        )
+        _gd_auto = st.button(
+            "🌐 Récupérer les G-D manquants ou périmés",
+            type="primary",
+            key="gd_auto_btn",
+            disabled=not bool(_prep_data and _gd_cibles),
+        )
+        if _gd_auto or _gd_reprende:
+            _gd_precedent = None
+            _gd_a_traiter = _gd_cibles
+            if _gd_reprende:
+                _gd_precedent = ResultatRafraichissementGD.from_dict(
+                    _gd_pending.get("resultat", {})
+                )
+                _gd_a_traiter = _gd_precedent.restantes
+                _gd_pending["reprendre"] = False
+            with st.status("Récupération des G-D…", expanded=True) as _gd_status:
+                _gd_nouveau = rafraichir_gd_journee(
+                    _prep_data, paires=_gd_a_traiter, log=True
+                )
+                _gd_total = fusionner_rafraichissements_gd(
+                    _gd_precedent, _gd_nouveau
+                )
+                _afficher_resultat_gd(_gd_nouveau)
+                if _gd_nouveau.session_expiree:
+                    st.session_state["operation_portail"] = {
+                        "type": "import_gd",
+                        "date": _prep_date_str,
+                        "resultat": _gd_total.to_dict(),
+                        "reprendre": False,
+                    }
+                    st.session_state["ouvrir_dialog_session"] = True
+                    _gd_status.update(label="Session à renouveler", state="error")
+                elif not _gd_total.succes_complet:
+                    st.session_state.pop("operation_portail", None)
+                    _gd_status.update(label="Récupération partielle", state="error")
+                else:
+                    st.session_state.pop("operation_portail", None)
+                    st.session_state["prep_flash"] = "Gauche-Droite récupérés depuis STM."
+                    _gd_status.update(label="Récupération terminée", state="complete")
+                    st.rerun()
+        elif _prep_data and not _gd_cibles:
+            st.caption("Tous les G-D de cette journée sont présents et à jour.")
+
+        st.divider()
+        st.caption("Import manuel de secours")
+        st.markdown(
+            "Collez le texte brut copié depuis l'interface STM. Le fichier "
+            "`gd<ligne>_<direction>.json` sera créé ou mis à jour."
+        )
 
         gd_text = st.text_area(
             "Texte brut G-D",
@@ -1668,6 +1783,7 @@ with tabs[3]:
                         "garage_id": jd.get("garage_id", ""),
                         "journee_numero": jd.get("journee_numero", ""),
                         "piece_id": piece.get("id", ""),
+                        "type_horaire": piece.get("type_horaire", "horaire"),
                     }
                     for i in range(N_TRAJET_COLS):
                         row[f"trajet{i + 1}_ligne"] = (
@@ -1679,7 +1795,9 @@ with tabs[3]:
                 st.warning("Aucune journée dans cet intervalle.")
             else:
                 buf = io.StringIO()
-                fieldnames = ["date", "garage_id", "journee_numero", "piece_id"] + [
+                fieldnames = [
+                    "date", "garage_id", "journee_numero", "piece_id", "type_horaire"
+                ] + [
                     f"trajet{i + 1}_ligne" for i in range(N_TRAJET_COLS)
                 ]
                 writer = csv.DictWriter(buf, fieldnames=fieldnames)

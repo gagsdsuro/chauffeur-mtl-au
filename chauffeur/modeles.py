@@ -125,6 +125,7 @@ class Piece:
     debut: str
     fin: str
     lieu_fin: str
+    type_horaire: str = "horaire"
     trajets: list = field(default_factory=list)   # list[TrajetService | TrajetHlp | dict]
     numero_autobus: str | None = None
     releve: dict | None = None
@@ -139,6 +140,7 @@ class Piece:
             debut=d.get("debut", ""),
             fin=d.get("fin", ""),
             lieu_fin=d.get("lieu_fin", ""),
+            type_horaire=d.get("type_horaire", "horaire"),
             numero_autobus=d.get("numero_autobus"),
             releve=d.get("releve"),
             trajets=[_trajet_from_dict(t) for t in d.get("trajets", [])],
@@ -147,6 +149,7 @@ class Piece:
     def to_dict(self) -> dict:
         return {
             "id": self.id,
+            "type_horaire": self.type_horaire,
             "numero_autobus": self.numero_autobus,
             "duree": self.duree,
             "prise": self.prise,

@@ -1,0 +1,113 @@
+Accueil  Ma journée
+Détail de ma journée
+Hier59200 - Frontenac
+Journée440
+Temps travaillé9:31
+Temps supplémentaire2:14
+Mis à jour le 23 août 2026 21:17
+Sommaire136 - 0131194--2:59Horaire
+Prise
+13:08
+Lieu
+M16001
+Début
+13:08
+Fin
+16:07
+Lieu
+FRT
+Sommaire85 - 0731228--4:18Horaire
+Prise
+16:48
+Lieu
+E137
+Début
+16:48
+Fin
+21:06
+Lieu
+E137
+Sommaire85 - 0731228--2:14ContinuHoraire
+Prise
+21:06
+Lieu
+E137
+Début
+21:06
+Fin
+23:20
+Lieu
+E137
+Détails 136 - 01
+136 Nord
+ID 1
+Départ et arrivé :
+Station Viau13:14
+Des Grandes-Prairies / No 594013:49
+136 Sud
+ID 2
+Départ et arrivé :
+Des Grandes-Prairies / No 594013:56
+Station Viau14:31
+136 Nord
+ID 1
+Départ et arrivé :
+Station Viau14:38
+Des Grandes-Prairies / No 594015:13
+136 Sud
+ID 2
+Départ et arrivé :
+Des Grandes-Prairies / No 594015:20
+Station Viau15:54
+Entrée
+Départ et arrivé :
+Station Viau15:54
+Frontenac16:07
+Détails 85 - 07
+Haut-le-pied
+Départ et arrivé :
+Du Havre / La Fontaine16:48
+Station Frontenac16:51
+85 Est
+ID 1
+Départ et arrivé :
+Station Frontenac17:06
+Du Golf / Métropolitain17:59
+85 Ouest
+ID 2
+Départ et arrivé :
+Du Golf / Métropolitain18:07
+Du Havre / La Fontaine19:01
+Haut-le-pied
+Départ et arrivé :
+Du Havre / La Fontaine19:01
+Station Frontenac19:04
+85 Est
+ID 1
+Départ et arrivé :
+Station Frontenac19:10
+Du Golf / Métropolitain20:00
+85 Ouest
+ID 2
+Départ et arrivé :
+Du Golf / Métropolitain20:13
+Du Havre / La Fontaine21:06
+Je relève:
+Personne A - 10001
+Détails 85 - 07
+Haut-le-pied
+Départ et arrivé :
+Du Havre / La Fontaine21:06
+Station Frontenac21:09
+85 Est
+ID 1
+Départ et arrivé :
+Station Frontenac21:17
+Du Golf / Métropolitain22:05
+85 Ouest
+ID 2
+Départ et arrivé :
+Du Golf / Métropolitain22:28
+Du Havre / La Fontaine23:20
+Je relève:
+Personne B - 10002

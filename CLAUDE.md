@@ -29,6 +29,13 @@ python3 scripts/parse_gd.py < data/raw/new-gd.txt          # importe et écrit l
 python3 scripts/parse_gd.py --json < data/raw/new-gd.txt   # idem + imprime le JSON complet sur stdout
 python3 scripts/parse_gd.py --log < data/raw/new-gd.txt    # idem + trace dans data/log/parse_gd.log
 ```
+Depuis une session portail valide, `refresh_gd.py` récupère le HTML sémantique
+de `/listeBus` (le bloc PDFMake caché est ignoré) :
+```bash
+python3 scripts/refresh_gd.py --journee data/journees/journee-2026-06-25.json
+python3 scripts/refresh_gd.py --journee data/journees/journee-2026-06-25.json --tous
+python3 scripts/refresh_gd.py --ligne 24 --sens est
+```
 
 **Import Événements** — lit depuis stdin, écrit dans `data/Events/` :
 ```bash
@@ -44,6 +51,13 @@ python3 scripts/parse_journee.py --json < raw.txt              # idem + JSON com
 python3 scripts/parse_journee.py --log < raw.txt               # idem + trace dans data/log/parse_journee.log
 ```
 La date est auto-détectée depuis le champ « Mis à jour le » si `--date` est absent.
+Les pièces `ContinuHoraire` sont conservées avec `type_horaire: "continu"`;
+plusieurs pièces peuvent légitimement partager le même `id`.
+Import automatique depuis une session valide :
+```bash
+python3 scripts/fetch_journee.py                         # aujourd'hui
+python3 scripts/fetch_journee.py --date 2026-08-22 --log
+```
 
 **Rapport journalier v1** — PDF recto-verso prêt à imprimer (G-D + détours filtrés) :
 ```bash
@@ -158,7 +172,8 @@ python3 scripts/rapport_gd.py --ligne 125 --direction est --arret-debut 54112 --
 ```
 Options clés : `--format html|md`, `--heure-debut`/`--heure-fin` (peut dépasser 24h ex. `25:19`), `--parcours principal|secondaire|école|weekend`, `--arret-debut`/`--arret-fin`. Sortie : `scripts/rapport_<ligne>_<dir>_<date>.html`.
 
-**Rafraîchissement événements depuis le portail STM** — lit depuis `employe.stm.info`, écrit dans `data/Events/` :
+**Rafraîchissements depuis le portail STM** — journées, G-D et événements lisent
+`employe.stm.info` avec le même client et la même session persistante. Pour les événements :
 ```bash
 python3 scripts/refresh_events.py --journee data/journees/journee-2026-06-25.json
 python3 scripts/refresh_events.py --journee data/journees/journee-2026-06-25.json --restantes

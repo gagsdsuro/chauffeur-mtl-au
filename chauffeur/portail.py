@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
+from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,59 @@ import requests
 BASE_URL = "https://employe.stm.info"
 SESSION_PATH = Path(__file__).resolve().parent.parent / "data" / "session" / "cookies.json"
 SENS_MAP = {"est": "E", "ouest": "W", "nord": "N", "sud": "S"}
+
+
+class _ExtracteurTexteHTML(HTMLParser):
+    """Extrait le texte visible d'un fragment HTML sans dépendance externe."""
+
+    BLOCS = {
+        "article", "br", "dd", "div", "dl", "dt", "h1", "h2", "h3", "h4",
+        "li", "ol", "p", "section", "span", "table", "tbody", "td", "th", "tr", "ul",
+    }
+
+    def __init__(self, ids_ignores: set[str]):
+        super().__init__(convert_charrefs=True)
+        self.ids_ignores = ids_ignores
+        self.morceaux: list[str] = []
+        self.profondeur_ignoree = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attributs = dict(attrs)
+        if self.profondeur_ignoree:
+            self.profondeur_ignoree += 1
+        elif tag in {"script", "style"} or attributs.get("id") in self.ids_ignores:
+            self.profondeur_ignoree = 1
+        elif tag in self.BLOCS:
+            self.morceaux.append("\n")
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if not self.profondeur_ignoree and tag in self.BLOCS:
+            self.morceaux.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if self.profondeur_ignoree:
+            self.profondeur_ignoree -= 1
+        elif tag in self.BLOCS:
+            self.morceaux.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if not self.profondeur_ignoree:
+            self.morceaux.append(data)
+
+    def texte(self) -> str:
+        lignes = []
+        for ligne in "".join(self.morceaux).splitlines():
+            propre = re.sub(r"\s+", " ", ligne).strip()
+            if propre:
+                lignes.append(propre)
+        return "\n".join(lignes)
+
+
+def texte_visible_html(source: str, *, ids_ignores: set[str] | None = None) -> str:
+    """Convertit le HTML du portail en lignes de texte visibles et stables."""
+    extracteur = _ExtracteurTexteHTML(set(ids_ignores or ()))
+    extracteur.feed(source or "")
+    return extracteur.texte()
 
 
 class SessionExpiredError(Exception):
@@ -195,30 +249,55 @@ class PortailClient:
             "valide", "Session active", self._source.get("saved_at"), self.verifiee_le
         )
 
+    def _fetch_json(self, url: str, contexte: str, prefixe_attendu: str) -> dict:
+        if self.csrf_token is None:
+            self.verifier()
+        try:
+            response = self.http.get(url, timeout=15, allow_redirects=True)
+        except requests.RequestException as exc:
+            raise PortailError(f"Erreur réseau pour {contexte} : {exc}") from exc
+        if response.status_code in (401, 403) or not response.url.startswith(prefixe_attendu):
+            self._persist("expiree")
+            raise SessionExpiredError("Session expirée pendant la récupération")
+        if response.status_code != 200:
+            raise PortailError(f"Erreur HTTP {response.status_code} pour {contexte}")
+        try:
+            payload = response.json()
+        except Exception as exc:
+            raise PortailError(f"Réponse non-JSON pour {contexte}") from exc
+        if not isinstance(payload, dict):
+            raise PortailError(f"Réponse JSON inattendue pour {contexte}")
+        self._persist()
+        return payload
+
     def fetch_detours(self, ligne: str, sens: str) -> dict:
         code_sens = SENS_MAP.get((sens or "").lower())
         if not code_sens:
             raise PortailError(f"Sens non reconnu : '{sens}'. Valeurs valides : {list(SENS_MAP)}")
-        if self.csrf_token is None:
-            self.verifier()
         url = f"{BASE_URL}/resume-journee/panel/detour/{ligne}/{code_sens}"
+        return self._fetch_json(
+            url, f"{ligne} {sens}", f"{BASE_URL}/resume-journee/"
+        )
+
+    def fetch_journee(self, date_cible: date | str) -> dict:
+        """Récupère le sommaire et les voyages de la date ISO demandée."""
+        date_str = date_cible.isoformat() if isinstance(date_cible, date) else str(date_cible)
         try:
-            response = self.http.get(url, timeout=15, allow_redirects=True)
-        except requests.RequestException as exc:
-            raise PortailError(f"Erreur réseau pour {ligne} {sens} : {exc}") from exc
-        if response.status_code in (401, 403) or not response.url.startswith(
-            f"{BASE_URL}/resume-journee/"
-        ):
-            self._persist("expiree")
-            raise SessionExpiredError("Session expirée pendant la récupération")
-        if response.status_code != 200:
-            raise PortailError(f"Erreur HTTP {response.status_code} pour {ligne} {sens}")
-        try:
-            payload = response.json()
-        except Exception as exc:
-            raise PortailError(f"Réponse non-JSON pour {ligne} {sens}") from exc
-        self._persist()
-        return payload
+            date.fromisoformat(date_str)
+        except ValueError as exc:
+            raise PortailError(f"Date de journée invalide : {date_str}") from exc
+        url = f"{BASE_URL}/resume-journee?date={date_str}"
+        return self._fetch_json(url, f"la journée du {date_str}", f"{BASE_URL}/resume-journee")
+
+    def fetch_gd(self, ligne: str, sens: str) -> dict:
+        """Récupère tous les parcours G-D courants d'une ligne/direction."""
+        code_sens = SENS_MAP.get((sens or "").lower())
+        if not code_sens:
+            raise PortailError(f"Sens non reconnu : '{sens}'. Valeurs valides : {list(SENS_MAP)}")
+        url = f"{BASE_URL}/resume-journee/panel/chemin/{ligne}/{code_sens}/undefined"
+        return self._fetch_json(
+            url, f"le G-D {ligne} {sens}", f"{BASE_URL}/resume-journee/"
+        )
 
 
 def valider_et_sauvegarder_session(

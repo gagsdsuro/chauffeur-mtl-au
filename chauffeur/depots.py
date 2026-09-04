@@ -10,6 +10,8 @@ pour permettre des tests hermétiques sur des fichiers gelés.
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -51,11 +53,32 @@ def charger_journee(path: Path) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def _sauvegarder_json_atomique(path: Path, contenu: dict) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.stem}-", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(contenu, handle, indent=2, ensure_ascii=False)
+            handle.write("\n")
+        os.replace(tmp_name, path)
+    except Exception:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        Path(tmp_name).unlink(missing_ok=True)
+        raise
+
+
 def sauvegarder_journee(path: Path, journee: dict) -> None:
-    """Écrit un fichier journée JSON (convention 2 espaces, accents préservés)."""
-    Path(path).write_text(
-        json.dumps(journee, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-    )
+    """Écrit atomiquement une journée JSON selon les conventions du dépôt."""
+    _sauvegarder_json_atomique(path, journee)
+
+
+def sauvegarder_gd(path: Path, gd: dict) -> None:
+    """Écrit atomiquement un fichier G-D JSON selon les conventions du dépôt."""
+    _sauvegarder_json_atomique(path, gd)
 
 
 def lister_journees_fenetre(

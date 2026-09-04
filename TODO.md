@@ -157,6 +157,9 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 # 12. Améliorations fonctionnelles
 
 * [ ] **P2** — Identifier les traitements manuels pouvant être automatisés.
+  * Préparation de la journée
+    * Évaluer la faisabilité d'automatiser la lecture des G-D manquants ou expirés à partir d'une session valide. Garder la version manuel de la même manière que pour les évènements.
+    * Évaluer la faisabilité d'automatiser la lecture d'une journée de travail à partir d'une session valide. Garder la version manuel de la même manière que pour les évènements. Prévoir les variantes pour aujourd'hui, demain, après-demain, Lundi le jj, Mardi le jj, etc
 * [ ] **P2** — Identifier les informations actuellement difficiles à consulter dans l'interface.
   * "Fichiers"/"Gestion des fichiers"/"Journée" déplacer les sections "Aperçu" et "Export" devant la liste de fichier ou mettre la liste de fichier dans une section refermable.
 

@@ -13,7 +13,9 @@ from typing import Callable, Iterable
 
 from .depots import (
     DATA_DIR, EVENTS_DIR, GD_DIR, charger_journee, chemin_evenements, chemin_gd,
+    chemin_journee, info_gd, sauvegarder_journee,
 )
+from .journal import ecrire_bloc
 from .journee import lignes_de_service
 from .evenements import (
     evenements_modifies, evenements_retires, resumer_changements_evenements,
@@ -163,6 +165,182 @@ def rafraichir_evenements_journee(
     for index, (ligne, direction) in enumerate(liste):
         try:
             resultat.lignes.append(_traiter_ligne(client, ligne, direction, log))
+        except SessionExpiredError:
+            resultat.session_expiree = True
+            resultat.restantes = liste[index:]
+            break
+    return resultat
+
+
+@dataclass
+class ResultatImportationJournee:
+    succes: bool
+    date: str
+    modifie: bool = False
+    message: str = ""
+    chemin: Path | None = None
+    session_expiree: bool = False
+
+
+def importer_journee_portail(
+    date_cible: date | str,
+    *,
+    client: PortailClient | None = None,
+    log: bool = True,
+) -> ResultatImportationJournee:
+    """Récupère, valide et sauvegarde une journée depuis le portail STM."""
+    date_str = date_cible.isoformat() if isinstance(date_cible, date) else str(date_cible)
+    try:
+        date.fromisoformat(date_str)
+    except ValueError:
+        return ResultatImportationJournee(False, date_str, message="Date ISO invalide")
+    try:
+        client = client or PortailClient()
+        client.verifier()
+        payload = client.fetch_journee(date_str)
+    except (FileNotFoundError, SessionExpiredError):
+        return ResultatImportationJournee(False, date_str, session_expiree=True)
+    except PortailError as exc:
+        return ResultatImportationJournee(False, date_str, message=str(exc))
+
+    from scripts.parse_journee import JourneeParser
+
+    parser = JourneeParser.from_portal_json(payload, date_str)
+    journee = parser.parse()
+    if journee is None:
+        message = parser.get_summary()
+        if log:
+            ecrire_bloc("parse_journee", message)
+        return ResultatImportationJournee(False, date_str, message=message)
+
+    path = chemin_journee(date_str)
+    avant = charger_journee(path) if path.exists() else None
+    contenu = journee.to_dict()
+    sauvegarder_journee(path, contenu)
+    message = parser.get_summary(journee, path)
+    if log:
+        ecrire_bloc("parse_journee", message)
+    return ResultatImportationJournee(
+        True, date_str, modifie=avant != contenu, message=message, chemin=path
+    )
+
+
+@dataclass
+class ResultatLigneGD:
+    ligne: str
+    direction: str
+    succes: bool
+    modifie: bool = False
+    message: str = ""
+
+
+@dataclass
+class ResultatRafraichissementGD:
+    lignes: list[ResultatLigneGD] = field(default_factory=list)
+    restantes: list[tuple[str, str]] = field(default_factory=list)
+    session_expiree: bool = False
+
+    @property
+    def succes_complet(self) -> bool:
+        return not self.session_expiree and not self.restantes and all(
+            ligne.succes for ligne in self.lignes
+        )
+
+    @property
+    def modifie(self) -> bool:
+        return any(ligne.modifie for ligne in self.lignes)
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ResultatRafraichissementGD":
+        return cls(
+            lignes=[ResultatLigneGD(**item) for item in data.get("lignes", [])],
+            restantes=[tuple(item) for item in data.get("restantes", [])],
+            session_expiree=bool(data.get("session_expiree")),
+        )
+
+
+def fusionner_rafraichissements_gd(
+    precedent: ResultatRafraichissementGD | None,
+    suivant: ResultatRafraichissementGD,
+) -> ResultatRafraichissementGD:
+    """Fusionne une reprise G-D sans retraiter les lignes déjà réussies."""
+    if precedent is None:
+        return suivant
+    return ResultatRafraichissementGD(
+        lignes=precedent.lignes + suivant.lignes,
+        restantes=suivant.restantes,
+        session_expiree=suivant.session_expiree,
+    )
+
+
+def _traiter_gd(
+    client: PortailClient, ligne: str, direction: str, log: bool
+) -> ResultatLigneGD:
+    from scripts.parse_gd import GDParser
+
+    try:
+        payload = client.fetch_gd(ligne, direction)
+    except SessionExpiredError:
+        raise
+    except PortailError as exc:
+        return ResultatLigneGD(ligne, direction, False, message=str(exc))
+
+    path = chemin_gd(ligne, direction, GD_DIR)
+    try:
+        avant = json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+    except (OSError, json.JSONDecodeError):
+        avant = None
+    parser = GDParser.from_portal_json(payload, ligne, direction, gd_dir=GD_DIR)
+    contenu = parser.parse()
+    if contenu is None:
+        message = "❌ " + ("; ".join(parser.errors) or "Échec du parsing G-D")
+        if log:
+            ecrire_bloc("parse_gd", message)
+        return ResultatLigneGD(ligne, direction, False, message=message)
+    if log:
+        ecrire_bloc("parse_gd", parser.report)
+    return ResultatLigneGD(
+        ligne, direction, True, modifie=avant != contenu, message=parser.report
+    )
+
+
+def rafraichir_gd_journee(
+    journee: dict,
+    *,
+    paires: Iterable[tuple[str, str]] | None = None,
+    manquants_ou_perimes_seulement: bool = True,
+    client: PortailClient | None = None,
+    log: bool = True,
+) -> ResultatRafraichissementGD:
+    """Récupère les G-D utiles à une journée avec une seule session HTTP."""
+    liste = list(paires) if paires is not None else lignes_de_service(journee)
+    liste = list(dict.fromkeys((str(l), str(d).lower()) for l, d in liste))
+    if manquants_ou_perimes_seulement and paires is None:
+        liste = [
+            (ligne, direction)
+            for ligne, direction in liste
+            if not info_gd(ligne, direction, gd_dir=GD_DIR)["fresh"]
+        ]
+    if not liste:
+        return ResultatRafraichissementGD()
+    try:
+        client = client or PortailClient()
+        client.verifier()
+    except (FileNotFoundError, SessionExpiredError):
+        return ResultatRafraichissementGD(restantes=liste, session_expiree=True)
+    except PortailError as exc:
+        return ResultatRafraichissementGD(
+            lignes=[ResultatLigneGD(liste[0][0], liste[0][1], False, message=str(exc))],
+            restantes=liste[1:],
+        )
+
+    resultat = ResultatRafraichissementGD()
+    for index, (ligne, direction) in enumerate(liste):
+        try:
+            resultat.lignes.append(_traiter_gd(client, ligne, direction, log))
         except SessionExpiredError:
             resultat.session_expiree = True
             resultat.restantes = liste[index:]

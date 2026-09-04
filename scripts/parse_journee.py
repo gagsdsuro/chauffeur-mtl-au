@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from chauffeur.depots import sauvegarder_journee  # noqa: E402
 from chauffeur.journal import ecrire_bloc  # noqa: E402
 from chauffeur.modeles import Journee  # noqa: E402
+from chauffeur.portail import texte_visible_html  # noqa: E402
 
 
 MOIS_FR = {
@@ -33,6 +34,36 @@ NOTE_RE       = re.compile(r'^\d+\s*note\(s\)\s+de\s+voyages?\s*:', re.IGNORECAS
 RELEVE_RE     = re.compile(r'^Je relève\s*:', re.IGNORECASE)
 RELEVE_PAR_RE = re.compile(r'^Je suis relevé par\s*:', re.IGNORECASE)
 PERSONNE_RE   = re.compile(r'^(.+?)\s*-\s*(\d+)$')
+PERSONNE_SANS_MATRICULE_RE = re.compile(r'^(.+?)\s*-\s*$')
+
+
+def _attributs_balise(balise: str) -> dict[str, str]:
+    return {
+        nom.lower(): valeur1 or valeur2
+        for nom, valeur1, valeur2 in re.findall(
+            r'([\w-]+)\s*=\s*(?:"([^"]*)"|\'([^\']*)\')', balise
+        )
+    }
+
+
+def _ancres_sommaires(html: str) -> list[str]:
+    ancres = []
+    for balise in re.findall(r"<a\b[^>]*>", html or "", re.IGNORECASE):
+        attrs = _attributs_balise(balise)
+        classes = attrs.get("class", "").split()
+        href = attrs.get("href", "")
+        if "work-piece-summary-link" in classes and href.startswith("#"):
+            ancres.append(href[1:])
+    return ancres
+
+
+def _ancres_details(html: str) -> list[str]:
+    ancres = []
+    for balise in re.findall(r"<h2\b[^>]*>", html or "", re.IGNORECASE):
+        attrs = _attributs_balise(balise)
+        if "trips-item-heading" in attrs.get("class", "").split() and attrs.get("id"):
+            ancres.append(attrs["id"])
+    return ancres
 
 
 def _date_from_text(text: str) -> str | None:
@@ -46,7 +77,7 @@ def _date_from_text(text: str) -> str | None:
 
 def _day_offset_from_text(text: str) -> int:
     """Retourne +1 si 'Demain', -1 si 'Hier', 0 sinon (la journée affichée ≠ date de mise à jour)."""
-    m = re.search(r'(Hier|Demain)\d{4,6}', text)
+    m = re.search(r'(Hier|Demain)\s*\d{4,6}', text)
     if not m:
         return 0
     return -1 if m.group(1) == "Hier" else 1
@@ -60,6 +91,56 @@ def _split_stop_time(line: str) -> tuple[str, str | None]:
     return line.strip(), None
 
 
+def _lire_arret(block_lines: list[str], index: int) -> tuple[dict, int]:
+    """Lit un arrêt dont l'heure peut être collée ou sur la ligne suivante."""
+    arret, heure = _split_stop_time(block_lines[index])
+    index += 1
+    if heure is None and index < len(block_lines):
+        suivant = block_lines[index].strip()
+        if re.fullmatch(r"\d{1,2}:\d{2}", suivant):
+            heure = suivant
+            index += 1
+    return {"arret": arret, "heure": heure}, index
+
+
+def _lire_personne(block_lines: list[str], index: int) -> tuple[dict | None, int]:
+    """Lit « Nom - matricule », même si le HTML sépare ses trois parties."""
+    morceaux: list[str] = []
+    while index < len(block_lines):
+        ligne = block_lines[index].strip()
+        if (
+            RELEVE_RE.match(ligne)
+            or RELEVE_PAR_RE.match(ligne)
+            or SEGMENT_RE.match(ligne)
+            or ligne.startswith(("Détails", "Haut-le-pied", "Sortie", "Entrée"))
+        ):
+            break
+
+        morceaux.append(ligne)
+        index += 1
+        personne = PERSONNE_RE.match(" ".join(morceaux))
+        if personne:
+            return {
+                "nom": personne.group(1).strip(),
+                "matricule": personne.group(2),
+            }, index
+        # Le portail utilise aussi « Relève à confirmer - ». Il faut attendre
+        # de savoir si la ligne suivante contient un matricule séparé avant de
+        # conclure qu'il est réellement absent.
+        sans_matricule = PERSONNE_SANS_MATRICULE_RE.match(" ".join(morceaux))
+        prochain_est_matricule = (
+            index < len(block_lines)
+            and bool(re.fullmatch(r"\d+", block_lines[index].strip()))
+        )
+        if sans_matricule and not prochain_est_matricule:
+            return {
+                "nom": sans_matricule.group(1).strip(),
+                "matricule": "",
+            }, index
+
+    return None, index
+
+
 class JourneeParser:
 
     PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -69,6 +150,8 @@ class JourneeParser:
     def __init__(self, raw_text: str, date_str: str | None = None):
         self.raw_text = raw_text.replace('\r\n', '\n').replace('\r', '\n')
         self.errors   = []
+        self._ancres_sommaire: list[str] = []
+        self._ancres_detail: list[str] = []
         if date_str:
             self.date_str = date_str
         else:
@@ -82,26 +165,52 @@ class JourneeParser:
             else:
                 self.date_str = datetime.now().strftime("%Y-%m-%d")
 
+    @classmethod
+    def from_portal_json(cls, payload: dict, date_str: str) -> "JourneeParser":
+        """Construit le parseur depuis la réponse JSON de `/resume-journee`."""
+        if not isinstance(payload, dict):
+            parser = cls("", date_str=date_str)
+            parser.errors.append("❌ Réponse portail invalide")
+            return parser
+        journee_html = payload.get("journeeHtml")
+        voyages_html = payload.get("voyagesHtml")
+        if not isinstance(journee_html, str) or not isinstance(voyages_html, str):
+            parser = cls("", date_str=date_str)
+            parser.errors.append("❌ Blocs HTML de la journée introuvables")
+            return parser
+        texte = texte_visible_html(journee_html) + "\n" + texte_visible_html(voyages_html)
+        parser = cls(texte, date_str=date_str)
+        parser._ancres_sommaire = _ancres_sommaires(journee_html)
+        parser._ancres_detail = _ancres_details(voyages_html)
+        if payload.get("date") != date_str:
+            parser.errors.append(
+                f"❌ Date retournée inattendue : {payload.get('date')!r}, attendu {date_str}"
+            )
+        return parser
+
     # ── En-tête ────────────────────────────────────────────────────────────────
 
     def _parse_header(self) -> dict:
         t = self.raw_text
         h = {}
 
-        m = re.search(r"(?:Hier|Aujourd'hui)?(\d{4,6})\s*-\s*([\w ,-]+?)(?=\n|$)", t)
+        m = re.search(
+            r"(?:Hier|Aujourd'hui|Demain)?\s*(\d{4,6})\s*-\s*([\w ,-]+?)(?=\n|$)",
+            t,
+        )
         if m:
             h["garage_id"] = m.group(1)
             h["garage"]    = m.group(2).strip()
 
-        m = re.search(r'Journée(\d+)', t)
+        m = re.search(r'Journée\s*(\d+)', t)
         if m:
             h["journee_numero"] = int(m.group(1))
 
-        m = re.search(r'Temps travaillé(\d+:\d{2})', t)
+        m = re.search(r'Temps travaillé\s*(\d+:\d{2})', t)
         if m:
             h["temps_travaille"] = m.group(1)
 
-        m = re.search(r'Temps supplémentaire(\d+:\d{2})', t)
+        m = re.search(r'Temps supplémentaire\s*(\d+:\d{2})', t)
         if m:
             h["temps_supplementaire"] = m.group(1)
 
@@ -136,30 +245,58 @@ class JourneeParser:
         sommaires = []
         lines = [l for l in self.raw_text.split('\n')]
 
-        for i, raw_line in enumerate(lines):
+        i = 0
+        while i < len(lines):
+            raw_line = lines[i]
             line = raw_line.strip()
+            if not line.startswith("Sommaire"):
+                i += 1
+                continue
+
+            # Le HTML et Firefox séparent parfois Sommaire, identifiant, bus,
+            # durée, Continu et Horaire sur plusieurs lignes.
+            morceaux = [line]
+            fin_entete = i
+            while "Horaire" not in "".join(morceaux) and fin_entete + 1 < len(lines):
+                prochain = lines[fin_entete + 1].strip()
+                if prochain.startswith("Sommaire") or prochain.startswith("Détails"):
+                    break
+                fin_entete += 1
+                if prochain:
+                    morceaux.append(prochain)
+            entete = "".join(morceaux)
             # \d{1,3} pour le numéro de pièce (01, 02, … 15, etc.)
             # (?:(\d{5})|--)? pour le numéro d'autobus : 5 chiffres, ou "--"
             # littéral si pas encore assigné (optionnel dans les deux cas)
             # (?:--|\d{2}) pour le séparateur : "--" littéral, ou numéro
             # d'emplacement (même largeur que "--", 2 caractères)
             m = re.match(
-                r'^Sommaire(\d+\s*-\s*\d{1,3})(?:(\d{5})|--)?(?:--|\d{2})(\d{1,2}:\d{2})Horaire$',
-                line
+                r'^Sommaire(\d+\s*-\s*\d{1,3})(?:(\d{5})|--)?'
+                r'(?:--|\d{2})(\d{1,2}:\d{2})(Continu)?Horaire$',
+                entete,
+                re.IGNORECASE,
             )
             if not m:
+                i = fin_entete + 1
                 continue
 
             piece_id    = re.sub(r'\s+', '', m.group(1))   # "24-15"
             num_autobus = m.group(2) or None
             duree       = m.group(3)
 
-            s = {"id": piece_id, "numero_autobus": num_autobus, "duree": duree}
+            s = {
+                "id": piece_id,
+                "type_horaire": "continu" if m.group(4) else "horaire",
+                "numero_autobus": num_autobus,
+                "duree": duree,
+            }
+            if len(sommaires) < len(self._ancres_sommaire):
+                s["_ancre"] = self._ancres_sommaire[len(sommaires)]
 
             # Extrait le bloc Prise/Lieu/Début/Fin/Lieu qui suit
             sched_keys   = ["prise",  "lieu_prise", "debut",  "fin",  "lieu_fin"]
             sched_labels = ["Prise",  "Lieu",       "Début",  "Fin",  "Lieu"]
-            ki, j = 0, i + 1
+            ki, j = 0, fin_entete + 1
             while j < len(lines) and ki < len(sched_labels):
                 l = lines[j].strip()
                 if not l:
@@ -180,6 +317,7 @@ class JourneeParser:
                     j += 1
 
             sommaires.append(s)
+            i = max(j, fin_entete + 1)
 
         return sommaires
 
@@ -196,25 +334,15 @@ class JourneeParser:
 
             # ── Relève ──────────────────────────────────────────────────────
             if RELEVE_RE.match(line):
-                i += 1
-                if i < len(block_lines):
-                    pm = PERSONNE_RE.match(block_lines[i])
-                    if pm:
-                        releve["je_releve"] = {
-                            "nom": pm.group(1).strip(), "matricule": pm.group(2)
-                        }
-                    i += 1
+                personne, i = _lire_personne(block_lines, i + 1)
+                if personne:
+                    releve["je_releve"] = personne
                 continue
 
             if RELEVE_PAR_RE.match(line):
-                i += 1
-                if i < len(block_lines):
-                    pm = PERSONNE_RE.match(block_lines[i])
-                    if pm:
-                        releve["je_suis_releve_par"] = {
-                            "nom": pm.group(1).strip(), "matricule": pm.group(2)
-                        }
-                    i += 1
+                personne, i = _lire_personne(block_lines, i + 1)
+                if personne:
+                    releve["je_suis_releve_par"] = personne
                 continue
 
             # ── Haut-le-pied / Sortie (garage→service) / Entrée (service→garage) ──
@@ -234,13 +362,9 @@ class JourneeParser:
                 if i < len(block_lines) and "Départ et arrivé" in block_lines[i]:
                     i += 1
                 if i < len(block_lines):
-                    arret, heure = _split_stop_time(block_lines[i])
-                    trajet["depart"] = {"arret": arret, "heure": heure}
-                    i += 1
+                    trajet["depart"], i = _lire_arret(block_lines, i)
                 if i < len(block_lines):
-                    arret, heure = _split_stop_time(block_lines[i])
-                    trajet["arrivee"] = {"arret": arret, "heure": heure}
-                    i += 1
+                    trajet["arrivee"], i = _lire_arret(block_lines, i)
                 trajets.append(trajet)
                 continue
 
@@ -266,14 +390,10 @@ class JourneeParser:
                     i += 1
 
                 if i < len(block_lines):
-                    arret, heure = _split_stop_time(block_lines[i])
-                    trajet["depart"] = {"arret": arret, "heure": heure}
-                    i += 1
+                    trajet["depart"], i = _lire_arret(block_lines, i)
 
                 if i < len(block_lines):
-                    arret, heure = _split_stop_time(block_lines[i])
-                    trajet["arrivee"] = {"arret": arret, "heure": heure}
-                    i += 1
+                    trajet["arrivee"], i = _lire_arret(block_lines, i)
 
                 if i < len(block_lines) and "Informations supplémentaires" in block_lines[i]:
                     i += 1
@@ -303,7 +423,7 @@ class JourneeParser:
 
         return trajets, releve or None
 
-    def _parse_details(self) -> dict[str, tuple[list[dict], dict | None]]:
+    def _parse_details(self) -> dict[tuple[str, object], tuple[list[dict], dict | None]]:
         lines = self.raw_text.split('\n')
         markers: list[tuple[int, str]] = []
 
@@ -312,18 +432,25 @@ class JourneeParser:
             if m:
                 markers.append((idx, re.sub(r'\s+', '', m.group(1))))
 
-        details: dict[str, tuple] = {}
+        details: dict[tuple[str, int], tuple] = {}
+        occurrences: dict[str, int] = {}
         for k, (start_idx, piece_id) in enumerate(markers):
             end_idx = markers[k + 1][0] if k + 1 < len(markers) else len(lines)
             block   = [l.strip() for l in lines[start_idx + 1:end_idx] if l.strip()]
             trajets, releve = self._parse_piece_block(block)
-            details[piece_id] = (trajets, releve)
+            occurrence = occurrences.get(piece_id, 0)
+            details[(piece_id, occurrence)] = (trajets, releve)
+            if k < len(self._ancres_detail):
+                details[("ancre", self._ancres_detail[k])] = (trajets, releve)
+            occurrences[piece_id] = occurrence + 1
 
         return details
 
     # ── Assemblage ─────────────────────────────────────────────────────────────
 
     def parse(self) -> Journee | None:
+        if self.errors:
+            return None
         header = self._parse_header()
         if not header.get("garage_id"):
             self.errors.append("❌ Impossible d'extraire l'identifiant de garage")
@@ -337,11 +464,19 @@ class JourneeParser:
         details = self._parse_details()
 
         pieces = []
+        occurrences: dict[str, int] = {}
         for s in sommaires:
             pid = s["id"]
-            traj, releve = details.get(pid, ([], None))
+            occurrence = occurrences.get(pid, 0)
+            occurrences[pid] = occurrence + 1
+            cle_ancre = ("ancre", s.get("_ancre"))
+            traj, releve = details.get(
+                cle_ancre,
+                details.get((pid, occurrence), ([], None)),
+            )
             pieces.append({
                 "id":              pid,
+                "type_horaire":    s.get("type_horaire", "horaire"),
                 "numero_autobus":  s.get("numero_autobus"),
                 "duree":           s.get("duree"),
                 "prise":           s.get("prise"),
@@ -388,7 +523,7 @@ class JourneeParser:
                 ntraj = sum(1 for t in p.trajets if isinstance(t, TrajetService))
                 nhlp  = sum(1 for t in p.trajets if isinstance(t, TrajetHlp))
                 lines.append(
-                    f"   Pièce {p.id} : bus {bus}, "
+                    f"   Pièce {p.id}{' (TS)' if p.type_horaire == 'continu' else ''} : bus {bus}, "
                     f"{p.debut} → {p.fin}, "
                     f"{ntraj} voyage(s), {nhlp} HLP"
                 )

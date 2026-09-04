@@ -60,6 +60,14 @@ def main() -> int:
                         f"{portail.BASE_URL}/resume-journee/panel/detour/24/E",
                         payload={"countDeviations": 0, "html": ""},
                     ),
+                    Reponse(
+                        f"{portail.BASE_URL}/resume-journee?date=2026-08-22",
+                        payload={"date": "2026-08-22", "journeeHtml": "", "voyagesHtml": ""},
+                    ),
+                    Reponse(
+                        f"{portail.BASE_URL}/resume-journee/panel/chemin/24/E/undefined",
+                        payload={"html": "<h2>Gauche-Droite / 24 Est</h2>"},
+                    ),
                 ],
             )
             fake.cookies.set("rotation", "nouvelle")
@@ -67,15 +75,23 @@ def main() -> int:
             client = portail.PortailClient(session_path)
             etat = client.verifier()
             payload = client.fetch_detours("24", "est")
+            journee = client.fetch_journee("2026-08-22")
+            gd = client.fetch_gd("24", "est")
             if etat.statut != "valide" or payload.get("countDeviations") != 0:
                 echecs.append("validation/récupération valide non reconnue")
+            if journee.get("date") != "2026-08-22" or "Gauche-Droite" not in gd.get("html", ""):
+                echecs.append("récupération journée/G-D valide non reconnue")
             saved = json.loads(session_path.read_text(encoding="utf-8"))
             if "rotation=nouvelle" not in saved.get("cookies", ""):
                 echecs.append("cookie tourné non persisté")
             if portail.etat_session(session_path).statut != "valide":
                 echecs.append("état valide non exposé après vérification")
-            if len(fake.appels) != 2:
+            if len(fake.appels) != 4:
                 echecs.append("la session a été revalidée pour chaque ligne")
+            if not fake.appels[2].endswith("/resume-journee?date=2026-08-22"):
+                echecs.append(f"URL journée inattendue: {fake.appels[2]}")
+            if not fake.appels[3].endswith("/panel/chemin/24/E/undefined"):
+                echecs.append(f"URL G-D inattendue: {fake.appels[3]}")
 
             redirect = SessionFausse(
                 "laravel_session=secret",
