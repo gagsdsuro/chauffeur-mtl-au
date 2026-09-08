@@ -1,5 +1,43 @@
 # chauffeur-stm
 
+## Présentation de l'application
+
+**chauffeur-stm** accompagne les chauffeurs d'autobus de la STM dans la préparation
+et le suivi de leur journée de travail. Elle répond au besoin de regrouper des
+informations dispersées, de repérer les changements touchant les parcours et de
+disposer de documents pratiques, à jour et faciles à consulter.
+
+Ses principales fonctions sont :
+
+- **Préparer la journée** : récupérer les affectations, les itinéraires
+  Gauche-Droite et les événements pertinents.
+- **Obtenir un itinéraire adapté à la journée** : produire à la demande un parcours
+  intégrant les événements applicables, pour repérer directement les perturbations
+  aux endroits concernés et préparer son trajet plus rapidement.
+- **Produire les documents de travail** : annoter la carte agent et générer des
+  rapports consultables ou imprimables.
+- **Suivre les changements** : actualiser les événements avant le départ et pendant
+  les pauses, puis consulter les informations utiles aux lignes à effectuer.
+- **Faciliter les prises de relève** : localiser le prochain autobus à récupérer
+  lorsque les données sont accessibles.
+- **Entretenir les données** : vérifier leur ancienneté, retirer les fichiers
+  obsolètes et consulter les journaux d'activité.
+
+Pour le chauffeur, les bénéfices attendus sont un **gain de temps de préparation**,
+moins de recherches et de manipulations manuelles, ainsi qu'une **meilleure
+anticipation des perturbations**. L'itinéraire intégrant les événements évite de
+croiser soi-même plusieurs sources pour comprendre leur incidence sur le parcours.
+L'accès sur téléphone et les documents imprimables permettent d'adapter la
+consultation aux différents moments de la journée.
+
+Une **fonction future** vise également à faciliter la sélection des journées selon
+les préférences des chauffeurs Réserve et RFLEX et à produire la note spécifique de
+réserve.
+
+Les scénarios détaillés sont décrits dans les [cas d'utilisation](USECASES.md).
+
+## Documentation technique
+
 Dépôt de données d'itinéraires d'autobus de la STM (Montréal) + scripts d'import
 et génération de rapports. Langue de travail : français.
 Voir `CLAUDE.md` pour la spécification détaillée des formats et des commandes.
