@@ -34,6 +34,11 @@ def main() -> int:
         (base / "ca" / "carte-agent-2026-06-18.pdf").write_bytes(b"x")
         (base / "notes").mkdir()
         (base / "notes" / "voiture.json").write_text("{}", encoding="utf-8")
+        (base / "log").mkdir()   # journal commun (flotte) + résidus personnels
+        (base / "log" / "parse_gd.log").write_text("flotte\n", encoding="utf-8")
+        (base / "log" / "fetch_gtfs.log").write_text("flotte\n", encoding="utf-8")
+        (base / "log" / "parse_journee.log").write_text("perso\n", encoding="utf-8")
+        (base / "log" / "carte_agent.log").write_text("perso\n", encoding="utf-8")
         (base / "Gauche-Droite").mkdir()   # flotte : ne doit pas bouger
         (base / "Gauche-Droite" / "gd104_est.json").write_text("{}", encoding="utf-8")
 
@@ -41,15 +46,17 @@ def main() -> int:
         r = migrate_data.migrer(base, "43863", dry_run=True)
         check((base / "journees" / "journee-2026-06-15.json").exists(),
               "dry-run: l'original ne doit pas bouger")
-        check(len(r.deplacements) == 3,
-              f"dry-run: 3 déplacements attendus (journees, ca, notes), "
-              f"obtenu {len(r.deplacements)}")
+        check((base / "log" / "parse_journee.log").exists(),
+              "dry-run: le journal personnel ne doit pas bouger")
+        check(len(r.deplacements) == 5,
+              f"dry-run: 5 déplacements attendus (journees, ca, notes + "
+              f"parse_journee.log, carte_agent.log), obtenu {len(r.deplacements)}")
 
         # ── Migration réelle ────────────────────────────────────────────────
         r = migrate_data.migrer(base, "43863")
-        check(len(r.deplacements) == 3, f"migration: 3 déplacements attendus, "
+        check(len(r.deplacements) == 5, f"migration: 5 déplacements attendus, "
               f"obtenu {len(r.deplacements)}")
-        for dossier in ["journees", "ca", "notes", "log", "session"]:
+        for dossier in ["journees", "ca", "notes", "session"]:
             check(not (base / dossier).exists(),
                   f"migration: data/{dossier} devrait avoir disparu")
         check((base / "43863" / "journees" / "journee-2026-06-15.json").exists(),
@@ -59,11 +66,24 @@ def main() -> int:
         check((base / "Gauche-Droite" / "gd104_est.json").exists(),
               "migration: la flotte (Gauche-Droite) ne doit pas bouger")
 
-        # ── Re-migration : rien à faire (absents) ───────────────────────────
+        # ── data/log reste commun : flotte en place, personnel rapatrié ──────
+        check((base / "log").exists(),
+              "migration: data/log (journal commun de la flotte) doit rester")
+        check((base / "log" / "parse_gd.log").exists()
+              and (base / "log" / "fetch_gtfs.log").exists(),
+              "migration: les journaux de la flotte restent dans data/log")
+        check(not (base / "log" / "parse_journee.log").exists()
+              and not (base / "log" / "carte_agent.log").exists(),
+              "migration: les journaux personnels quittent data/log")
+        check((base / "43863" / "log" / "parse_journee.log").exists()
+              and (base / "43863" / "log" / "carte_agent.log").exists(),
+              "migration: journaux personnels rapatriés vers data/43863/log/")
+
+        # ── Re-migration : rien à faire (côté personnels en place) ───────────
         r2 = migrate_data.migrer(base, "43863")
         check(r2.deplacements == [], "re-migration: aucun déplacement attendu")
-        check(len(r2.ignores) == 6,
-              f"re-migration: 6 dossiers devraient être ignorés, "
+        check(len(r2.ignores) == 5,
+              f"re-migration: les 5 dossiers privés absents ignorés, "
               f"obtenu {len(r2.ignores)}")
 
         # ── Matricule invalide ──────────────────────────────────────────────
@@ -81,13 +101,20 @@ def main() -> int:
         cible = base / "43863" / "journees"
         cible.mkdir(parents=True)
         (cible / "journee-2026-06-16.json").write_text("b", encoding="utf-8")
+        (base / "log").mkdir()
+        (base / "log" / "parse_journee.log").write_text("source\n", encoding="utf-8")
+        cible_log = base / "43863" / "log"
+        cible_log.mkdir(parents=True)
+        (cible_log / "parse_journee.log").write_text("cible\n", encoding="utf-8")
 
         r = migrate_data.migrer(base, "43863")
-        check(len(r.conflits) == 1 and r.deplacements == [],
-              f"conflit: dir non vide → refus sans --force, obtenu "
+        check(len(r.conflits) == 2 and r.deplacements == [],
+              f"conflit: cibles non vides → refus sans --force, obtenu "
               f"conflits={len(r.conflits)}, déplacements={len(r.deplacements)}")
         check((base / "journees" / "journee-2026-06-15.json").exists(),
-              "conflit: l'original doit rester intact")
+              "conflit: l'original ne doit pas rester intact")
+        check((base / "log" / "parse_journee.log").exists(),
+              "conflit: le journal personnel conflictuel doit rester en place")
 
         r = migrate_data.migrer(base, "43863", force=True)
         check((cible / "journee-2026-06-15.json").exists()
@@ -95,12 +122,20 @@ def main() -> int:
               "force: les deux journées doivent coexister, aucun écrasement")
         check(not (base / "journees").exists(),
               "force: le sous-dossier source doit disparaître une fois vidé")
+        check(not (base / "log" / "parse_journee.log").exists(),
+              "force: sans conflit le journal personnel est rapatrié")
+        check((base / "log").exists(),
+              "force: data/log reste en place (commun)")
 
         sonde = cible / "journee-2026-06-16.json"
         contenu_final = sonde.read_text(encoding="utf-8")
         check(contenu_final == "b",
               f"force: l'entrée existante ne doit jamais être écrasée, obtenu "
               f"{contenu_final!r}")
+        check((cible_log / "parse_journee.log").read_text(encoding="utf-8") == "source\n",
+              "force: le journal du chauffeur devient le fichier courant")
+        check((cible_log / "parse_journee.1").read_text(encoding="utf-8") == "cible\n",
+              "force: l'ancienne cible est conservée de côté (parse_journee.1)")
 
     if echecs:
         print("✗ test_migrate_data")

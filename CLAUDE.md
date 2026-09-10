@@ -205,7 +205,7 @@ Résolution du matricule **à l'usage**, dans l'ordre : contexte par thread (app
 
 **Mode strict** (`CHAUFFEUR_MODE_STRICT=1`, opt-in explicite) : plus de repli legacy — résoudre un répertoire privé sans matricule (session ou env) lève `ValueError`. Les constantes du module n'appliquent pas le strict (l'app doit pouvoir ouvrir sa page de connexion).
 
-Migration one-shot : `python3 scripts/migrate_data.py --matricule 43863 [--dry-run] [--force]` (fusion sans jamais écraser un fichier).
+Migration one-shot : `python3 scripts/migrate_data.py --matricule 43863 [--dry-run] [--force]` (fusion sans jamais écraser un fichier) déplace les dossiers privés historiques. **`data/log/` reste commun (flotte)** : seuls les journaux personnels (`parse_journee.log`, `carte_agent.log`) qui s'y trouvent sont rapatriés vers `data/<matricule>/log/` (conflit → mis de côté `<source>.N` avec `--force`) ; `python3 scripts/migrer_logs_flotte.py [--dry-run]` fait l'inverse pour les journaux de flotte restés dans des dossiers privés.
 
 ## Authentification locale par PIN
 
