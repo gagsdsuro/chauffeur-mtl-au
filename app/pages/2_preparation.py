@@ -27,7 +27,7 @@ from app.state import (
     effacer_operation_portail,
     operation_portail,
 )
-from bootstrap import DATA_DIR, SCRIPTS_DIR
+from bootstrap import DATA_DIR, SCRIPTS_DIR, journees_dir
 
 from parse_event import STMEventParser, split_sections as split_ev
 from parse_gd import GDParser, split_sections
@@ -153,7 +153,7 @@ st.divider()
 with st.expander("1 — Importer la journée", expanded=not bool(_prep_data)):
     st.markdown(
         "Récupérez le **Détail de ma journée** depuis une session STM valide. "
-        "Le fichier `journee-YYYY-MM-DD.json` sera créé dans `data/journees/`."
+        f"Le fichier `journee-YYYY-MM-DD.json` sera créé dans `{journees_dir()}/`."
     )
 
     j_imp_date = _prep_date
