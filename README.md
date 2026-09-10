@@ -66,7 +66,7 @@ pip install --break-system-packages -r requirements.txt
 
 | Paquet | Requis par |
 |---|---|
-| `streamlit` | l'app (`app/ui.py`) |
+| `streamlit` | l'app (`app/main.py` + pages dans `app/pages/`) |
 | `requests` | imports GTFS/GTFS-RT et imports automatiques journée/G-D/événements depuis le portail STM |
 | `pymupdf` (importé sous le nom `fitz`) | annotation des cartes agent (`scripts/carte_agent_stm.py`), tests `test_carte_agent.py`/`test_rapport_evenements.py` et outil `creer_cas_test.py` |
 | `reportlab` | PDF des rapports v1/v2 (`scripts/gen_rapport.py`, `gen_rapport_v2.py`) et tests `test_rapport.py`/`test_rapport_evenements.py` |
@@ -83,13 +83,32 @@ Remarques :
 ## Lancer
 
 ```bash
-streamlit run app/ui.py      # développement local
+streamlit run app/main.py      # développement local
 docker compose up --build    # production (port 8501, volume ./data)
 ```
 
 Dans « Préparation d'une journée », une session employé STM valide permet de
 récupérer automatiquement la journée sélectionnée, ses G-D manquants ou périmés
 et ses événements. Les trois imports manuels restent disponibles en secours.
+
+### Authentification locale (PIN) et matricule
+
+Dès qu'un compte existe dans `data/users.json` (créé par l'app ou
+`chauffeur.auth`), l'app demande un **PIN** (4-8 chiffres) au démarrage de
+chaque session navigateur. Sans compte, l'app garde son comportement legacy.
+
+Chaque compte a un rôle : **Chauffeur** ou **Chauffeur-admin** (le premier
+compte créé est Chauffeur-admin). Un Chauffeur change son propre PIN depuis la
+barre latérale ; le menu **Administration** (réservé aux Chauffeur-admin)
+permet de créer des comptes, promouvoir/destituer, réinitialiser un PIN et
+déverrouiller ou révoquer un compte.
+
+Par défaut, les données personnelles sont isolées dans `data/<matricule>/` dès
+que `CHAUFFEUR_MATRICULE` (5 chiffres) est défini — sinon dans `data/`. En
+mode strict (`CHAUFFEUR_MODE_STRICT=1`), le matricule est **obligatoire** :
+l'app exige la connexion (assistant de premier lancement sans compte) et les
+scripts échouent avec une erreur claire s'il manque. La flotte (G-D, événements,
+GTFS) reste partagée, hors de ces répertoires.
 
 ## Tests
 

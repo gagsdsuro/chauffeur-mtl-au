@@ -12,10 +12,10 @@ La langue de travail est le **français** (noms de champs, messages, documentati
 
 **Lancer l'application Streamlit** :
 ```bash
-streamlit run app/ui.py                     # développement local
+streamlit run app/main.py                   # développement local (pages dans app/pages/)
 docker compose up --build                   # production (port 8501, volume ./data)
 ```
-L'app expose 5 onglets : Ma journée (fenêtre J−2/J+5, rafraîchissement des lignes restantes, consultation par pièce/trajet) · Préparation d'une journée (état synthétique, imports manuels, récupération des événements et rapports conditionnels) · Rapports (2 sous-onglets) · Fichiers (5 sous-onglets, avec purge des fichiers obsolètes) · Logs.
+L'app expose 5 pages (navigation latérale, `st.navigation` dans `main.py`) : Ma journée (fenêtre J−2/J+5, rafraîchissement des lignes restantes, consultation par pièce/trajet) · Préparation d'une journée (état synthétique, imports manuels, récupération des événements et rapports conditionnels) · Rapports (2 sous-onglets) · Fichiers (5 sous-onglets, avec purge des fichiers obsolètes) · Logs. La 6e page **Administration** (gestion des comptes) n'apparaît que pour un Chauffeur-admin ; garde-fou `st.stop` en page pour un accès direct par URL.
 
 **Dépendances** — listées dans `requirements.txt`, installées par le Dockerfile ; en local : `pip install -r requirements.txt` (ajouter `--break-system-packages` sur un Python système Debian/Ubuntu). Détail et tableau paquet→usage dans le `README.md`. Points à savoir :
 - `pymupdf` (`fitz`) : annotation carte agent + tests `test_carte_agent.py`/`test_rapport_evenements.py`/`creer_cas_test.py`.
@@ -27,7 +27,7 @@ L'app expose 5 onglets : Ma journée (fenêtre J−2/J+5, rafraîchissement des 
 ```bash
 python3 scripts/parse_gd.py < data/raw/new-gd.txt          # importe et écrit les fichiers
 python3 scripts/parse_gd.py --json < data/raw/new-gd.txt   # idem + imprime le JSON complet sur stdout
-python3 scripts/parse_gd.py --log < data/raw/new-gd.txt    # idem + trace dans data/log/parse_gd.log
+python3 scripts/parse_gd.py --log < data/raw/new-gd.txt    # idem + trace dans data/log/parse_gd.log (flotte, commun)
 ```
 Depuis une session portail valide, `refresh_gd.py` récupère le HTML sémantique
 de `/listeBus` (le bloc PDFMake caché est ignoré) :
@@ -41,14 +41,14 @@ python3 scripts/refresh_gd.py --ligne 24 --sens est
 ```bash
 python3 scripts/parse_event.py < data/raw/new-events.txt
 python3 scripts/parse_event.py --json < data/raw/new-events.txt
-python3 scripts/parse_event.py --log < data/raw/new-events.txt   # trace dans data/log/parse_event.log
+python3 scripts/parse_event.py --log < data/raw/new-events.txt   # trace dans data/log/parse_event.log (flotte, commun)
 ```
 
 **Import Journée** — lit depuis stdin le texte brut « Détail de ma journée », écrit dans `data/journees/` :
 ```bash
 python3 scripts/parse_journee.py --date 2026-06-18 < raw.txt   # date explicite
 python3 scripts/parse_journee.py --json < raw.txt              # idem + JSON complet sur stdout
-python3 scripts/parse_journee.py --log < raw.txt               # idem + trace dans data/log/parse_journee.log
+python3 scripts/parse_journee.py --log < raw.txt               # idem + trace dans data/<matricule>/log/parse_journee.log (personnel)
 ```
 La date est auto-détectée depuis le champ « Mis à jour le » si `--date` est absent.
 Les pièces `ContinuHoraire` sont conservées avec `type_horaire: "continu"`;
@@ -128,9 +128,11 @@ python3 tests/test_journee.py
 python3 tests/test_evenements.py
 ```
 
-**Tests unitaires journaux** — couvre `chauffeur.journal` (`chemin_journal`, `ecrire_bloc` — dont le format historique de `parse_event.log`, préservé octet pour octet —, `ecrire_ligne`, `lister_journaux`) en répertoire temporaire :
+**Tests unitaires journaux** — couvre `chauffeur.journal` (`chemin_journal`, `ecrire_bloc` — dont le format historique de `parse_event.log`, préservé octet pour octet —, `ecrire_ligne`, `lister_journaux`) en répertoire temporaire ; `test_journal_commun.py` le routage flotte (commun) vs personnel ; `test_migrer_logs_flotte.py` le rapatriement vers `data/log/` :
 ```bash
 python3 tests/test_journal.py
+python3 tests/test_journal_commun.py
+python3 tests/test_migrer_logs_flotte.py
 ```
 
 **Tests unitaires dépôts** — couvre `chauffeur.depots` (chemins canoniques, `charger_gd` avec sélection par id et replis, `charger_evenements`, `evenements_pour_date`, `charger_journee`, `sauvegarder_journee`, fraîcheur `info_gd`/`info_gtfs`) sur fichiers synthétiques en répertoire temporaire :
@@ -180,7 +182,7 @@ python3 scripts/refresh_events.py --journee data/journees/journee-2026-06-25.jso
 python3 scripts/refresh_events.py --ligne 10 --sens sud
 ```
 Codes de sortie : `0` succès, `1` erreur HTTP/parse, `2` session expirée (renouveler les cookies).
-Session : lors d'une récupération, l'app valide d'abord la session par `/listeBus`. Si elle est expirée, une boîte de dialogue permet de coller la chaîne de cookies et reprend automatiquement les lignes non traitées. La session HTTP et le jeton CSRF sont réutilisés pour tout le lot. Les cookies sont stockés avec permissions `0600` dans `data/session/cookies.json` (gitignorée via `data/`) ; `chauffeur.portail.save_session()` reste disponible en Python.
+Session : lors d'une récupération, l'app valide d'abord la session par `/listeBus`. Si elle est expirée, une boîte de dialogue permet de coller la chaîne de cookies et reprend automatiquement les lignes non traitées. La session HTTP et le jeton CSRF sont réutilisés pour tout le lot. Les cookies sont stockés avec permissions `0600` dans `data/<matricule>/session/cookies.json` (gitignorée via `data/`) ; `chauffeur.portail.save_session()` reste disponible en Python.
 
 **Téléchargement GTFS** — données statiques (hebdomadaire) et temps-réel (requiert `requests`) :
 ```bash
@@ -191,9 +193,27 @@ python3 scripts/fetch_gtfs_rt.py
 `fetch_gtfs.py` construit `stops_index.json` après extraction (scan unique de `stop_times.txt`) ; `chauffeur.gtfs.stops_for_line()` lit cet index (~80x plus rapide qu'un scan CSV) avec repli automatique si l'index est absent.
 
 - `parse_gd.py`, `parse_event.py` et `parse_journee.py` importent `chauffeur` (`journal`, `modeles`, `depots` — stdlib, pas de package externe). Les autres scripts requièrent `requests` et/ou `PyMuPDF (fitz)`.
-- Les trois parseurs acceptent `--log` : la sortie est ajoutée à `data/log/<source>.log`. Opt-in en CLI (un import de test ne salit pas le journal) ; **toujours actif** pour les imports faits depuis l'app, où chaque import est une action à tracer.
+- Les trois parseurs acceptent `--log` : la sortie est ajoutée au journal de la source (**roulage par nature des données**, `chauffeur.journal.SOURCES_COMMUNES`) — imports de la flotte (G-D/Événements/GTFS/GTFS-RT) → `data/log/<source>.log` **commun** ; journaux personnels (journée, carte agent) → `data/<matricule>/log/<source>.log`. Opt-in en CLI (un import de test ne salit pas le journal) ; **toujours actif** pour les imports faits depuis l'app, où chaque import est une action à tracer.
 - Tous les scripts résolvent les chemins via `Path(__file__).parent.parent` ; ils fonctionnent peu importe le répertoire courant.
 - Code de sortie : `0` si tout réussit, `1` si une section échoue (erreurs sur stderr).
+
+## Isolation par matricule
+
+`CHAUFFEUR_MATRICULE` (5 chiffres, 20000-99999 — cf. `chauffeur/matricule.py`) route les données **personnelles** (journées, cartes agent, notes, rapports, journaux personnels — journée, carte agent, session portail) vers `data/<matricule>/<dossier>/` ; la **flotte partagée** (G-D `data/Gauche-Droite/`, événements `data/Events/`, GTFS `data/gtfs/`, GTFS-RT `data/gtfs_rt/`, et les journaux de leurs imports `data/log/`) reste à la racine de `data/`. Absente, les emplacements historiques `data/<dossier>/` s'appliquent (legacy). Une valeur d'env invalide lève `ValueError`. L'app (et elle seule) charge le `.env` de la racine au démarrage (`app/main.py`) ; les scripts et tests sont hermétiques : ils lisent uniquement l'environnement réel du process.
+
+Résolution du matricule **à l'usage**, dans l'ordre : contexte par thread (app : matricule de session) puis environnement. Les constantes du module (`JOURNEES_DIR`, `CA_DIR`, …) restent figées à l'import pour le CLI ; les modules de domaine (`journal`, `notes`, `ca`, `portail`, `preparation`) et les fonctions de `depots` (**`repertoire_prive`**, `chemin_journee`, `lister_journees_fenetre`) consultent le contexte courant à l'usage — dans l'app, passer par les accesseurs `bootstrap.journees_dir()`/`rapports_dir()`/… après `initialiser_page()`.
+
+**Mode strict** (`CHAUFFEUR_MODE_STRICT=1`, opt-in explicite) : plus de repli legacy — résoudre un répertoire privé sans matricule (session ou env) lève `ValueError`. Les constantes du module n'appliquent pas le strict (l'app doit pouvoir ouvrir sa page de connexion).
+
+Migration one-shot : `python3 scripts/migrate_data.py --matricule 43863 [--dry-run] [--force]` (fusion sans jamais écraser un fichier).
+
+## Authentification locale par PIN
+
+`data/users.json` (partagé, permissions `0600`, gitignoré) : comptes `matricule → {nom, rôle, sel, hash scrypt, tentatives, verrou}`. Le PIN (4-8 chiffres, `chauffeur.auth.pin_valide`) n'est jamais stocké en clair ; hash `hashlib.scrypt` + sel 16 octets (protocole figé dans `auth._N/_R/_P/_DKLEN`). Premier compte créé → **Chauffeur-admin**, suivants → Chauffeur. Verrouillage : `TENTATIVES_MAX`=5 échecs → `VERROU_SECONDES`=300 s ; un PIN correct réinitialise le compteur. API : `creer_compte` (rôle optionnel, admin requis pour créer un admin), `verifier_pin`, `changer_pin` (autonomie, ancien requis), `reinitialiser_pin` (admin, sans ancien), `deverrouiller_compte`, `changer_role`, `revoquer_compte` (tous deux opérateur admin obligatoire), `lister_comptes`/`est_verrouille` — écritures atomiques sous verrou (`threading.Lock`).
+
+**Matrice d'autorités — auto-gestion stricte :** un Chauffeur-admin promeut un Chauffeur (`changer_role`), mais l'autorité d'un admin n'est modifiable **que par lui-même** (promotion/destitution d'un autre admin refusées) ; l'**auto-destitution** est permise sauf pour le **dernier** admin (anti-verrouillage) ; pas de révocation d'un admin par autrui ni par soi. Un simple Chauffeur ne change pas de rôle, ne révoque pas, ne réinitialise pas un PIN.
+
+Dans l'app (`app/components/connexion.py`), la connexion est exigée dès qu'un compte existe dans `users.json` ; sans compte, le **wizard de premier lancement** n'apparaît qu'en mode strict — sans compte et sans strict, l'app garde son comportement legacy (auth = choix explicite). Le PIN est redemandé à chaque session navigateur (pas de cookie « rester connecté ») ; un Chauffeur change son PIN dans la barre latérale (ancien requis) ; la **page Administration** (réservée Chauffeur-admin) gère comptes, rôles, réinitialisation de PIN, déverrouillage et révocation.
 
 ## Architecture
 
@@ -202,20 +222,21 @@ python3 scripts/fetch_gtfs_rt.py
 ```
 data/raw/*.txt        ──(parse_gd.py)────────►  data/Gauche-Droite/gd<ligne>_<direction>.json
                       ──(parse_event.py)──────►  data/Events/<ligne>_<direction>.json
-                      ──(parse_journee.py)────►  data/journees/journee-YYYY-MM-DD.json
+                      ──(parse_journee.py)────►  data/<matricule>/journees/journee-YYYY-MM-DD.json
 employe.stm.info      ──(refresh_events.py)──►  data/Events/<ligne>_<direction>.json
 data/gtfs/            ──(fetch_gtfs.py)──────►  data/gtfs/gtfs_stm/   (données statiques)
-data/ca/*.pdf         ──(carte_agent_stm.py + GTFS)──►  PDF annoté
-                      ──(gen_rapport.py)──────►  data/rapports/rapport-YYYY-MM-DD.pdf
-data/journees/        ──(gen_rapport_v2.py)──►  data/rapports/rapport-v2-YYYY-MM-DD.{html,pdf}
+data/<matricule>/ca/*.pdf  ──(carte_agent_stm.py + GTFS)──►  PDF annoté
+                      ──(gen_rapport.py)──────►  data/<matricule>/rapports/rapport-YYYY-MM-DD.pdf
+data/<matricule>/journees/ ──(gen_rapport_v2.py)──►  data/<matricule>/rapports/rapport-v2-YYYY-MM-DD.{html,pdf}
 data/Gauche-Droite/ + data/Events/ + GTFS  ──(rapport_gd.py)──►  scripts/rapport_<ligne>_<dir>_<date>.html
 
-tout import (CLI avec --log, ou via l'app)  ──(chauffeur.journal)──►  data/log/<source>.log
+import de la flotte (CLI --log ou app, parse_gd/parse_event/fetch_gtfs/fetch_gtfs_rt)  ──(chauffeur.journal)──►  data/log/<source>.log   (commun)
+import personnel (CLI --log ou app, journée/carte agent)  ──(chauffeur.journal)──►  data/<matricule>/log/<source>.log   (privé)
 ```
 
-Le package **`chauffeur/`** centralise le noyau de domaine partagé entre les scripts et l'app Streamlit : `matching` (appariement noms d'arrêts), `modeles` (dataclasses), `ca` (cartes agent : résolution par identité `resoudre_ca` avec repli legacy par date, rangement `ranger_ca` — collision refusée sauf remplacement, sauvegarde `.bak`), `depots` (chemins canoniques, chargement et sauvegarde des fichiers G-D/évènements/journées de `data/` et fraîcheur `info_gd`/`info_gtfs` avec seuils `FRAICHEUR_*` — source unique des conventions de nommage), `effectif` (horaires, dont `bornes_quart` — min/max d'une liste d'heures de quart par valeur réelle plutôt que par tri lexical), `evenements` (applicabilité au quart, à une date, à une plage de quart — source unique du marqueur ✅/⬜ de l'UI et du filtre date des rapports ; sémantique des arrêts touchés via `titre_annule_l_arret`/`arret_reellement_annule` — source unique de la teinte rouge/ambre des rapports), `journal` (journaux d'importation `data/log/<source>.log` : `ecrire_bloc` pour les rapports de parseur, `ecrire_ligne` pour la progression des téléchargements, `lister_journaux` pour l'onglet Logs), `gd` (build_rows, détours, applicabilité par parcours — `stop_ids=None` = arrêts GTFS inconnus → évènement présumé applicable, fail-safe ; placement des arrêts ajoutés via `insert_added_stops_inline` — source unique de la règle d'ancrage code/parenthèses), `gtfs` (lookup arrêts GTFS, `stops_for_parcours`, index `stops_index.json`), `gtfs_rt` (décodeur protobuf minimal du flux vehiclePositions, `parse_vehicle_positions`/`find_vehicle`), `journee` (groupes/lignes de service à partir d'une journée), `periodes` (calendrier de référence STM — listes/variations/fériés — et dérivation de l'identité d'une carte agent via `identite_ca(date, numero)`), `portail` (client HTTP persistant, validation et stockage sécurisé de session), `preparation` (rafraîchissement structuré, reprise des lignes et empreintes de rapports). La lecture des cartes agent PDF se fait directement dans `scripts/carte_agent_stm.py` (parsing géométrique bbox via PyMuPDF).
+Le package **`chauffeur/`** centralise le noyau de domaine partagé entre les scripts et l'app Streamlit : `matching` (appariement noms d'arrêts), `modeles` (dataclasses), `ca` (cartes agent : résolution par identité `resoudre_ca` avec repli legacy par date, rangement `ranger_ca` — collision refusée sauf remplacement, sauvegarde `.bak`), `depots` (chemins canoniques — isolation par matricule via `repertoire_utilisateur`/`repertoire_prive`, flotte partagée vs. données personnelles `data/<matricule>/` ; chargement et sauvegarde des fichiers G-D/évènements/journées de `data/` et fraîcheur `info_gd`/`info_gtfs` avec seuils `FRAICHEUR_*` — source unique des conventions de nommage), `effectif` (horaires, dont `bornes_quart` — min/max d'une liste d'heures de quart par valeur réelle plutôt que par tri lexical), `evenements` (applicabilité au quart, à une date, à une plage de quart — source unique du marqueur ✅/⬜ de l'UI et du filtre date des rapports ; sémantique des arrêts touchés via `titre_annule_l_arret`/`arret_reellement_annule` — source unique de la teinte rouge/ambre des rapports), `journal` (journaux d'importation — deux familles routées par `SOURCES_COMMUNES` : flotte `parse_gd`/`parse_event`/`fetch_gtfs`/`fetch_gtfs_rt` → `data/log/` commun, personnel → `data/<matricule>/log/` ; `ecrire_bloc` pour les rapports de parseur, `ecrire_ligne` pour la progression des téléchargements, `lister_journaux`/`lister_journaux_communs`/`lister_journaux_personnels` pour l'onglet Logs), `gd` (build_rows, détours, applicabilité par parcours — `stop_ids=None` = arrêts GTFS inconnus → évènement présumé applicable, fail-safe ; placement des arrêts ajoutés via `insert_added_stops_inline` — source unique de la règle d'ancrage code/parenthèses), `gtfs` (lookup arrêts GTFS, `stops_for_parcours`, index `stops_index.json`), `gtfs_rt` (décodeur protobuf minimal du flux vehiclePositions, `parse_vehicle_positions`/`find_vehicle`), `journee` (groupes/lignes de service à partir d'une journée), `periodes` (calendrier de référence STM — listes/variations/fériés — et dérivation de l'identité d'une carte agent via `identite_ca(date, numero)`), `portail` (client HTTP persistant, validation et stockage sécurisé de session), `preparation` (rafraîchissement structuré, reprise des lignes et empreintes de rapports). La lecture des cartes agent PDF se fait directement dans `scripts/carte_agent_stm.py` (parsing géométrique bbox via PyMuPDF).
 
-L'application Streamlit tient dans un seul fichier de présentation, `app/ui.py` (5 onglets) : toute la logique (fraîcheur `info_gtfs`/`info_gd`, résolution/rangement des cartes agent, décodage GTFS-RT) vit dans le package `chauffeur/`.
+L'application Streamlit est **multipages** : entrée `app/main.py`, une page par écran dans `app/pages/` (1 Ma journée · 2 Préparation · 3 Rapports · 4 Fichiers · 5 Logs · 6 Administration), composants partagés dans `app/components/`. Zéro logique : la fraîcheur `info_gtfs`/`info_gd`, la résolution/rangement des cartes agent, le décodage GTFS-RT vivent tous dans le package `chauffeur/`. `app/main.py` déclare la navigation `st.navigation(_pages).run()` — l'entrée « Administration » n'est ajoutée qu'à un Chauffeur-admin — puis pose la configuration globale et le style ; chaque page appelle `bootstrap.initialiser_page()` qui applique la connexion (`app/components/connexion.py` : login, wizard premier lancement, déconnexion et changement de PIN dans la barre latérale) puis pose le **matricule de session** dans le contexte par thread de `chauffeur.depots`. Les pages obtiennent leurs emplacements via les accesseurs `bootstrap.journees_dir()`/`ca_dir()`/`notes_dir()`/`rapports_dir()`/`log_dir()`/`session_path()` — jamais les constantes de module.
 
 1. **`split_sections()`** découpe l'entrée brute en sections, une par en-tête `Gauche-Droite / <ligne> <direction>`. Un seul collage peut donc contenir plusieurs lignes/directions.
 2. **`GDParser`** traite une section :
@@ -239,13 +260,13 @@ Racine : `{ ligne, direction, routes: [ { line_number, direction, parcours: [...
 
 - **Gauche-Droite** : `gd<ligne>_<direction>.json` (avec préfixe `gd`), direction en minuscule (`est|ouest|nord|sud`), ligne avec `e` minuscule si applicable (`85e`). Un fichier par direction.
 - **Événements** : `<ligne>_<direction>.json` (sans préfixe), même convention de direction/ligne.
-- **Journées** : `data/journees/journee-YYYY-MM-DD.json` (sortie de `parse_journee.py`).
-- **Cartes agent** : identifiées par `(numéro, liste/variation, jour-type)` via `chauffeur.periodes.identite_ca()`, pas par leur seule date — un même numéro peut désigner des cartes différentes selon la liste et le jour-type (semaine/samedi/dimanche/variation). Nommage `data/ca/<numéro>_<groupe_id>_<jour_type>.pdf` (+ `-annotee.pdf`), les deux copies conservées ; une identité déjà présente est refusée à l'écrasement sauf action explicite « remplacer » (sauvegarde `.bak`). Les fichiers `carte-agent-YYYY-MM-DD.pdf` restent le nommage des imports antérieurs à cette refonte (non migrés, lus en repli par `get_ca_info()`).
-- **Journaux d'importation** : `data/log/<source>.log`, un fichier par type d'import, nommé d'après le parseur qui le produit — `parse_event.log` (y compris pour `refresh_events.py`, même parseur), `parse_gd.log`, `parse_journee.log`, `carte_agent.log`, `fetch_gtfs.log`, `fetch_gtfs_rt.log`. En ajout, sans rotation. Écrits uniquement via `chauffeur.journal` ; consultables dans l'onglet Logs.
+- **Journées** : `data/<matricule>/journees/journee-YYYY-MM-DD.json` (sortie de `parse_journee.py` ; legacy : `data/journees/`).
+- **Cartes agent** : identifiées par `(numéro, liste/variation, jour-type)` via `chauffeur.periodes.identite_ca()`, pas par leur seule date — un même numéro peut désigner des cartes différentes selon la liste et le jour-type (semaine/samedi/dimanche/variation). Nommage `data/<matricule>/ca/<numéro>_<groupe_id>_<jour_type>.pdf` (+ `-annotee.pdf`), les deux copies conservées ; une identité déjà présente est refusée à l'écrasement sauf action explicite « remplacer » (sauvegarde `.bak`). Les fichiers `carte-agent-YYYY-MM-DD.pdf` restent le nommage des imports antérieurs à cette refonte (non migrés, lus en repli par `get_ca_info()` ; legacy : `data/ca/`).
+- **Journaux d'importation** : un fichier par type d'import, nommé d'après le parseur qui le produit — `parse_event.log` (y compris pour `refresh_events.py`, même parseur), `parse_gd.log`, `parse_journee.log`, `carte_agent.log`, `fetch_gtfs.log`, `fetch_gtfs_rt.log`. En ajout, sans rotation. **Deux familles** : `data/log/` (commun, flotte — G-D, Événements, GTFS, GTFS-RT, `SOURCES_COMMUNES`) et `data/<matricule>/log/` (personnel — journée, carte agent ; legacy : `data/log/`). Écrits uniquement via `chauffeur.journal` ; consultables dans la page Logs (journaux communs et personnels réunis, étiquetés). `scripts/migrer_logs_flotte.py [--dry-run]` rapatrie les journaux de flotte restés dans `data/<matricule>/log/` (cible existante → `<source>.N`, jamais d'écrasement).
 - **Placement des arrêts ajoutés** (`arrets_ajoutes` → ligne verte du rapport) : ancrer par ordre de fiabilité décroissante — (1) le **code d'arrêt** cité par une étape du détour (« TERMINUS TEMPORAIRE STATION SHERBROOKE (52506) », « ... ARRÊT 53016 ») est une ancre exacte et l'emporte sur tout ; cité par la 1re étape le terminus est le **départ** → l'arrêt la précède, cité plus loin c'est l'**arrivée** → l'arrêt la suit ; (2) sinon les rues **entre parenthèses** du nom (« Station Papineau (Cartier / Sainte-Catherine) ») ; (3) sinon le nom lui-même. Pour un nom « A / B », c'est d'ordinaire la 1re rue qu'emprunte la ligne, mais un détour peut réquisitionner un arrêt situé sur la rue **perpendiculaire** à son parcours régulier (« Joliette / de Rouen » desservi par un détour circulant sur de Rouen) : si la 1re rue n'ancre sur aucune étape du détour, on **réessaie avec la rue transversale** comme rue empruntée (rôles échangés) avant d'abandonner. Ne jamais se fier au nom d'une **station** : il nomme la station, pas la rue où l'arrêt est planté (« Station Sherbrooke » est sur Berri) — et comme une station porte le nom d'une rue que la ligne emprunte, s'y fier place l'arrêt au mauvais coin sans signal d'erreur. Nom de lieu sans intersection exploitable → arrêt **non placé** (il ressort dans les alertes) plutôt que deviné.
 - **Teinte des arrêts touchés** : rouge barré = l'arrêt disparaît (« Détour avec annulation d'arrêt », « Annulation d'arrêts ») ; ambre non barré = l'arrêt reste desservi (« Arrêt déplacé », « Information chauffeur » — le portail STM les liste dans `arrets_annules` alors que le chauffeur doit s'y arrêter). Titre inconnu → rouge (fail-safe).
-- **Rapports journaliers v1** : `data/rapports/rapport-YYYY-MM-DD.pdf`.
-- **Rapports journaliers v2** : `data/rapports/rapport-v2-YYYY-MM-DD.{html,pdf}` (ou `rapport-v2-DATE-LIGNE-DIR-idN.html` pour un rapport mono-groupe).
-- **Notes** (`chauffeur.notes`) : fichiers indexés par clé → `{"note": str, "maj": "YYYY-MM-DD"}` (entrée retirée si texte vide) — `data/notes/carte_agent.json` (clé = identité de la carte `numero_groupe_id_jour_type` via `chauffeur.ca.cle_note_carte()` ; la note suit la carte réutilisée d'une journée à l'autre, listes/variations/fériés donnant des identités distinctes ; repli sur le nom legacy `carte-agent-YYYY-MM-DD` si l'identité n'est pas calculable) et `data/notes/journee.json` (clé = date ISO, note propre à la journée). Éditées dans l'onglet Ma journée.
+- **Rapports journaliers v1** : `data/<matricule>/rapports/rapport-YYYY-MM-DD.pdf`.
+- **Rapports journaliers v2** : `data/<matricule>/rapports/rapport-v2-YYYY-MM-DD.{html,pdf}` (ou `rapport-v2-DATE-LIGNE-DIR-idN.html` pour un rapport mono-groupe).
+- **Notes** (`chauffeur.notes`) : fichiers indexés par clé → `{"note": str, "maj": "YYYY-MM-DD"}` (entrée retirée si texte vide) — `data/<matricule>/notes/carte_agent.json` (clé = identité de la carte `numero_groupe_id_jour_type` via `chauffeur.ca.cle_note_carte()` ; la note suit la carte réutilisée d'une journée à l'autre, listes/variations/fériés donnant des identités distinctes ; repli sur le nom legacy `carte-agent-YYYY-MM-DD` si l'identité n'est pas calculable) et `data/<matricule>/notes/journee.json` (clé = date ISO, note propre à la journée). Éditées dans la page Ma journée (legacy : `data/notes/`).
 - JSON écrit avec indentation 2 espaces et accents préservés (`ensure_ascii=False`).
 - Préférer l'import via les scripts à l'édition manuelle, pour garantir la normalisation et le rapport de changements.

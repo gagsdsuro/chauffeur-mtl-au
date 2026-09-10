@@ -29,7 +29,9 @@ import openpyxl
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 XLSX_PATH    = PROJECT_ROOT / "data" / "import" / "STM_journee_historique.xlsx"
-JOURNEES_DIR = PROJECT_ROOT / "data" / "journees"
+
+sys.path.insert(0, str(PROJECT_ROOT))
+from chauffeur.depots import JOURNEES_DIR  # noqa: E402  (répertoire privé du matricule courant)
 
 N_TRAJET_SLOTS  = 4
 BASE_COLS       = 15   # nb de colonnes avant le 1er slot de trajet

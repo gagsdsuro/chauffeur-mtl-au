@@ -11,8 +11,11 @@ import subprocess
 import sys
 from typing import Callable, Iterable
 
+from . import depots
 from .depots import (
-    DATA_DIR, EVENTS_DIR, GD_DIR, charger_journee, chemin_evenements, chemin_gd,
+    DATA_DIR, EVENTS_DIR, GD_DIR,
+    GTFS_DIR, GTFS_MANIFEST, RAPPORTS_DIR,
+    charger_journee, chemin_evenements, chemin_gd,
     chemin_journee, info_gd, sauvegarder_journee,
 )
 from .journal import ecrire_bloc
@@ -22,11 +25,13 @@ from .evenements import (
 )
 from .portail import PortailClient, PortailError, SessionExpiredError
 
-RAPPORTS_DIR = DATA_DIR / "rapports"
-GTFS_DIR = DATA_DIR / "gtfs" / "gtfs_stm"
-GTFS_MANIFEST = DATA_DIR / "gtfs" / "gtfs_manifest.json"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+
+
+def _rapports_dir() -> Path:
+    """Répertoire des rapports : session (thread) si active, sinon constante."""
+    return depots.repertoire_prive_contexte("rapports") or RAPPORTS_DIR
 
 
 @dataclass
@@ -411,8 +416,8 @@ def empreinte_sources(journee_path: Path, variante: str, niveau: str | None = No
     return digest.hexdigest()
 
 
-def chemin_manifeste_rapports(date_str: str, rapports_dir: Path = RAPPORTS_DIR) -> Path:
-    return Path(rapports_dir) / f"rapport-etat-{date_str}.json"
+def chemin_manifeste_rapports(date_str: str, rapports_dir: Path | None = None) -> Path:
+    return Path(rapports_dir or _rapports_dir()) / f"rapport-etat-{date_str}.json"
 
 
 def _charger_manifeste(path: Path) -> dict:
@@ -429,10 +434,11 @@ def etat_rapport(
     variante: str,
     *,
     niveau: str | None = None,
-    rapports_dir: Path = RAPPORTS_DIR,
+    rapports_dir: Path | None = None,
 ) -> EtatRapport:
     journee = charger_journee(journee_path)
     date_str = journee.get("date") or Path(journee_path).stem.removeprefix("journee-")
+    rapports_dir = rapports_dir or _rapports_dir()
     if variante == "journalier":
         output = Path(rapports_dir) / f"rapport-{date_str}.pdf"
         key = "journalier"
@@ -454,7 +460,7 @@ def etat_rapport(
 
 
 def marquer_rapport_a_jour(
-    journee_path: Path, etat: EtatRapport, rapports_dir: Path = RAPPORTS_DIR
+    journee_path: Path, etat: EtatRapport, rapports_dir: Path | None = None
 ) -> None:
     journee = charger_journee(journee_path)
     date_str = journee.get("date") or Path(journee_path).stem.removeprefix("journee-")
@@ -493,7 +499,7 @@ def generer_v2_et_marquer(
     journee_path: Path,
     *,
     niveau: str = "détaillé",
-    rapports_dir: Path = RAPPORTS_DIR,
+    rapports_dir: Path | None = None,
 ) -> ResultatRapport:
     """Force une génération v2 et mémorise l'empreinte effectivement utilisée."""
     etat = etat_rapport(journee_path, "v2", niveau=niveau, rapports_dir=rapports_dir)
@@ -511,12 +517,12 @@ def finaliser_rapports(
     journee_path: Path,
     *,
     niveau_v2: str = "standard",
-    rapports_dir: Path = RAPPORTS_DIR,
+    rapports_dir: Path | None = None,
     generateur_journalier: Callable[[Path, Path], tuple[bool, str]] | None = None,
     generateur_v2: Callable[[Path, Path, str], tuple[bool, str]] | None = None,
 ) -> list[ResultatRapport]:
     """Génère uniquement les variantes absentes ou obsolètes."""
-    rapports_dir = Path(rapports_dir)
+    rapports_dir = Path(rapports_dir or _rapports_dir())
     rapports_dir.mkdir(parents=True, exist_ok=True)
     resultats: list[ResultatRapport] = []
     etat_j = etat_rapport(journee_path, "journalier", rapports_dir=rapports_dir)

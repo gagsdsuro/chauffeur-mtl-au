@@ -13,9 +13,19 @@ import tempfile
 
 import requests
 
+from . import depots
+from .depots import SESSION_PATH
+
 BASE_URL = "https://employe.stm.info"
-SESSION_PATH = Path(__file__).resolve().parent.parent / "data" / "session" / "cookies.json"
 SENS_MAP = {"est": "E", "ouest": "W", "nord": "N", "sud": "S"}
+
+
+def _session_path_courant() -> Path:
+    """Cookie de session portail : dossier de session du thread (app) sinon défaut."""
+    dossier = depots.repertoire_prive_contexte("session")
+    if dossier is not None:
+        return dossier / "cookies.json"
+    return SESSION_PATH
 
 
 class _ExtracteurTexteHTML(HTMLParser):
@@ -103,8 +113,8 @@ def _cookie_string(http: requests.Session) -> str:
     return "; ".join(f"{cookie.name}={cookie.value}" for cookie in http.cookies)
 
 
-def load_session(path: Path = SESSION_PATH) -> dict:
-    path = Path(path)
+def load_session(path: Path | None = None) -> dict:
+    path = Path(path or _session_path_courant())
     # Corrige aussi les anciens fichiers créés avant le stockage sécurisé.
     os.chmod(path, 0o600)
     with path.open(encoding="utf-8") as handle:
@@ -132,7 +142,7 @@ def _write_session(data: dict, path: Path) -> None:
         raise
 
 
-def save_session(cookie_string: str, path: Path = SESSION_PATH) -> None:
+def save_session(cookie_string: str, path: Path | None = None) -> None:
     """Sauvegarde une chaîne de cookies brute sans jamais la journaliser."""
     cookie_string = cookie_string.strip()
     if not cookie_string:
@@ -144,11 +154,11 @@ def save_session(cookie_string: str, path: Path = SESSION_PATH) -> None:
             "last_validated_at": None,
             "status": "non_verifiee",
         },
-        Path(path),
+        Path(path or _session_path_courant()),
     )
 
 
-def etat_session(session_path: Path = SESSION_PATH) -> EtatSessionPortail:
+def etat_session(session_path: Path | None = None) -> EtatSessionPortail:
     """Retourne l'état local, sans effectuer d'appel réseau."""
     try:
         data = load_session(session_path)
@@ -202,12 +212,12 @@ class PortailClient:
 
     def __init__(
         self,
-        session_path: Path = SESSION_PATH,
+        session_path: Path | None = None,
         *,
         cookie_string: str | None = None,
         persister: bool = True,
     ):
-        self.session_path = Path(session_path)
+        self.session_path = Path(session_path or _session_path_courant())
         self.persister = persister
         self._source = load_session(self.session_path) if cookie_string is None else {
             "cookies": cookie_string.strip(),
@@ -301,7 +311,7 @@ class PortailClient:
 
 
 def valider_et_sauvegarder_session(
-    cookie_string: str, session_path: Path = SESSION_PATH
+    cookie_string: str, session_path: Path | None = None
 ) -> tuple[bool, str]:
     """Valide un candidat en mémoire et ne le sauvegarde qu'après succès."""
     try:
@@ -314,7 +324,7 @@ def valider_et_sauvegarder_session(
                 "last_validated_at": state.verifiee_le,
                 "status": "valide",
             },
-            Path(session_path),
+            Path(session_path or _session_path_courant()),
         )
         return True, "Session validée et enregistrée"
     except (SessionExpiredError, PortailError, ValueError) as exc:
@@ -323,14 +333,14 @@ def valider_et_sauvegarder_session(
         return False, f"Erreur réseau : {exc}"
 
 
-def fetch_detours(ligne: str, sens: str, session_path: Path = SESSION_PATH) -> dict:
+def fetch_detours(ligne: str, sens: str, session_path: Path | None = None) -> dict:
     """Façade compatible pour une récupération isolée."""
     client = PortailClient(session_path)
     client.verifier()
     return client.fetch_detours(ligne, sens)
 
 
-def is_session_valid(session_path: Path = SESSION_PATH) -> tuple[bool, str]:
+def is_session_valid(session_path: Path | None = None) -> tuple[bool, str]:
     """Valide la session enregistrée par un appel réel au portail."""
     try:
         state = PortailClient(session_path).verifier()

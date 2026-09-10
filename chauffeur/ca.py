@@ -11,8 +11,14 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
+from . import depots
 from .depots import CA_DIR
 from .periodes import identite_ca, nom_ca
+
+
+def _ca_dir() -> Path:
+    """Répertoire des cartes agent : session (thread) si active, sinon constante."""
+    return depots.repertoire_prive_contexte("ca") or CA_DIR
 
 
 def resoudre_ca(jour: date, numero, ca_dir: Path | None = None) -> dict:
@@ -29,7 +35,7 @@ def resoudre_ca(jour: date, numero, ca_dir: Path | None = None) -> dict:
       annotee  — Path du PDF annoté, ou None
       legacy   — True si le PDF annoté résolu vient de l'ancien nommage par date
     """
-    ca_dir = ca_dir or CA_DIR
+    ca_dir = ca_dir or _ca_dir()
     date_str = jour.isoformat()
     identite = None
     brute = annotee = None
@@ -101,7 +107,7 @@ def ranger_ca(numero: str, groupe_id: str, jour_type: str,
 
     Retourne {"annotee": Path, "brute": Path | None} (destinations finales).
     """
-    ca_dir = ca_dir or CA_DIR
+    ca_dir = ca_dir or _ca_dir()
     dest_annotee = ca_dir / nom_ca(numero, groupe_id, jour_type, annotee=True)
     dest_brute = None if brute_tmp is None else ca_dir / nom_ca(numero, groupe_id, jour_type)
     collision = dest_annotee.exists() or (dest_brute is not None and dest_brute.exists())

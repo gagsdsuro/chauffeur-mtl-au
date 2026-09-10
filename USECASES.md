@@ -79,6 +79,18 @@ Ce document décrit les interactions des utilisateurs avec le système, indépen
 
 ---
 
+## Chauffeur-admin — Gestion des comptes
+
+**Contexte :** À l'occasion, pour maintenir l'accès au système. Un administrateur est identifié par le rôle **Chauffeur-admin** dont seul lui-même peut modifier l'autorité.
+
+1. Consulte la liste des comptes (matricule, nom, rôle, verrouillage).
+2. Peut créer un compte avec le rôle Chauffeur ou Chauffeur-admin.
+3. Promeut un Chauffeur en Chauffeur-admin (l'autorité d'un autre administrateur n'est pas modifiable).
+4. Réinitialise le PIN d'un compte sans connaître l'ancien, ou déverrouille un compte suspendu.
+5. Décide de sa propre destitution (sauf s'il est le dernier administrateur) ; ne révoque jamais un administrateur ni son propre compte.
+
+---
+
 ## Chauffeur-admin — Entretien des données
 
 **Contexte :** Périodiquement, pour maintenir le système en bon état.

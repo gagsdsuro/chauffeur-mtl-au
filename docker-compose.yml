@@ -18,4 +18,6 @@ services:
       - ./Installation:/app/Installation
     environment:
       - TZ=America/Toronto
+      - CHAUFFEUR_MATRICULE=50351
+      - CHAUFFEUR_MODE_STRICT=0
     restart: unless-stopped

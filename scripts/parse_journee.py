@@ -16,7 +16,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from chauffeur.depots import sauvegarder_journee  # noqa: E402
+from chauffeur.depots import (  # noqa: E402
+    JOURNEES_DIR as DEPOTS_JOURNEES_DIR, sauvegarder_journee,
+)
 from chauffeur.journal import ecrire_bloc  # noqa: E402
 from chauffeur.modeles import Journee  # noqa: E402
 from chauffeur.portail import texte_visible_html  # noqa: E402
@@ -145,7 +147,7 @@ class JourneeParser:
 
     PROJECT_ROOT = Path(__file__).resolve().parent.parent
     DATA_DIR     = PROJECT_ROOT / "data"
-    JOURNEES_DIR = DATA_DIR / "journees"
+    JOURNEES_DIR = DEPOTS_JOURNEES_DIR
 
     def __init__(self, raw_text: str, date_str: str | None = None):
         self.raw_text = raw_text.replace('\r\n', '\n').replace('\r', '\n')

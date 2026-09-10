@@ -208,3 +208,28 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
   * Conserver le filtrage par date, plage horaire et correspondance avec le parcours.
   * Afficher G-D, commentaire, arrêts concernés et ajoutés, identifiants, période et effectif.
   * Prévoir un défilement horizontal sur les écrans étroits.
+
+---
+
+# 15. Authentification locale par PIN (phase 3)
+
+* [x] **P1** — Verrouiller l'app par un PIN au démarrage de chaque session navigateur.
+
+  * Comptes dans `data/users.json` (0600, gitignoré, `matricule → {nom, rôle, sel, hash scrypt, tentatives, verrou}`) via `chauffeur/auth.py`.
+  * Premier compte créé = Chauffeur-admin, suivants = Chauffeur (rôles exploités à la phase 4).
+  * Verrouillage 5 échecs → 5 min ; `changer_pin`/`revoquer_compte`.
+  * Page de connexion + wizard de premier lancement + déconnexion dans la barre latérale (`app/components/connexion.py`).
+
+* [x] **P1** — Routage des données privées sur le matricule authentifié (contexte par thread dans `chauffeur.depots`).
+
+  * `bootstrap.initialiser_page()` pose le matricule de session ; modules de domaine et `depots` le consultent à l'usage.
+  * Accès privés via accesseurs `bootstrap.journees_dir()`/`ca_dir()`/`notes_dir()`/`rapports_dir()`/`log_dir()`/`session_path()`.
+
+* [x] **P1** — Mode strict `CHAUFFEUR_MODE_STRICT=1` (opt-in explicite, jamais par défaut) : plus de repli legacy, erreur claire sans matricule.
+
+* [x] **P2** — Phase 4 : page d'administration et rôles (auto-gestion stricte).
+
+  * Auto-gestion stricte retenue : seul un Chauffeur-admin promeut un Chauffeur ; l'autorité d'un admin n'est modifiable que par lui-même (auto-destitution refusée pour le dernier admin) ; un admin n'est jamais révocable par autrui ni par soi. (`chauffeur.auth.changer_role`/`revoquer_compte`.)
+  * Chauffeur : changement de son propre PIN en autonomie (ancien requis, barre latérale) ; l'admin réinitialise sans l'ancien (`reinitialiser_pin`) et déverrouille (`deverrouiller_compte`).
+  * Page `app/pages/6_administration.py` : liste, création (rôle au choix), promotion/destitution, réinitialisation de PIN, déverrouillage, révocation — visible uniquement aux Chauffeur-admin (`st.navigation` filtré dans `main.py` + garde-fou en page).
+  * Tests : `tests/test_auth_roles.py` (matrice d'autorisations) et `tests/test_administration_app.py` (AppTest : garde-fou Chauffeur + gestion par l'admin).

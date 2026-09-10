@@ -1,10 +1,9 @@
-#!/usr/bin/env python3
 """Notes libres sur autobus, matricules, cartes agent et journées
-(data/notes/voiture.json, matricule.json, carte_agent.json, journee.json).
+(NOTES_DIR/voiture.json, matricule.json, carte_agent.json, journee.json).
 
 Fichiers indexés par clé (numéro d'autobus, matricule, identité de carte
 agent ou date ISO de journée) -> {"note": str, "maj": "YYYY-MM-DD"}
-(+ "nom" pour les matricules). Édités manuellement ou via l'onglet
+(+ "nom" pour les matricules). Édités manuellement ou via la page
 Ma journée de l'app.
 """
 from __future__ import annotations
@@ -13,15 +12,25 @@ import json
 from datetime import date
 from pathlib import Path
 
-NOTES_DIR = Path(__file__).resolve().parent.parent / "data" / "notes"
+from . import depots
+from .depots import NOTES_DIR
 
 
-def _path(nom_fichier: str) -> Path:
-    return NOTES_DIR / f"{nom_fichier}.json"
+def _notes_dir() -> Path:
+    """Répertoire des notes : session (thread) si active, sinon la constante.
+
+    Dans l'app, le matricule de session prime (par chauffeur) ; en CLI et dans
+    les tests (où NOTES_DIR est patchable), la constante du module s'applique.
+    """
+    return depots.repertoire_prive_contexte("notes") or NOTES_DIR
 
 
-def _charger(nom_fichier: str) -> dict:
-    p = _path(nom_fichier)
+def _path(nom_fichier: str, notes_dir: Path | None = None) -> Path:
+    return (notes_dir or _notes_dir()) / f"{nom_fichier}.json"
+
+
+def _charger(nom_fichier: str, notes_dir: Path | None = None) -> dict:
+    p = _path(nom_fichier, notes_dir)
     if not p.exists():
         return {}
     try:
@@ -30,9 +39,10 @@ def _charger(nom_fichier: str) -> dict:
         return {}
 
 
-def _sauvegarder(nom_fichier: str, notes: dict) -> None:
-    NOTES_DIR.mkdir(parents=True, exist_ok=True)
-    _path(nom_fichier).write_text(
+def _sauvegarder(nom_fichier: str, notes: dict, notes_dir: Path | None = None) -> None:
+    notes_dir = notes_dir or _notes_dir()
+    notes_dir.mkdir(parents=True, exist_ok=True)
+    _path(nom_fichier, notes_dir).write_text(
         json.dumps(notes, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
 
