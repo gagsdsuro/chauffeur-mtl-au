@@ -218,14 +218,82 @@ def main() -> int:
     if ancienne.type_horaire != "horaire":
         echecs.append("type_horaire absent: repli 'horaire' attendu")
 
+    # Les HLP (Haut-le-pied / Sortie / Entrée) doivent conserver leurs heures
+    # début et fin à l'identique que l'import soit automatique (portail) ou un
+    # collage manuel de secours. Le portail intercale les instructions du G-D
+    # entre « Entrée » et « Départ et arrivé : » et sépare l'heure de l'arrêt
+    # dans un <span> : l'import automatique perdait ces heures (régression
+    # introduite le 4 septembre avec l'automatisation des imports).
+    txt_entree = (
+        ROOT / "tests" / "cas_journee" / "34-entree-heures.txt"
+    ).read_text(encoding="utf-8")
+    manuel_parser = JourneeParser(txt_entree, date_str="2026-09-13")
+    manuel = manuel_parser.parse()
+    if manuel is None:
+        echecs.append(f"entrée: parsing manuel échoué — {manuel_parser.errors}")
+    else:
+        trajets_manuel = [
+            t.to_dict() if hasattr(t, "to_dict") else t
+            for p in manuel.pieces for t in p.trajets
+        ]
+        entrees_manuel = [
+            t for t in trajets_manuel if t.get("type") == "entree"
+        ]
+        if entrees_manuel != [{
+            "type": "entree", "ligne": None, "direction": None,
+            "id_parcours": None, "detour": False,
+            "depart": {"arret": "Station Viau", "heure": "25:33"},
+            "arrivee": {"arret": "Frontenac", "heure": "25:44"},
+        }]:
+            echecs.append(f"entrée: HLP manuel incorrect {entrees_manuel}")
+
+    payload_portail = {
+        "date": "2026-09-13",
+        "journeeHtml": """
+            <div>59200 - Frontenac</div><div>Journée422</div>
+            <a class="work-piece-summary-link" href="#idPt18-27">
+              <span>Sommaire</span><span>34 - 02</span><span>31056</span>
+              <span>--</span><span>7:17</span><span>Horaire</span>
+            </a><div>Prise</div><div>18:27</div><div>Lieu</div><div>E082</div>
+            <div>Début</div><div>18:27</div><div>Fin</div><div>25:44</div>
+            <div>Lieu</div><div>FRT</div>
+        """,
+        "voyagesHtml": """
+            <h2 class="trips-item-heading" id="idPt18-27">Détails 34 - 02</h2>
+            <div>34 Est</div><div>ID 7</div>
+            <div>Départ et arrivé :</div>
+            <div>Ste-Catherine / Du Havre<span>18:27</span></div>
+            <div>Station Viau<span>18:49</span></div>
+            <div>Informations supplémentaires :</div><div>Information</div>
+            <div>Entrée</div>
+            <div>53753 - [V] Pierre-De Coubertin, [V] carrefour giratoire, [V] Pierre-De Coubertin, [D] carrefour giratoire, [D] Pierre-De Coubertin, [G] Pie-IX, [D] Hochelaga, [G] D'Iberville, [G] Ontario, [D] du Havre</div>
+            <div>Départ et arrivé :</div>
+            <div>Station Viau<span>25:33</span></div>
+            <div>Frontenac<span>25:44</span></div>
+        """,
+    }
+    portail = JourneeParser.from_portal_json(payload_portail, "2026-09-13").parse()
+    if portail is None:
+        echecs.append("entrée: parsing portail échoué")
+    else:
+        trajets_portail = [
+            t.to_dict() if hasattr(t, "to_dict") else t
+            for p in portail.pieces for t in p.trajets
+        ]
+        if trajets_portail != trajets_manuel:
+            echecs.append(
+                "entrée: import portail ≠ import manuel pour les trajets "
+                f"(portail={trajets_portail}, manuel={trajets_manuel})"
+            )
+
     if echecs:
         print("✗ test_parse_journee")
         for e in echecs:
             print(f"    {e}")
         print("\n0/1 cas réussis")
         return 1
-    print("✓ journées sans bus + pièce continue avec ID dupliqué")
-    print("\n2/2 cas réussis")
+    print("✓ journées sans bus + pièce continue avec ID dupliqué + HLP (heures début/fin portail)")
+    print("\n3/3 cas réussis")
     return 0
 
 

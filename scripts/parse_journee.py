@@ -361,7 +361,17 @@ class JourneeParser:
                     "direction": None, "id_parcours": None, "detour": False,
                 }
                 i += 1
-                if i < len(block_lines) and "Départ et arrivé" in block_lines[i]:
+                # Le portail insère parfois les instructions du G-D (ex.
+                # « 53753 - [V] Pierre-De Coubertin, … ») entre l'en-tête
+                # et « Départ et arrivé : ». On avance jusqu'au libellé pour
+                # que l'import automatique et le collage manuel donnent les
+                # mêmes heures début et fin. Sans le libellé, aucun arrêt.
+                while (
+                    i < len(block_lines)
+                    and "Départ et arrivé" not in block_lines[i]
+                ):
+                    i += 1
+                if i < len(block_lines):
                     i += 1
                 if i < len(block_lines):
                     trajet["depart"], i = _lire_arret(block_lines, i)
