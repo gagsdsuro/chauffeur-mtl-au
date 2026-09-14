@@ -12,7 +12,7 @@ from typing import Any
 import streamlit as st
 
 # ── Clés transverses partagées entre pages ─────────────────────────────────────
-JOURNEE_DATE = "journee_date"             # écrit par « Ma journée », lu par « Rapports »
+JOURNEE_DATE = "journee_date"             # journée sélectionnée dans « Ma journée »
 PREP_DATE = "prep_date"                   # « Préparation d'une journée »
 PREP_FLASH = "prep_flash"                 # message éphémère affiché au rerun (page 2)
 OPERATION_PORTAIL = "operation_portail"   # reprise après expiration de session (pages 1 et 2)

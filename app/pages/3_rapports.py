@@ -80,21 +80,17 @@ with rpt_tabs[1]:
         "Chaque groupe (ligne · direction · ID parcours) est traité séparément."
     )
 
-    # Journée active partagée (choisie dans 🏠 Ma journée)
-    v2_date   = st.session_state.get("journee_date")
-    v2_j_path = (
-        chemin_journee(v2_date) if v2_date else None
-    )
+    v2_date = st.date_input(
+        "Date du rapport", value=date.today(), key="rpt_v2_date"
+    ).isoformat()
+    v2_j_path = chemin_journee(v2_date)
 
-    if not (v2_j_path and v2_j_path.exists()):
+    if not v2_j_path.exists():
         st.info(
-            "Aucune journée active. Sélectionnez-en une dans **🏠 Ma journée** "
-            "(ou importez-en une dans **📅 Journée**)."
+            f"Aucune journée importée pour le {v2_date}. "
+            "Importez-la dans **Préparation d'une journée**."
         )
     else:
-        st.caption(
-            f"Journée active : **{v2_date}** — changer dans **🏠 Ma journée**."
-        )
         try:
             v2_j_data = charger_journee(v2_j_path)
         except Exception as e:
