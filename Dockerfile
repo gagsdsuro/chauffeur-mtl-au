@@ -1,4 +1,5 @@
-FROM python:3.12-slim
+# Mettre à jour le tag ET l'empreinte lors d'une mise à jour de Python.
+FROM python:3.12.14-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea
 
 WORKDIR /app
 
@@ -9,7 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --no-cache-dir --require-hashes -r requirements.txt \
+    && python -m pip check
 
 # Utilisateur non-root aligné sur l'hôte (UID/GID configurables au build).
 # Évite que les fichiers écrits dans le volume ./data appartiennent à root.

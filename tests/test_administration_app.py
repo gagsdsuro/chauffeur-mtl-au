@@ -8,14 +8,16 @@ Teste l'app Streamlit (AppTest) :
   et le révoquer ;
 * la barre latérale permet la déconnexion et le changement de son PIN.
 
-Non hermétique : écrit/supprime `data/users.json` (réel, gitignoré) et nettoie
-après coup. Exige streamlit installé.
+Hermétique : comptes et données personnelles dans un répertoire temporaire.
+Exige streamlit installé.
 
 Usage : python3 tests/test_administration_app.py   (code de sortie 0 si tout passe)
 """
 import os
 import sys
+import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
 for _var in ("CHAUFFEUR_MATRICULE", "CHAUFFEUR_MODE_STRICT"):
@@ -25,7 +27,7 @@ sys.path.insert(0, str(ROOT / "app"))
 
 from streamlit.testing.v1 import AppTest  # noqa: E402
 
-from chauffeur import auth  # noqa: E402
+from chauffeur import auth, depots  # noqa: E402
 
 ADMIN, CHA1, CHA2 = "43863", "20002", "30003"
 
@@ -108,14 +110,12 @@ def suite() -> list[str]:
 
 
 def main() -> int:
-    users = auth.chemin_users()
-    users.unlink(missing_ok=True)
-    auth.creer_compte(ADMIN, "1234", "Denis")
-    auth.creer_compte(CHA1, "2222", "Geneviève")
-    try:
-        echecs = suite()
-    finally:
-        users.unlink(missing_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        with patch.object(auth, "DATA_DIR", Path(tmp)), \
+                patch.object(depots, "DATA_DIR", Path(tmp)):
+            auth.creer_compte(ADMIN, "1234", "Denis")
+            auth.creer_compte(CHA1, "2222", "Geneviève")
+            echecs = suite()
 
     if echecs:
         print("✗ test_administration_app")

@@ -165,10 +165,12 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 * [ ] **P3** — Identifier les informations actuellement difficiles à consulter dans l'interface.
   * "Fichiers"/"Gestion des fichiers"/"Journée" déplacer les sections "Aperçu" et "Export" devant la liste de fichier ou mettre la liste de fichier dans une section refermable.
 * [x] **P1** - Créer un tableau résumé des durées à partir des informations de la journée. Voir le fichier [fonction-résumé des durées.md](<docs/fonction-résumé des durées.md>)
-* [ ] **P2** - [Ma journée](app/pages/1_ma_journee.py) ajuster le sélecteur de date de manière à permettre la saisie d'une date autres que ceux de la liste déroulante. Ceci permettant de visualiser des journées antérieurs.
+* [x] **P2** - [Ma journée](app/pages/1_ma_journee.py) ajuster le sélecteur de date de manière à permettre la saisie manuelle d'une date différente que ceux de la liste déroulante. Ceci permettant de visualiser des journées antérieurs.
 
 # 13. Dette technique / investigations
 
+* [x] **P2** — Verrouiller le déploiement sur Python 3.12.14 / Streamlit 1.64.0, avec dépendances transitives et empreintes ; 32/32 suites réussies en conteneur. Voir [la procédure de maintenance](docs/dependances.md).
+* [ ] **P2** — Effectuer la recette navigateur/mobile de l'image Streamlit 1.64.0 avant déploiement : connexion, navigation, date libre, notes d'autobus, imports, rapports et renouvellement de session portail.
 * [ ] **P2** — Déterminer si Python 3.14 doit devenir la version officiellement supportée hors Docker.
 * [ ] **P2** — Déterminer si Python 3.12 doit également être utilisé pour le développement local afin d'assurer une parité stricte avec Docker.
 * [ ] **P3** — Déterminer si le projet doit rester basé sur `requirements.txt` ou évoluer vers `pyproject.toml`.

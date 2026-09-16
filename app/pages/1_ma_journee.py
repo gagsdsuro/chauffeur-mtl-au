@@ -26,6 +26,7 @@ from app.components.session_dialog import (
 from app.state import (
     DB_REFRESH_REPORT,
     DB_REFRESH_RESULT,
+    JOURNEE_DATE,
     effacer_operation_portail,
     operation_portail,
 )
@@ -77,32 +78,48 @@ RAPPORTS_DIR = bootstrap.rapports_dir()
 st.header("Ma journée")
 
 _journees_fenetre = lister_journees_fenetre(date.today()) if JOURNEES_DIR.exists() else []
-db_j_files = [path for _, path in _journees_fenetre]
+db_j_labels = [jour.isoformat() for jour, _ in _journees_fenetre]
 
-if not db_j_files:
+# ── Sélecteur UNIQUE : journées proches ou date saisie manuellement ──────
+_today_label = date.today().isoformat()
+_default_idx = (
+    db_j_labels.index(_today_label)
+    if _today_label in db_j_labels
+    else min(
+        range(len(db_j_labels)),
+        key=lambda i: abs((date.fromisoformat(db_j_labels[i]) - date.today()).days),
+        default=None,
+    )
+)
+db_date_str = st.selectbox(
+    "Journée", db_j_labels, index=_default_idx, key=JOURNEE_DATE,
+    accept_new_options=True,
+    placeholder="Choisir ou saisir une date (AAAA-MM-JJ)",
+    help="Pour consulter une journée antérieure, saisissez sa date au format "
+         "AAAA-MM-JJ (ex. 2026-08-23), puis appuyez sur Entrée.",
+)
+
+if db_date_str is None:
     st.info(
-        "Aucune journée enregistrée. "
-        "Importez-en une dans **🧰 Préparation d'une journée**."
+        "Choisissez une journée ou saisissez une date au format AAAA-MM-JJ. "
+        "La liste propose les journées enregistrées entre J−2 et J+5."
     )
 else:
-    # ── Sélecteur UNIQUE de journée (source partagée journee_date) ─────────
-    db_j_labels = [p.stem.replace("journee-", "") for p in db_j_files]
-    # Purge d'une sélection périmée (journée supprimée entre deux reruns)
-    if st.session_state.get("journee_date") not in db_j_labels:
-        st.session_state.pop("journee_date", None)
-    _today_label = date.today().isoformat()
-    _default_idx = (
-        db_j_labels.index(_today_label)
-        if _today_label in db_j_labels
-        else min(
-            range(len(db_j_labels)),
-            key=lambda i: abs((date.fromisoformat(db_j_labels[i]) - date.today()).days),
+    try:
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", db_date_str):
+            raise ValueError
+        date.fromisoformat(db_date_str)
+    except ValueError:
+        st.warning("Saisissez une date valide au format AAAA-MM-JJ (ex. 2026-08-23).")
+        st.stop()
+
+    db_j_path = chemin_journee(db_date_str)
+    if not db_j_path.exists():
+        st.info(
+            f"Aucune journée enregistrée pour le {db_date_str}. "
+            "Importez-la dans **🧰 Préparation d'une journée**."
         )
-    )
-    db_date_str = st.selectbox(
-        "Journée", db_j_labels, index=_default_idx, key="journee_date"
-    )
-    db_j_path   = chemin_journee(db_date_str)
+        st.stop()
 
     try:
         db_j_data = charger_journee(db_j_path)
@@ -328,8 +345,10 @@ else:
 
                 if current_bus:
                     note_v = note_voiture(current_bus)
-                    note_v_key  = f"db_note_voiture_edit_{db_date_str}_{idx}"
-                    note_v_save = f"db_note_voiture_save_{db_date_str}_{idx}"
+                    # L'état du champ doit suivre le bus, même si Streamlit
+                    # conserve les widgets dont seuls le libellé et la valeur changent.
+                    note_v_key  = f"db_note_voiture_edit_{db_date_str}_{idx}_{current_bus}"
+                    note_v_save = f"db_note_voiture_save_{db_date_str}_{idx}_{current_bus}"
                     _nvcol, _nvscol = st.columns([5, 1])
                     with _nvcol:
                         st.text_area(

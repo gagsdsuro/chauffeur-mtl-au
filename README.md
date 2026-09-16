@@ -47,13 +47,17 @@ adapter se trouvent dans [`docs/gabarits/`](docs/gabarits/).
 
 ## Installation
 
-L'image de production est basée sur Python 3.12 (`Dockerfile`). Les dépendances
-sont listées dans `requirements.txt` (même liste qu'installe le Dockerfile) :
+La référence de déploiement est **Python 3.12.14 et Streamlit 1.64.0**.
+Le Dockerfile fixe l'image Python par son empreinte. Les dépendances directes
+sont déclarées dans `requirements.in` ; `requirements.txt` est généré sous
+Python 3.12 et verrouille toutes les dépendances avec leurs empreintes.
+Utiliser Python 3.12 pour reproduire cet environnement en développement :
 
 ```bash
-sudo apt install python3-pip
-python3 -m venv .venv && source .venv/bin/activate   # venv recommandé
-pip install -r requirements.txt
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --require-hashes -r requirements.txt
+python -m pip check
 ```
 
 Sur Debian/Ubuntu avec le Python système, pip exige l'option
@@ -61,7 +65,7 @@ Sur Debian/Ubuntu avec le Python système, pip exige l'option
 dépôt, ex. `gen_rapport.py`) :
 
 ```bash
-pip install --break-system-packages -r requirements.txt
+python3.12 -m pip install --break-system-packages --require-hashes -r requirements.txt
 ```
 
 | Paquet | Requis par |
@@ -73,6 +77,8 @@ pip install --break-system-packages -r requirements.txt
 
 Remarques :
 
+- Ne pas modifier `requirements.txt` à la main. La [procédure de mise à jour](docs/dependances.md)
+  décrit la génération, les tests et la revue mensuelle des nouvelles versions.
 - Le flux GTFS-RT est décodé par un analyseur wire-format minimal
   (`chauffeur/gtfs_rt.py`) : **aucune dépendance protobuf n'est requise**.
 - `pandas` (utilisé ponctuellement par l'app) est installé transitivement via

@@ -11,8 +11,8 @@ Les répertoires de journaux sont chauffés sur des répertoires temporaires
 (`chauffeur.journal.LOG_DIR_COMMUN` et sa résolution du répertoire personnel),
 donc le test n'écrit jamais dans `data/`.
 
-Non hermétique sur `data/users.json` (réel, gitignoré) : son contenu initial
-est **restauré** après le test, pas seulement détruit. Exige streamlit installé.
+Les comptes sont également créés dans le répertoire temporaire.
+Exige streamlit installé.
 
 Usage : python3 tests/test_logs_app.py   (code de sortie 0 si tout passe)
 """
@@ -20,6 +20,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
 for _var in ("CHAUFFEUR_MATRICULE", "CHAUFFEUR_MODE_STRICT"):
@@ -105,9 +106,6 @@ def suite(commun: Path, perso: Path, vide_commun: Path, vide_perso: Path) -> lis
 
 
 if __name__ == "__main__":
-    users = auth.chemin_users()
-    contenu_initial = users.read_bytes() if users.exists() else None
-
     with tempfile.TemporaryDirectory() as tmp:
         base = Path(tmp)
         commun = base / "commun"
@@ -123,14 +121,9 @@ if __name__ == "__main__":
         for d in (vide_commun, vide_perso):
             d.mkdir()
 
-        auth.creer_compte(MATRICULE, PIN, "Roxanne")
-        try:
+        with patch.object(auth, "DATA_DIR", base):
+            auth.creer_compte(MATRICULE, PIN, "Roxanne")
             echecs = suite(commun, perso, vide_commun, vide_perso)
-        finally:
-            if contenu_initial is None:
-                users.unlink(missing_ok=True)
-            else:
-                users.write_bytes(contenu_initial)
 
     if echecs:
         print("✗ test_logs_app")

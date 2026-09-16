@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Résumé des durées : rendu et page Streamlit, avec fichiers temporaires.
+"""Ma journée : résumé des durées et notes, avec fichiers temporaires.
 
 Usage : python3 tests/test_durees_app.py
 Aucun accès aux comptes, journées, notes, PDF ou cookies personnels.
@@ -156,6 +156,51 @@ class TestPage(unittest.TestCase):
         self.assertEqual(indicateurs(at)["Prise fin"], "—")
         self.assertFalse(tableau(at))
         self.assertTrue(any("Aucune pièce de travail à résumer" in i.value for i in at.info))
+
+    def test_note_bus_suit_changement_autobus(self):
+        j = journee_475()
+        j["pieces"][0]["numero_autobus"] = "38013"
+        self.ecrire(j)
+
+        for note_initiale in ("Note du bus B", ""):
+            with self.subTest(bus_cible_avec_note=bool(note_initiale)):
+                notes.sauvegarder_note_voiture("38013", "Note du bus A")
+                notes.sauvegarder_note_voiture("39999", note_initiale)
+                note_a = notes.note_voiture("38013")
+                note_b = notes.note_voiture("39999")
+                at = self.ouvrir()
+
+                def champ_note(bus):
+                    return next(c for c in at.text_area if c.label == f"Note — bus {bus}")
+
+                def enregistrer_note():
+                    next(b for b in at.button
+                         if b.proto.help == "Enregistrer la note du bus").click().run()
+                    self.assertFalse(at.exception)
+
+                self.assertEqual(champ_note("38013").value, "Note du bus A")
+                champ_note("38013").set_value("Brouillon du bus A").run()
+                at.text_input(key="db_bus_edit_2026-09-10_0").set_value("39999").run()
+                self.assertFalse(at.exception)
+                self.assertEqual(champ_note("39999").value, note_initiale)
+
+                # Un clic sans édition ne doit pas copier la note de l'autre bus.
+                enregistrer_note()
+                self.assertEqual(notes.note_voiture("38013"), note_a)
+                self.assertEqual(notes.note_voiture("39999"), note_b)
+
+                champ_note("39999").set_value("Note mise à jour du bus B").run()
+                enregistrer_note()
+                self.assertEqual(notes.note_voiture("39999")["note"], "Note mise à jour du bus B")
+                self.assertEqual(notes.note_voiture("38013"), note_a)
+
+                at.text_input(key="db_bus_edit_2026-09-10_0").set_value("38013").run()
+                self.assertFalse(at.exception)
+                self.assertEqual(champ_note("38013").value, "Note du bus A")
+                at.text_input(key="db_bus_edit_2026-09-10_0").set_value("39999").run()
+                self.assertFalse(at.exception)
+                self.assertEqual(champ_note("39999").value, "Note mise à jour du bus B")
+                self.assertEqual(json.loads(self.chemin(j["date"]).read_text()), j)
 
 
 if __name__ == "__main__":
