@@ -34,17 +34,17 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
   * Vérifier la possibilité de passer à la version 3.14 dans le Dokerfile
 
-* [ ] **P2** — Vérifier si les versions minimales de `requirements.txt` sont encore appropriées.
+* [ ] **P3** — Vérifier si les versions minimales de `requirements.txt` sont encore appropriées.
 
-* [ ] **P2** — Évaluer l'ajout d'un `pyproject.toml` pour moderniser la gestion du projet Python.
+* [ ] **P3** — Évaluer l'ajout d'un `pyproject.toml` pour moderniser la gestion du projet Python.
 
-* [ ] **P3** - Évaluer le message au runtime: `st.components.v1.html` will be removed after 2026-06-01. ... Please replace `st.components.v1.html` with `st.iframe`.
+* [ ] **P2** - Évaluer le message au runtime: `st.components.v1.html` will be removed after 2026-06-01. ... Please replace `st.components.v1.html` with `st.iframe`.
 
 ## Code
 
-* [ ] **P2** — Uniformiser progressivement le typage Python.
-* [ ] **P2** — Évaluer l'utilisation de `ruff` pour le linting et le formatage.
-* [ ] **P3** — Évaluer l'utilisation de `mypy` ou d'un autre type checker.
+* [ ] **P3** — Uniformiser progressivement le typage Python.
+* [ ] **P3** — Évaluer l'utilisation de `ruff` pour le linting et le formatage.
+* [ ] **P4** — Évaluer l'utilisation de `mypy` ou d'un autre type checker.
 
 ---
 
@@ -52,19 +52,19 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 ## Suite de tests
 
-* [ ] **P1** — Vérifier que `python tests/run_all.py` passe complètement dans `.venv`.
+* [ ] **P2** — Vérifier que `python tests/run_all.py` passe complètement dans `.venv`.
 
 ## Automatisation
 
-* [ ] **P2** — Évaluer l'intérêt de migrer tout ou partie de la suite actuelle vers `pytest`.
+* [ ] **P3** — Évaluer l'intérêt de migrer tout ou partie de la suite actuelle vers `pytest`.
 
 ---
 
 # 3. Application Streamlit
 
-* [ ] **P1** — Améliorer les messages d'erreur affichés à l'utilisateur.
-* [ ] **P2** — Vérifier les temps de chargement lorsque `data/` devient volumineux.
-* [ ] **P2** — Évaluer la mise en cache des données calculées.
+* [ ] **P2** — Améliorer les messages d'erreur affichés à l'utilisateur.
+* [ ] **P3** — Vérifier les temps de chargement lorsque `data/` devient volumineux.
+* [ ] **P3** — Évaluer la mise en cache des données calculées.
 
 ---
 
@@ -72,13 +72,13 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 ## GTFS / GTFS-RT
 
-* [ ] **P2** — Vérifier la conservation des données historiques.
-* [ ] **P2** — Définir une politique de nettoyage et d'archivage des anciennes données.
+* [ ] **P3** — Vérifier la conservation des données historiques.
+* [ ] **P3** — Définir une politique de nettoyage et d'archivage des anciennes données.
 
 ## Données métier
 
-* [ ] **P2** — Ajouter des validations automatiques des fichiers JSON importants.
-* [ ] **P2** — Évaluer un schéma de validation JSON pour les formats stables.
+* [ ] **P3** — Ajouter des validations automatiques des fichiers JSON importants.
+* [ ] **P3** — Évaluer un schéma de validation JSON pour les formats stables.
 
 ---
 
@@ -94,7 +94,7 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
   * Séparer le commentaire, les arrêts annulés ou concernés et les arrêts ajoutés.
   * Répéter l'en-tête du tableau et permettre le fractionnement des événements longs.
 
-* [ ] **P3** - "Rapport journalier" et "Rapport V2": Remplacer le sélecteur de date par une liste [j-5, aujourd'hui, j+7], n'afficher que les date où un fichier journée json est présent. Par défaut, la date du jour ou la journée la plus proche valide.
+* [ ] **P4** - "Rapport journalier" et "Rapport V2": Remplacer le sélecteur de date par une liste [j-5, aujourd'hui, j+7], n'afficher que les date où un fichier journée json est présent. Par défaut, la date du jour ou la journée la plus proche valide.
 
 ## Qualité
 
@@ -114,25 +114,25 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
   * Respecter l'option CLI qui masque les détails et l'encadrement historique des journaux.
 
 * [x] **P1** — Préserver les retours à la ligne des G-D lors de l'import, avec repli compatible pour les anciennes chaînes aplaties.
-* [ ] **P2** — Uniformiser les conventions de ligne de commande.
-* [ ] **P1** — Ajouter une gestion d'erreur cohérente.
-* [ ] **P3** — Adapter `parse_journee.py` au format multiligne produit par un copier-coller depuis Firefox, si ce navigateur devient officiellement pris en charge par `employe.stm.info`.
+* [ ] **P3** — Uniformiser les conventions de ligne de commande.
+* [ ] **P2** — Ajouter une gestion d'erreur cohérente.
+* [ ] **P4** — Adapter `parse_journee.py` au format multiligne produit par un copier-coller depuis Firefox, si ce navigateur devient officiellement pris en charge par `employe.stm.info`.
 
 ---
 
 # 7. Gestion des données générées
 
-* [ ] **P1** — Définir clairement quelles données sous `data/` sont des sources.
-* [ ] **P1** — Définir quelles données sont générées par les scripts.
-* [ ] **P2** — Documenter la stratégie d'archivage des données historiques.
+* [ ] **P2** — Définir clairement quelles données sous `data/` sont des sources.
+* [ ] **P2** — Définir quelles données sont générées par les scripts.
+* [ ] **P3** — Documenter la stratégie d'archivage des données historiques.
 
 ---
 
 # 8. Docker / déploiement
 
-* [ ] **P1** — Vérifier le healthcheck Streamlit.
-* [ ] **P1** — Documenter les variables d'environnement nécessaires.
-* [ ] **P1** — Comparer le comportement local Python 3.14 avec Python 3.12 dans Docker.
+* [ ] **P2** — Vérifier le healthcheck Streamlit.
+* [ ] **P2** — Documenter les variables d'environnement nécessaires.
+* [ ] **P2** — Comparer le comportement local Python 3.14 avec Python 3.12 dans Docker.
 
 ---
 
@@ -144,8 +144,8 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 # 10. Documentation
 
 
-* [x] **P2** — Documenter le format réel des fichiers d'événements et les ID dupliqués légitimes.
-* [ ] **P2** — Documenter les formats de données importants.
+* [x] **P3** — Documenter le format réel des fichiers d'événements et les ID dupliqués légitimes.
+* [ ] **P3** — Documenter les formats de données importants.
 
 ---
 
@@ -156,23 +156,22 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 # 12. Améliorations fonctionnelles
 
-* [-] **P2** — Identifier les traitements manuels pouvant être automatisés.
+* [-] **P3** — Identifier les traitements manuels pouvant être automatisés.
   * Préparation de la journée
     * Évaluer la faisabilité d'automatiser la lecture des G-D manquants ou expirés à partir d'une session valide. Garder la version manuel de la même manière que pour les évènements.
     * Évaluer la faisabilité d'automatiser la lecture d'une journée de travail à partir d'une session valide. Garder la version manuel de la même manière que pour les évènements. Prévoir les variantes pour aujourd'hui, demain, après-demain, Lundi le jj, Mardi le jj, etc. Prévoir la variante avec TS (temps supplémentaire) Voir le fichier ci-joint du 22 août
     * Repenser le workflow de l'import des CA
       * Récupérer, annoter, Imprimer
-* [ ] **P2** — Identifier les informations actuellement difficiles à consulter dans l'interface.
+* [ ] **P3** — Identifier les informations actuellement difficiles à consulter dans l'interface.
   * "Fichiers"/"Gestion des fichiers"/"Journée" déplacer les sections "Aperçu" et "Export" devant la liste de fichier ou mettre la liste de fichier dans une section refermable.
-* [ ] **P2** - Créer un tableau des durées de trajet, battement, pause à partir des informations de la journée et des données GTFS
-
----
+* [x] **P1** - Créer un tableau résumé des durées à partir des informations de la journée. Voir le fichier [fonction-résumé des durées.md](<docs/fonction-résumé des durées.md>)
+* [ ] **P2** - [Ma journée](app/pages/1_ma_journee.py) ajuster le sélecteur de date de manière à permettre la saisie d'une date autres que ceux de la liste déroulante. Ceci permettant de visualiser des journées antérieurs.
 
 # 13. Dette technique / investigations
 
-* [ ] **P1** — Déterminer si Python 3.14 doit devenir la version officiellement supportée hors Docker.
-* [ ] **P1** — Déterminer si Python 3.12 doit également être utilisé pour le développement local afin d'assurer une parité stricte avec Docker.
-* [ ] **P2** — Déterminer si le projet doit rester basé sur `requirements.txt` ou évoluer vers `pyproject.toml`.
+* [ ] **P2** — Déterminer si Python 3.14 doit devenir la version officiellement supportée hors Docker.
+* [ ] **P2** — Déterminer si Python 3.12 doit également être utilisé pour le développement local afin d'assurer une parité stricte avec Docker.
+* [ ] **P3** — Déterminer si le projet doit rester basé sur `requirements.txt` ou évoluer vers `pyproject.toml`.
 
 ---
 
@@ -227,7 +226,7 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 * [x] **P1** — Mode strict `CHAUFFEUR_MODE_STRICT=1` (opt-in explicite, jamais par défaut) : plus de repli legacy, erreur claire sans matricule.
 
-* [x] **P2** — Phase 4 : page d'administration et rôles (auto-gestion stricte).
+* [x] **P3** — Phase 4 : page d'administration et rôles (auto-gestion stricte).
 
   * Auto-gestion stricte retenue : seul un Chauffeur-admin promeut un Chauffeur ; l'autorité d'un admin n'est modifiable que par lui-même (auto-destitution refusée pour le dernier admin) ; un admin n'est jamais révocable par autrui ni par soi. (`chauffeur.auth.changer_role`/`revoquer_compte`.)
   * Chauffeur : changement de son propre PIN en autonomie (ancien requis, barre latérale) ; l'admin réinitialise sans l'ancien (`reinitialiser_pin`) et déverrouille (`deverrouiller_compte`).

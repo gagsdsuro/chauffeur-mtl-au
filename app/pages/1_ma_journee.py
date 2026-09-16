@@ -18,6 +18,7 @@ import streamlit.components.v1 as components
 from gen_rapport_v2 import generer_rapport as _gen_v2
 
 from app.components.result_display import _afficher_resultat_rafraichissement
+from app.components.resume_durees import afficher_resume_durees
 from app.components.session_dialog import (
     declencher_dialog_si_requis,
     demander_renouvellement,
@@ -42,7 +43,7 @@ from chauffeur.depots import (
     lister_journees_fenetre,
     sauvegarder_journee,
 )
-from chauffeur.effectif import bornes_quart
+from chauffeur.durees import resumer_durees
 from chauffeur.evenements import applicable_a_la_plage, trier_evenements_par_arrets
 from chauffeur.gd import event_applicable_to_parcours
 from chauffeur.gtfs_rt import find_vehicle, parse_vehicle_positions
@@ -207,17 +208,14 @@ else:
 
     # ── Métriques résumé ──────────────────────────────────────────────────
     db_pieces = db_j_data.get("pieces", [])
-    db_debut_all = [p.get("debut", "") for p in db_pieces if p.get("debut")]
-    db_fin_all   = [p.get("fin",   "") for p in db_pieces if p.get("fin")]
-    db_bornes_deb = bornes_quart(db_debut_all, date.fromisoformat(db_date_str))
-    db_bornes_fin = bornes_quart(db_fin_all,   date.fromisoformat(db_date_str))
+    db_resume_durees = resumer_durees(db_j_data)
 
     mc1, mc2, mc3, mc4, mc5 = st.columns(5)
     mc1.metric("Journée n°",      db_j_data.get("journee_numero", "–"))
     mc2.metric("Garage",          db_j_data.get("garage",         "–"))
     mc3.metric("Temps travaillé", db_j_data.get("temps_travaille","–"))
-    mc4.metric("Prise début",      db_bornes_deb[0] if db_bornes_deb else "–")
-    mc5.metric("Prise fin",       db_bornes_fin[1] if db_bornes_fin else "–")
+    mc4.metric("Prise début",     db_resume_durees.prise_debut or "—")
+    mc5.metric("Prise fin",       db_resume_durees.prise_fin or "—")
 
     # ── Notes (carte agent + journée) ─────────────────────────────────────
     nn1, nn2 = st.columns(2)
@@ -279,6 +277,7 @@ else:
     st.divider()
 
     # ── Pièces de travail (consultation « En route ») ─────────────────────
+    afficher_resume_durees(db_resume_durees)
     st.subheader("Pièces de travail")
 
     for idx, piece in enumerate(db_pieces):
