@@ -199,10 +199,10 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 L'audit consigne déjà 32/32 suites réussies sous Python 3.12.14 / Streamlit 1.64.0, dont Logs sans adaptation du pilote AppTest : aucune tâche spécifique à Streamlit 1.50 n'est retenue. Ces résultats Docker n'ont pas été rejoués lors de cette réévaluation. La recette navigateur/mobile reste à exécuter ; la rédaction de sa fiche ne vaut pas validation.
 
 * [x] **P2** — Verrouiller le déploiement sur Python 3.12.14 / Streamlit 1.64.0, avec dépendances transitives et empreintes ; 32/32 suites réussies en conteneur. Voir [la procédure de maintenance](docs/dependances.md).
-* [-] **P1** — Exécuter la [recette navigateur/mobile](docs/recette-navigateur-mobile.md) de l'image Streamlit 1.64.0 avant déploiement.
+* [x] **P1** — Exécuter la [recette navigateur/mobile](docs/recette-navigateur-mobile.md) de l'image Streamlit 1.64.0 avant déploiement.
 
   * Entrée réouverte après confirmation que la recette n'a pas été exécutée ; priorité relevée pour valider les interactions et le rendu que les tests automatisés ne couvrent pas.
-  * Première exécution les 16–17 septembre : R01–R04 et R06 réussis sur les deux appareils. R05/R07 à rejouer après correction du chemin personnel du rapport journalier et du fond des rapports HTML. Voir le [compte rendu](docs/recettes/2026-09-16-dialogue-session.md).
+  * Première exécution les 16–17 septembre : R01–R04 et R06 réussis sur les deux appareils. R05/R07 rejoués avec succès le 17 septembre après correction du chemin personnel du rapport journalier et du fond des rapports HTML ; recette validée sur `chauffeur-stm:recette-rapports` (code `d49224e`). Voir le [compte rendu](docs/recettes/2026-09-16-dialogue-session.md).
   * Couvrir R01–R07 : connexion/déconnexion, isolation des comptes, navigation, date libre et clavier tactile, notes d'autobus, imports de journée et de PDF, aperçus et téléchargements des rapports, renouvellement de session portail et reprise d'opération.
   * Vérifier le rendu CSS sur ordinateur et téléphone : marges, en-tête, colonnes, boutons, thèmes clair/sombre et orientations portrait/paysage.
   * Conserver un compte rendu daté avec l'image, les versions et les appareils testés ; distinguer les statuts non exécuté, réussi, échoué et bloqué. Sans accès au portail, déclarer le scénario concerné bloqué ; aucune vérification non exécutée ou bloquée ne vaut réussite.

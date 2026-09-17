@@ -55,8 +55,8 @@ vérifie les fichiers sauvegardés et la demande de reprise.
 - Création des comptes : réalisée par l’utilisateur.
 - R06 : échec de la validation/reprise signalé pendant la préparation.
 
-La recette n’est pas encore validée. Le cookie du dossier commun n’a pas été
-réattribué automatiquement : son compte propriétaire ne peut être déduit.
+La recette est validée après reprise de R05 et R07 le 17 septembre 2026 par GD.
+Le cookie du dossier commun n’a pas été réattribué automatiquement.
 
 | Scénario | Ordinateur | Téléphone | Observations / anomalie |
 | --- | --- | --- | --- |
@@ -64,13 +64,13 @@ réattribué automatiquement : son compte propriétaire ne peut être déduit.
 | R02 — Dates | **réussi** | **réussi** | |
 | R03 — Notes d'autobus | **réussi** | **réussi** | |
 | R04 — Imports | **réussi** | **réussi** | |
-| R05 — Rapports | **réussi** | **réussi** |Rapport journalier Erreur : Aucune journée trouvée dans /app/data/journees Fichier attendu : journee-2026-09-17.json. La section détour du rapport V2 (Rapport v2 — Aperçu(rapport-v2-2026-09-17-standard.html)) avec le thème "Dark" est pratiquement invisible (noir sur noir).  Même chose avec le rapport journalier (Aperçu — 94 Sud ID 7) par exemple et la colonne "Arrêt/Détour". C'est ok par contre avec le thème "Light". Les 2 anomalies corrigés et testés. |
+| R05 — Rapports | **réussi** | **réussi** |Rapport journalier Erreur : Aucune journée trouvée dans /app/data/journees Fichier attendu : journee-2026-09-17.json. La section détour du rapport V2 (Rapport v2 — Aperçu(rapport-v2-2026-09-17-standard.html)) avec le thème "Dark" est pratiquement invisible (noir sur noir).  Même chose avec le rapport journalier (Aperçu — 94 Sud ID 7) par exemple et la colonne "Arrêt/Détour". C'est ok par contre avec le thème "Light". Anomalies de la première exécution : toutes deux corrigées et retestées avec succès le 17 septembre. |
 | R06 — Portail | **réussi** | **réussi** | |
 | R07 — Ergonomie mobile | sans objet | **réussi** |  |
 
 - Date et personne ayant effectué l'essai : 16 et 17 septembre 2026 - GD
-- Commit du code testé et modifications locales éventuelles : pas encore de commit
-- Image Docker (tag et identifiant/digest) :   chauffeur-stm:recette-7db57ea
+- Commit du code testé : `d49224e` (correctifs présents dans l’image avant leur commit)
+- Image Docker finale : `chauffeur-stm:recette-rapports` ; identifiant consigné ci-dessous
 - Versions Python / Streamlit : Streamlit 1.64.0 Python 3.12.14
 - Ordinateur : système, navigateur et version : Windows 11, Chrome 152.0.7977.84
 - Téléphone : modèle, système, navigateur et version : Pixel 8, Android 17, Firefox 155.0.1
@@ -79,7 +79,9 @@ Données de référence: data/reference/periodes_stm_2026.json
 
 ## Correctifs après la première exécution — 17 septembre 2026
 
-Les résultats ci-dessus restent ceux de la première exécution.
+Le tableau ci-dessus présente les résultats finaux après reprise. R05 et R07
+étaient en échec lors de la première exécution ; les anomalies sont conservées
+dans les observations pour l’historique.
 
 - Rapport journalier : la page transmet désormais explicitement le chemin de
   la journée du compte connecté au sous-processus de génération. Le test
@@ -97,7 +99,12 @@ Les résultats ci-dessus restent ceux de la première exécution.
   dont 11 tests d'interface. Instance remplacée sur le port 8502, données
   conservées et sonde HTTP `ok`.
 
-**À rejouer : R05 et R07**, sur ordinateur et téléphone, thèmes clair et sombre.
-Régénérer les rapports HTML complets et par trajet : les fichiers déjà générés
-conservent leur ancien style. Les résultats visuels de cette nouvelle image
-restent à renseigner ; ils ne sont pas couverts par les tests automatisés.
+**Reprise terminée : R05 et R07 réussis**, selon les essais manuels de GD
+consignés le 17 septembre 2026. Les deux anomalies de R05 sont confirmées
+corrigées ; R07 est réussi sur téléphone.
+
+**Décision de recette :** validée pour l’image `chauffeur-stm:recette-rapports`
+identifiée ci-dessus. Aucun blocage ne reste signalé dans cette recette.
+Déployer cette même image sans reconstruction, après sauvegarde des données
+et conservation de l’image précédente. Cette validation ne constitue pas
+un déploiement en production.
