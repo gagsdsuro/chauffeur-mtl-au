@@ -310,6 +310,36 @@ class TestInterface(unittest.TestCase):
         self.assertTrue(any(d.proto.label == "⬇️ Télécharger (PDF)" and d.proto.url
                             for d in at.get("download_button")))
 
+    def test_rapport_journalier_utilise_la_journee_du_compte(self):
+        # Vrai sous-processus, dépôt isolé et journée homonyme dans le dossier
+        # historique : le rapport doit choisir celle du compte connecté.
+        for dossier in ("scripts", "chauffeur"):
+            shutil.copytree(ROOT / dossier, self.base / dossier,
+                            ignore=shutil.ignore_patterns("__pycache__"))
+        self.contexte.enter_context(patch.object(bootstrap, "SCRIPTS_DIR", self.base / "scripts"))
+        for matricule in ("41001", "41002"):
+            with self.subTest(matricule=matricule):
+                auth.creer_compte(matricule, "1111", "Compte de recette")
+                prive = self.data / matricule / "journees"
+                prive.mkdir(parents=True)
+                jour = journee_475()
+                jour["garage"] = f"Garage du compte {matricule}"
+                (prive / "journee-2026-09-10.json").write_text(json.dumps(jour))
+                at = self.ouvrir()
+                at.text_input(key="login_matricule").set_value(matricule)
+                at.text_input(key="login_pin").set_value("1111")
+                self.champ(at, "button", "Se connecter").click().run()
+                at.run()
+                self.changer_page(at, "3_rapports")
+                at.date_input(key="rj_date").set_value(date(2026, 9, 10)).run()
+                at.button(key="rj_btn").click().run()
+                self.sans_exception(at)
+                self.assertFalse(at.error)
+                self.assertTrue(any(f"Garage du compte {matricule}" in c.value for c in at.code))
+                pdf = self.data / matricule / "rapports/rapport-2026-09-10.pdf"
+                self.assertTrue(pdf.read_bytes().startswith(b"%PDF"))
+                self.assertFalse((self.rapports / pdf.name).exists())
+
 
 if __name__ == "__main__":
     unittest.main()

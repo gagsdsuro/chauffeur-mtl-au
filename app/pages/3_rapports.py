@@ -43,6 +43,7 @@ with rpt_tabs[0]:
         cmd = [
             sys.executable, str(SCRIPTS_DIR / "gen_rapport.py"),
             "--date", str(rj_date),
+            "--journee", str(chemin_journee(str(rj_date))),
             "--output", str(rj_out),
         ]
         with st.spinner("Génération en cours…"):
@@ -60,7 +61,8 @@ with rpt_tabs[0]:
         else:
             st.error(
                 "Erreur lors de la génération. "
-                "Vérifiez qu'une journée JSON existe pour cette date dans `data/journees/`."
+                "Vérifiez qu'une journée existe pour cette date dans "
+                "**Préparation d'une journée** pour votre compte."
             )
 
     if rj_out.exists():

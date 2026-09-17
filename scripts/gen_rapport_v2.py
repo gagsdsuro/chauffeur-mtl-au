@@ -133,7 +133,8 @@ def process_groupe(groupe: dict, date_str: str, ev_all_cache: dict) -> dict:
 # ── Rendu HTML ────────────────────────────────────────────────────────────────
 
 _CSS = """
-body{font-family:Arial,sans-serif;font-size:13px;margin:20px;color:#1A1A2E}
+html{color-scheme:light;background:#fff}
+body{font-family:Arial,sans-serif;font-size:13px;margin:20px;color:#1A1A2E;background:#fff}
 h1{font-size:16px;margin-bottom:4px;color:#0072CE}
 .meta{color:#555;margin-bottom:12px;font-size:12px}
 h2{font-size:14px;margin:22px 0 2px;padding:4px 8px;background:#0072CE;color:#fff}

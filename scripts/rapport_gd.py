@@ -177,7 +177,8 @@ def render_html(rows, added, args, parcours, shift_start=None, shift_end=None, o
 <meta charset="utf-8">
 <title>Rapport G-D — Ligne {args.ligne} {args.direction.capitalize()} — {args.date}</title>
 <style>
-  body {{ font-family: Arial, sans-serif; font-size: 13px; margin: 20px; }}
+  html {{ color-scheme: light; background: #fff; }}
+  body {{ font-family: Arial, sans-serif; font-size: 13px; margin: 20px; color: #1A1A2E; background: #fff; }}
   h1 {{ font-size: 16px; margin-bottom: 4px; }}
   .meta {{ color: #555; margin-bottom: 12px; font-size: 12px; }}
   table {{ border-collapse: collapse; width: 100%; }}
