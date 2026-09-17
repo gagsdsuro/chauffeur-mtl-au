@@ -94,6 +94,8 @@ Critères de validation :
 
 Une sonde HTTP ou une ouverture de page par AppTest ne valide pas à elle seule
 les interactions navigateur, les cookies STM ou le rendu mobile.
+Les étapes et la fiche de résultats réutilisable sont dans la
+[recette navigateur/mobile](recette-navigateur-mobile.md).
 
 Attribuer à l'image validée un tag de livraison distinct et conserver son
 identifiant ou son digest. Déployer cette même image sans la reconstruire entre

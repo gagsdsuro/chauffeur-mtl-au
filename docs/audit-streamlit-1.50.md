@@ -161,6 +161,66 @@ Journaux temporaires : `/tmp/chauffeur-verrouillage-164-_zced977/`.
 Cette image n'a pas été déployée. La recette navigateur/mobile et les échanges
 réels avec le portail restent à effectuer. Les dépréciations signalées dans
 l'audit restent à traiter séparément.
+Utiliser la [recette réutilisable](recette-navigateur-mobile.md) et sa fiche
+d'exécution pour consigner ces vérifications.
 
 La [procédure de maintenance](dependances.md) décrit les installations, les
 mises à jour ciblées, la revue mensuelle et la conservation de l'image validée.
+
+## Corrections des aperçus et des états de widgets
+
+Suivi du 16 septembre 2026, fondé sur les références état de session,
+navigation et API du skill `developing-with-streamlit`, puis sur les signatures
+effectivement disponibles dans l'image Python 3.12.14 / Streamlit 1.64.0.
+
+Les trois aperçus HTML utilisent maintenant `st.iframe`, avec une hauteur de
+600 px et le défilement natif. Le HTML des rapports reste isolé dans l'iframe ;
+les imports de `streamlit.components.v1` ont été retirés de ces pages.
+
+Les essais ont reproduit avant correction, sur 1.64.0, quatre défauts : note
+de relève conservée après changement de matricule, ancien brouillon de numéro
+d'autobus conservé après réimport, dates perdues entre pages et texte d'import
+conservé après changement de date. Les règles retenues sont désormais :
+
+| État | Comportement |
+| --- | --- |
+| Dates de Ma journée, Préparation et des deux rapports | Chaque sélection reste indépendante et persiste entre pages pendant la session, avec `persist_state="session"`. |
+| Notes de relève | Le champ et son bouton incluent le matricule ; une nouvelle personne recharge sa propre note, vide si absente. |
+| Notes d'autobus, de journée et de carte agent | Les notes enregistrées sont relues pour la bonne identité ; les brouillons ne suivent pas une autre identité ni un changement de page. |
+| Numéro d'autobus | Le brouillon reste sur les relances ordinaires ; un réimport modifiant la pièce ou son bus recharge le numéro enregistré. |
+| Import de journée et de carte agent | Le texte est lié à la date ; le PDF et les cases autorisant son remplacement sont liés à la date et au numéro de journée. |
+| Positions, états des trajets et rafraîchissements | Une position reste associée au bus et à la date ; les états des trajets sont liés à leur identité ; changer de date efface les résultats de rafraîchissement précédents. |
+| Déconnexion | Tous les états de session sont effacés, y compris dates persistantes, brouillons et opérations en attente. |
+
+Les champs communs d'import G-D/événements concernent la flotte et ne sont pas
+rattachés à une date de journée. Les options générales de rapport et de
+traitement GTFS gardent leur comportement existant.
+
+`tests/test_etat_streamlit.py` ajoute dix tests sur une copie temporaire de
+l'app et des données synthétiques. Ils couvrent les deux types de relève avec
+ou sans note, les fichiers sauvegardés, les réimports, les dates, les notes de
+journée/CA, la navigation réelle par `st.navigation`, la déconnexion, les
+positions et rafraîchissements, ainsi que les trois aperçus et les sorties
+HTML/PDF. La génération des rapports est exécutée sans GTFS de production.
+
+Validation après correction :
+
+- Python 3.14.4 / Streamlit 1.62.0 : les dix nouveaux tests et les cinq tests
+  de `test_durees_app.py` passent.
+- Python 3.12.14 / Streamlit 1.64.0 : **33/33 suites réussies**, dans l'image
+  `chauffeur-stm:validation-1.64.0` avec une copie isolée du code modifié,
+  sans réseau, `.env`, cookies ni données personnelles.
+- Compilation des fichiers Python modifiés et `git diff --check` réussis.
+
+AppTest 1.64.0 ne sérialise pas une option libre absente de la liste du
+sélecteur : le test de date libre amorce donc l'état public avant affichage,
+puis vérifie le traitement des dates anciennes, absentes et invalides et le
+retour à une date proposée. Cela ne valide pas la saisie au clavier dans un
+navigateur. De même, les tests vérifient le HTML transmis aux iframes et les
+sorties téléchargeables, pas leur rendu visuel ni le transfert navigateur.
+La [recette navigateur/mobile](recette-navigateur-mobile.md) reste à exécuter.
+Le service existant n'a pas été redéployé.
+
+Quatre paramètres `use_container_width` ont aussi été remplacés par
+`width="stretch"` dans Connexion et Préparation ; huit restent à migrer dans
+Administration et le dialogue de session portail, suivis dans le TODO.

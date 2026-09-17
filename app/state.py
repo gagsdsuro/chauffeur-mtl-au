@@ -27,6 +27,7 @@ AUTH_NOM = "auth_nom"                     # nom libre du compte (informatif)
 # ── Clés locales à la page « Ma journée » ──────────────────────────────────────
 DB_REFRESH_RESULT = "db_refresh_result"
 DB_REFRESH_REPORT = "db_refresh_report"
+DB_REFRESH_DATE = "db_refresh_date"       # journée à laquelle ces résultats appartiennent
 
 # ── Helpers opération portail ──────────────────────────────────────────────────
 

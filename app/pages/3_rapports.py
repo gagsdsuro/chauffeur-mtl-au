@@ -12,7 +12,6 @@ import sys
 from datetime import date
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from gen_rapport_v2 import generer_rapport
 
@@ -33,7 +32,9 @@ rpt_tabs = st.tabs(["📄 Rapport journalier", "📊 Rapport v2 (journée)"])
 with rpt_tabs[0]:
     st.markdown("Génère le PDF recto-verso (G-D + détours) à partir de la journée du jour.")
 
-    rj_date = st.date_input("Date du rapport", value=date.today(), key="rj_date")
+    rj_date = st.date_input(
+        "Date du rapport", value=date.today(), key="rj_date", persist_state="session"
+    )
     rj_out = RAPPORTS_DIR / f"rapport-{rj_date}.pdf"
 
     rj_generated = False
@@ -81,7 +82,7 @@ with rpt_tabs[1]:
     )
 
     v2_date = st.date_input(
-        "Date du rapport", value=date.today(), key="rpt_v2_date"
+        "Date du rapport", value=date.today(), key="rpt_v2_date", persist_state="session"
     ).isoformat()
     v2_j_path = chemin_journee(v2_date)
 
@@ -176,9 +177,9 @@ with rpt_tabs[1]:
                     )
                     if v2_fmt == "html":
                         with st.expander("Aperçu HTML"):
-                            components.html(
+                            st.iframe(
                                 _out.read_text(encoding="utf-8"),
-                                height=600, scrolling=True,
+                                height=600,
                             )
                 except Exception as _e:
                     st.error(f"Erreur lors de la génération : {_e}")

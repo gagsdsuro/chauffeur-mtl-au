@@ -22,23 +22,27 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 ## Python / dépendances
 
-* [ ] **P1** — Migrer l'utilisation de l'API PyMuPDF `fitz` vers `pymupdf`.
+* [ ] **P2** — Migrer l'utilisation de l'API PyMuPDF `fitz` vers `pymupdf`.
 
-  * Vérifier tous les imports et usages de `fitz`.
-  * Adapter le code concerné.
-  * Adapter les tests.
-  * Mettre à jour `README.md`.
-  * Valider toute la suite de tests.
+  * Reclassé de P1 à P2 le 16 septembre 2026 : dépréciation confirmée, mais les cartes agent fonctionnent avec PyMuPDF 1.28.2 verrouillé. Effort faible ; à traiter avant une prochaine mise à jour de PyMuPDF. Voir l'[historique officiel](https://pymupdf.readthedocs.io/en/latest/changes.html).
+  * Remplacer les imports et usages dans `scripts/carte_agent_stm.py`, `tests/test_carte_agent.py` et `tests/creer_cas_test.py`.
+  * Actualiser les références dans `README.md` et `CLAUDE.md`.
+  * Vérifier les cartes agent, l'absence d'avertissement lié à `fitz` et toute la suite de tests.
 
-* [ ] **P1** — Vérifier la compatibilité Python 3.14 de toutes les dépendances.
+* [ ] **P2** — Vérifier la compatibilité Python 3.14 de toutes les dépendances.
 
   * Vérifier la possibilité de passer à la version 3.14 dans le Dokerfile
 
-* [ ] **P3** — Vérifier si les versions minimales de `requirements.txt` sont encore appropriées.
+* [ ] **P3** — Réévaluer les contraintes des dépendances directes dans `requirements.in` ; `requirements.txt` est généré avec des versions exactes et des empreintes, sans édition manuelle. Suivre la [procédure de maintenance](docs/dependances.md).
 
 * [ ] **P3** — Évaluer l'ajout d'un `pyproject.toml` pour moderniser la gestion du projet Python.
 
-* [ ] **P2** - Évaluer le message au runtime: `st.components.v1.html` will be removed after 2026-06-01. ... Please replace `st.components.v1.html` with `st.iframe`.
+* [x] **P1** — Migrer les trois aperçus HTML de `components.html` vers `st.iframe`.
+
+  * P1 maintenu : trois points d'affichage du workflow courant dépendent d'une API dépréciée. Effort faible à moyen, principalement lié à la validation visuelle. Voir l'[audit Streamlit](docs/audit-streamlit-1.50.md) et la [documentation de `st.iframe`](https://docs.streamlit.io/develop/api-reference/text/st.iframe).
+  * Remplacer les deux appels de Ma journée et celui de Rapports ; retirer les imports devenus inutiles.
+  * Conserver l'isolation CSS, la hauteur de 600 px et le défilement ; `st.iframe` accepte directement le HTML et ne prend pas le paramètre `scrolling`.
+  * Migration et validation automatisée terminées le 16 septembre 2026 : aperçus complets et par trajet, contenu HTML transmis aux iframes, défilement et sorties HTML/PDF couverts par `tests/test_etat_streamlit.py` sur 1.64.0. La validation visuelle reste dans la recette navigateur/mobile ouverte en section 13.
 
 ## Code
 
@@ -52,7 +56,7 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 ## Suite de tests
 
-* [ ] **P2** — Vérifier que `python tests/run_all.py` passe complètement dans `.venv`.
+* [ ] **P3** — Vérifier que `python tests/run_all.py` passe complètement dans `.venv`.
 
 ## Automatisation
 
@@ -61,6 +65,26 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 ---
 
 # 3. Application Streamlit
+
+* [x] **P0** — Corriger les notes de relève associées au mauvais matricule.
+
+  * Réévaluation de l'[audit Streamlit](docs/audit-streamlit-1.50.md), le 16 septembre 2026 : anomalie reproduite sur Python 3.14.4 / Streamlit 1.62.0 avec des fichiers temporaires. Si le matricule de relève change dans le fichier journée pendant que Ma journée reste ouverte, une relance affiche le nouveau nom avec l'ancienne note ; enregistrer écrase la note du nouveau matricule.
+  * Inclure le matricule concerné dans les clés du champ et du bouton d'enregistrement de la note de relève.
+  * Couvrir `je_releve` et `je_suis_releve_par`, une cible avec ou sans note, les brouillons et les allers-retours ; vérifier le texte affiché et les notes réellement sauvegardées, sans écraser celles d'un autre matricule.
+  * Régression reproduite avant correction sur Python 3.12.14 / Streamlit 1.64.0, puis corrigée : les quatre combinaisons de rôle et de présence d'une note passent, avec vérification des fichiers sauvegardés (`tests/test_etat_streamlit.py`).
+
+* [x] **P1** — Vérifier les widgets à contenu variable et la navigation entre pages, conformément à l'[audit Streamlit](docs/audit-streamlit-1.50.md).
+
+  * Examiner les changements de journée, les réimports et les notes dont les données changent alors que la clé du widget reste identique ; traiter le cas confirmé des notes de relève dans le P0 ci-dessus.
+  * Vérifier les allers-retours Ma journée → Préparation → Rapports avec des données saisies ; distinguer notes enregistrées, brouillons et dates sélectionnées.
+  * Corrections : dates conservées entre pages par `persist_state="session"`, numéro d'autobus réinitialisé après réimport changeant la pièce ou son bus, texte d'import et dépôt PDF liés à leur journée/CA, états des trajets et positions liés à leur contexte, résultats de rafraîchissement effacés au changement de date et états personnels purgés à la déconnexion.
+  * Les notes enregistrées sont relues ; les brouillons ne sont pas conservés lors d'un changement de page ou d'identité. Comportements et limites consignés dans le [suivi de l'audit](docs/audit-streamlit-1.50.md#corrections-des-aperçus-et-des-états-de-widgets).
+  * Validation : dix nouveaux tests AppTest réussis sur 1.64.0, suite complète **33/33**. La saisie tactile, les vrais téléversements/téléchargements navigateur et le rendu restent dans la recette manuelle.
+
+* [-] **P2** — Remplacer les douze `use_container_width=True` par `width="stretch"`, signalés dans l'[audit Streamlit](docs/audit-streamlit-1.50.md).
+
+  * Quatre usages migrés dans Connexion et Préparation lors des corrections d'état ; huit restent dans le dialogue de session portail et Administration.
+  * Vérifier les boutons, formulaires et le tableau d'administration sur 1.64.0, notamment leur disposition et leur accessibilité sur téléphone.
 
 * [ ] **P2** — Améliorer les messages d'erreur affichés à l'utilisateur.
 * [ ] **P3** — Vérifier les temps de chargement lorsque `data/` devient volumineux.
@@ -94,7 +118,7 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
   * Séparer le commentaire, les arrêts annulés ou concernés et les arrêts ajoutés.
   * Répéter l'en-tête du tableau et permettre le fractionnement des événements longs.
 
-* [ ] **P4** - "Rapport journalier" et "Rapport V2": Remplacer le sélecteur de date par une liste [j-5, aujourd'hui, j+7], n'afficher que les date où un fichier journée json est présent. Par défaut, la date du jour ou la journée la plus proche valide.
+* [x] **P4** - "Rapport journalier" et "Rapport V2": Remplacer le sélecteur de date par une liste [j-5, aujourd'hui, j+7], n'afficher que les date où un fichier journée json est présent. Par défaut, la date du jour ou la journée la plus proche valide.
 
 ## Qualité
 
@@ -166,11 +190,22 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
   * "Fichiers"/"Gestion des fichiers"/"Journée" déplacer les sections "Aperçu" et "Export" devant la liste de fichier ou mettre la liste de fichier dans une section refermable.
 * [x] **P1** - Créer un tableau résumé des durées à partir des informations de la journée. Voir le fichier [fonction-résumé des durées.md](<docs/fonction-résumé des durées.md>)
 * [x] **P2** - [Ma journée](app/pages/1_ma_journee.py) ajuster le sélecteur de date de manière à permettre la saisie manuelle d'une date différente que ceux de la liste déroulante. Ceci permettant de visualiser des journées antérieurs.
+* [ ] **P4** - ajusté l'affichage dans le cas du mode "Dark"
 
 # 13. Dette technique / investigations
 
+**Bilan de réévaluation de l'[audit Streamlit](docs/audit-streamlit-1.50.md) — 16 septembre 2026 :** la correction des notes d'autobus et le verrouillage des versions sont présents. Les vérifications ciblées de cette réévaluation passent sous Python 3.14.4 / Streamlit 1.62.0 : cinq tests de `test_durees_app.py`, le scénario Logs de `test_logs_app.py` et trois cas de `test_carte_agent.py`. L'import `fitz` émet encore un avertissement de dépréciation. L'anomalie des notes de relève a été reproduite séparément sur fichiers temporaires ; elle est suivie en P0 dans « Application Streamlit ».
+
+L'audit consigne déjà 32/32 suites réussies sous Python 3.12.14 / Streamlit 1.64.0, dont Logs sans adaptation du pilote AppTest : aucune tâche spécifique à Streamlit 1.50 n'est retenue. Ces résultats Docker n'ont pas été rejoués lors de cette réévaluation. La recette navigateur/mobile reste à exécuter ; la rédaction de sa fiche ne vaut pas validation.
+
 * [x] **P2** — Verrouiller le déploiement sur Python 3.12.14 / Streamlit 1.64.0, avec dépendances transitives et empreintes ; 32/32 suites réussies en conteneur. Voir [la procédure de maintenance](docs/dependances.md).
-* [ ] **P2** — Effectuer la recette navigateur/mobile de l'image Streamlit 1.64.0 avant déploiement : connexion, navigation, date libre, notes d'autobus, imports, rapports et renouvellement de session portail.
+* [ ] **P1** — Exécuter la [recette navigateur/mobile](docs/recette-navigateur-mobile.md) de l'image Streamlit 1.64.0 avant déploiement.
+
+  * Entrée réouverte après confirmation que la recette n'a pas été exécutée ; priorité relevée pour valider les interactions et le rendu que les tests automatisés ne couvrent pas.
+  * Couvrir R01–R07 : connexion/déconnexion, isolation des comptes, navigation, date libre et clavier tactile, notes d'autobus, imports de journée et de PDF, aperçus et téléchargements des rapports, renouvellement de session portail et reprise d'opération.
+  * Vérifier le rendu CSS sur ordinateur et téléphone : marges, en-tête, colonnes, boutons, thèmes clair/sombre et orientations portrait/paysage.
+  * Conserver un compte rendu daté avec l'image, les versions et les appareils testés ; distinguer les statuts non exécuté, réussi, échoué et bloqué. Sans accès au portail, déclarer le scénario concerné bloqué ; aucune vérification non exécutée ou bloquée ne vaut réussite.
+
 * [ ] **P2** — Déterminer si Python 3.14 doit devenir la version officiellement supportée hors Docker.
 * [ ] **P2** — Déterminer si Python 3.12 doit également être utilisé pour le développement local afin d'assurer une parité stricte avec Docker.
 * [ ] **P3** — Déterminer si le projet doit rester basé sur `requirements.txt` ou évoluer vers `pyproject.toml`.

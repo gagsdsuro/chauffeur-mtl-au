@@ -13,7 +13,6 @@ import sys
 from datetime import date
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from gen_rapport_v2 import generer_rapport as _gen_v2
 
@@ -24,6 +23,7 @@ from app.components.session_dialog import (
     demander_renouvellement,
 )
 from app.state import (
+    DB_REFRESH_DATE,
     DB_REFRESH_REPORT,
     DB_REFRESH_RESULT,
     JOURNEE_DATE,
@@ -93,11 +93,19 @@ _default_idx = (
 )
 db_date_str = st.selectbox(
     "Journée", db_j_labels, index=_default_idx, key=JOURNEE_DATE,
+    persist_state="session",
     accept_new_options=True,
     placeholder="Choisir ou saisir une date (AAAA-MM-JJ)",
     help="Pour consulter une journée antérieure, saisissez sa date au format "
          "AAAA-MM-JJ (ex. 2026-08-23), puis appuyez sur Entrée.",
 )
+
+# Les résultats non liés à un widget survivent à la navigation : ne pas
+# présenter ceux d'une ancienne journée sous la nouvelle date sélectionnée.
+if st.session_state.get(DB_REFRESH_DATE) != db_date_str:
+    st.session_state.pop(DB_REFRESH_RESULT, None)
+    st.session_state.pop(DB_REFRESH_REPORT, None)
+    st.session_state[DB_REFRESH_DATE] = db_date_str
 
 if db_date_str is None:
     st.info(
@@ -284,9 +292,9 @@ else:
 
     if latest_html_jour:
         with st.expander(f"📊 Rapport v2 — Aperçu  ({latest_html_jour.name})"):
-            components.html(
+            st.iframe(
                 latest_html_jour.read_text(encoding="utf-8"),
-                height=600, scrolling=True,
+                height=600,
             )
     else:
         st.caption("Aucun rapport v2 complet à prévisualiser pour cette journée.")
@@ -320,8 +328,11 @@ else:
                 st.markdown(_lieu_md("Lieu fin", piece.get("lieu_fin")))
 
             with pc2:
-                bus_edit_key = f"db_bus_edit_{db_date_str}_{idx}"
-                bus_save_key = f"db_bus_save_{db_date_str}_{idx}"
+                # Un réimport peut changer la pièce ou son bus sans changer
+                # la date ni l'indice : abandonner alors l'ancien brouillon.
+                bus_identite = f"{db_date_str}_{idx}_{pid}_{piece.get('numero_autobus') or ''}"
+                bus_edit_key = f"db_bus_edit_{bus_identite}"
+                bus_save_key = f"db_bus_save_{bus_identite}"
                 _bcol, _scol = st.columns([5, 1])
                 with _bcol:
                     st.text_input(
@@ -366,7 +377,7 @@ else:
                     if note_v and note_v.get("maj"):
                         st.caption(f"Mise à jour : {note_v['maj']}")
 
-                geo_key = f"db_geo_r_{idx}"
+                geo_key = f"db_geo_r_{db_date_str}_{idx}_{current_bus}"
                 _rt_ts_key = "db_rt_last_fetch"
                 geo_clicked = st.button(
                     "📍 Géolocaliser",
@@ -442,8 +453,10 @@ else:
                     if not _mat:
                         continue
                     note_m = note_matricule(_mat)
-                    note_m_key  = f"db_note_mat_edit_{db_date_str}_{idx}_{_rk}"
-                    note_m_save = f"db_note_mat_save_{db_date_str}_{idx}_{_rk}"
+                    # La note doit suivre le matricule après un réimport,
+                    # même si Streamlit conserve les widgets à clé identique.
+                    note_m_key  = f"db_note_mat_edit_{db_date_str}_{idx}_{_rk}_{_mat}"
+                    note_m_save = f"db_note_mat_save_{db_date_str}_{idx}_{_rk}_{_mat}"
                     st.text_area(
                         f"Note — {r['nom']}",
                         value=(note_m or {}).get("note", ""),
@@ -489,7 +502,7 @@ else:
                     f"{note_txt}"
                 )
 
-                t_key = f"db_t_{idx}_{ti}"
+                t_key = f"db_t_{db_date_str}_{idx}_{ti}_{tl}_{td}_{tid}"
                 out_rpt = (
                     RAPPORTS_DIR
                     / f"rapport-v2-{db_date_str}-{tl}-{td}-id{tid}.html"
@@ -540,9 +553,9 @@ else:
                         f"Aperçu — {tl} {td.capitalize()} ID {tid}",
                         expanded=rpt_just_generated,
                     ):
-                        components.html(
+                        st.iframe(
                             rpt_html.decode("utf-8"),
-                            height=600, scrolling=True,
+                            height=600,
                         )
 
                 # Évènements pour ce trajet

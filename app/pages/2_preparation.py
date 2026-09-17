@@ -23,6 +23,7 @@ from app.components.session_dialog import (
     demander_renouvellement,
 )
 from app.state import (
+    PREP_DATE,
     PREP_FLASH,
     effacer_operation_portail,
     operation_portail,
@@ -65,7 +66,7 @@ st.header("Préparation d'une journée")
 if st.session_state.get(PREP_FLASH):
     st.success(st.session_state.pop(PREP_FLASH))
 _prep_date = st.date_input(
-    "Date à préparer", value=date.today(), key="prep_date"
+    "Date à préparer", value=date.today(), key=PREP_DATE, persist_state="session"
 )
 _prep_date_str = str(_prep_date)
 _prep_path = chemin_journee(_prep_date_str)
@@ -209,7 +210,7 @@ with st.expander("1 — Importer la journée", expanded=not bool(_prep_data)):
             "Mis à jour le 17 juin 2026 00:32\n"
             "Sommaire24 - 1538013--3:18Horaire\n..."
         ),
-        key="j_text",
+        key=f"j_text_{_prep_date_str}",
     )
 
     if st.button("Importer", type="primary", key="j_imp_btn"):
@@ -240,7 +241,10 @@ with st.expander("2 — Importer ou vérifier la carte agent", expanded=bool(_pr
         "réimporter le PDF."
     )
 
-    uploaded = st.file_uploader("Fichier carte agent (PDF)", type="pdf", key="ca_upload")
+    # Le fichier et les autorisations de remplacement appartiennent à la
+    # journée/CA choisie, pas à la position du formulaire dans la page.
+    _ca_contexte = f"{_prep_date_str}_{(_prep_data or {}).get('journee_numero', '')}"
+    uploaded = st.file_uploader("Fichier carte agent (PDF)", type="pdf", key=f"ca_upload_{_ca_contexte}")
 
     ca_date = _prep_date
     col1, col2 = st.columns(2)
@@ -251,12 +255,12 @@ with st.expander("2 — Importer ou vérifier la carte agent", expanded=bool(_pr
 
     ca_remplacer = st.checkbox(
         "Remplacer une CA existante pour cette identité (version augmentée)",
-        value=False, key="ca_remplacer",
+        value=False, key=f"ca_remplacer_{_ca_contexte}",
     )
     ca_deja_annotee = st.checkbox(
         "Le PDF déposé est déjà annoté — le ranger tel quel (remplace uniquement "
         "la version annotée, sans relancer le traitement GTFS)",
-        value=False, key="ca_deja_annotee",
+        value=False, key=f"ca_deja_annotee_{_ca_contexte}",
     )
 
     btn_label = "Enregistrer la version annotée" if ca_deja_annotee else "Annoter la carte"
@@ -526,12 +530,12 @@ _fc1, _fc2 = st.columns(2)
 _auto_clicked = _fc1.button(
     "🌐 Récupérer les événements et finaliser",
     type="primary",
-    use_container_width=True,
+    width="stretch",
     disabled=_prep_blocked,
 )
 _local_clicked = _fc2.button(
     "📁 Finaliser avec les événements présents",
-    use_container_width=True,
+    width="stretch",
     disabled=_prep_blocked,
 )
 _prep_pending = operation_portail()

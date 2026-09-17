@@ -127,7 +127,7 @@ def afficher_statut_connexion() -> None:
     role = info.get("role") or st.session_state.get(AUTH_ROLE) or ""
     etiquette = f"🚌 Chauffeur {matricule}" + (f" · {role}" if role else "")
     if st.sidebar.button("Se déconnecter", key="btn_deconnexion",
-                         use_container_width=True):
+                         width="stretch"):
         _deconnecter()
     st.sidebar.caption(etiquette)
     _afficher_changement_pin(matricule)
@@ -149,7 +149,7 @@ def _afficher_changement_pin(matricule: str) -> None:
             key="pin_chg_confirmation",
         )
         clique = st.button("Changer le PIN", key="btn_changer_pin",
-                           use_container_width=True)
+                           width="stretch")
         if clique:
             if nouveau != confirmation:
                 st.error("Les deux nouveaux PIN ne correspondent pas.")
@@ -162,6 +162,8 @@ def _afficher_changement_pin(matricule: str) -> None:
 
 
 def _deconnecter() -> None:
-    for cle in (AUTH_MATRICULE, AUTH_ROLE, AUTH_NOM):
+    # Les dates persistantes, brouillons et résultats appartiennent au compte
+    # sortant. Ne rien transmettre au prochain compte dans le même navigateur.
+    for cle in list(st.session_state):
         st.session_state.pop(cle, None)
     st.rerun()

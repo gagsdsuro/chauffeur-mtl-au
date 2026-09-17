@@ -180,7 +180,7 @@ class TestPage(unittest.TestCase):
 
                 self.assertEqual(champ_note("38013").value, "Note du bus A")
                 champ_note("38013").set_value("Brouillon du bus A").run()
-                at.text_input(key="db_bus_edit_2026-09-10_0").set_value("39999").run()
+                at.text_input(key="db_bus_edit_2026-09-10_0_185-62_38013").set_value("39999").run()
                 self.assertFalse(at.exception)
                 self.assertEqual(champ_note("39999").value, note_initiale)
 
@@ -194,10 +194,10 @@ class TestPage(unittest.TestCase):
                 self.assertEqual(notes.note_voiture("39999")["note"], "Note mise à jour du bus B")
                 self.assertEqual(notes.note_voiture("38013"), note_a)
 
-                at.text_input(key="db_bus_edit_2026-09-10_0").set_value("38013").run()
+                at.text_input(key="db_bus_edit_2026-09-10_0_185-62_38013").set_value("38013").run()
                 self.assertFalse(at.exception)
                 self.assertEqual(champ_note("38013").value, "Note du bus A")
-                at.text_input(key="db_bus_edit_2026-09-10_0").set_value("39999").run()
+                at.text_input(key="db_bus_edit_2026-09-10_0_185-62_38013").set_value("39999").run()
                 self.assertFalse(at.exception)
                 self.assertEqual(champ_note("39999").value, "Note mise à jour du bus B")
                 self.assertEqual(json.loads(self.chemin(j["date"]).read_text()), j)
