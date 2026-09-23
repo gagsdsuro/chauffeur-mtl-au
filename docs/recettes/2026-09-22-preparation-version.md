@@ -1,5 +1,10 @@
 # Préparation de la version Fichiers — 22 septembre 2026
 
+> **Statut final — 23 septembre 2026 :** déploiement en production confirmé
+> par l’utilisateur ; téléchargement PDF sous Firefox en HTTPS testé avec
+> succès. Le dernier contrôle reporté est clôturé. Les étapes ci-dessous
+> conservent l’historique de la recette.
+
 ## Note
 
 Les commandes ci-dessous décrivent le lancement initial. Depuis le 23 septembre,
@@ -188,3 +193,16 @@ Code et tests comparés à la copie isolée validée : aucun écart.
 Le déploiement n’est pas encore effectué : la tentative de connexion SSH à
 `dockeradmin@gagsmicros5` a été refusée lors de l’autorisation d’exécution.
 Ne pas confondre l’archive locale de livraison avec un déploiement réussi.
+
+## Confirmation de production — 23 septembre 2026
+
+L’utilisateur confirme avoir effectué le déploiement et testé avec succès le
+téléchargement PDF sous Firefox en HTTPS. Ce résultat clôt le contrôle reporté
+à la production. Le défaut observé dans l’environnement HTTP reste historique ;
+aucune correction générale de Firefox ou du fonctionnement en HTTP n’est déduite
+de cet essai.
+
+Livraison préparée : `chauffeur-stm:livraison-2026-09-23`, commit applicatif
+`f69a1f5`. Le déploiement et le résultat navigateur sont rapportés par
+l’utilisateur ; aucune inspection distante supplémentaire n’a été réalisée.
+Aucune mise en place de HTTPS en développement n’est prévue à ce stade.
