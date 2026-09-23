@@ -72,7 +72,7 @@ python3.12 -m pip install --break-system-packages --require-hashes -r requiremen
 |---|---|
 | `streamlit` | l'app (`app/main.py` + pages dans `app/pages/`) |
 | `requests` | imports GTFS/GTFS-RT et imports automatiques journée/G-D/événements depuis le portail STM |
-| `pymupdf` (importé sous le nom `fitz`) | annotation des cartes agent (`scripts/carte_agent_stm.py`), tests `test_carte_agent.py`/`test_rapport_evenements.py` et outil `creer_cas_test.py` |
+| `pymupdf` | annotation des cartes agent (`scripts/carte_agent_stm.py`), tests `test_carte_agent.py`/`test_rapport_evenements.py` et outil `creer_cas_test.py` |
 | `reportlab` | PDF des rapports v1/v2 (`scripts/gen_rapport.py`, `gen_rapport_v2.py`) et tests `test_rapport.py`/`test_rapport_evenements.py` |
 
 Remarques :
@@ -126,3 +126,6 @@ python3 tests/test_depots.py # une suite isolée = script direct (PAS pytest)
 Sans `pymupdf`/`reportlab`, les suites concernées échouent à l'import
 (`test_carte_agent.py`, `test_rapport.py`) ; toutes les autres sont hermétiques
 et ne requièrent aucune dépendance externe.
+
+La page [Fichiers](docs/fichiers.md) permet la recherche par période STM, les aperçus,
+l’édition des JSON autorisés et l’export CSV des journées.

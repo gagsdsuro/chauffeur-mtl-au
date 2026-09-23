@@ -3,7 +3,8 @@
 Cette recette manuelle complète les tests automatisés avant une livraison,
 notamment après une mise à jour de Streamlit ou de l'interface. Elle vérifie les
 interactions dans un vrai navigateur et sur un téléphone. Sa rédaction ne vaut
-pas exécution : aucun scénario ci-dessous n'est encore déclaré réussi.
+pas exécution : les résultats de chaque image sont consignés séparément dans
+`docs/recettes/` et ne valent pas validation d’une image ultérieure.
 
 ## Préparer l'essai
 
@@ -164,3 +165,50 @@ sont déjà couvertes dans `tests/test_durees_app.py`.
 
 L'automatisation de parcours navigateur pourra être ajoutée progressivement ;
 cette recette n'introduit pas de nouvel outil ni de dépendance de test.
+
+## R08 — Explorateur Fichiers et périodes STM
+
+Préparer au moins 200 fichiers synthétiques répartis entre plusieurs périodes,
+avec une journée sans service, une carte normale, une variation, un férié, une
+ancienne carte `carte-agent-DATE-surligné.pdf`, un nom non reconnu et des PDF/HTML.
+Utiliser deux comptes de test (administrateur et chauffeur).
+
+- Ouvrir Cartes agent puis Journées : la période en cours à Montréal est
+  sélectionnée. Changer de période, puis de catégorie et revenir : le choix est
+  conservé. Une période vide ne provoque aucun changement automatique.
+- Vérifier les variations et fériés dans leur liste et via le filtre Régime.
+  Vérifier Toutes les périodes et Période indéterminée.
+- Rechercher, trier et parcourir plusieurs pages de dix fichiers. Sélectionner un
+  fichier puis modifier les filtres : aucun aperçu ne doit désigner un autre
+  fichier par erreur. Les aperçus PDF, HTML, journées, G-D et événements sont
+  disponibles sans télécharger chaque document au préalable.
+- Modifier une journée, changer de catégorie puis revenir : le brouillon est
+  conservé. Enregistrer, vérifier la sauvegarde et le contenu. Essayer un JSON
+  invalide et une modification concurrente : l'enregistrement doit être refusé.
+- Vérifier la suppression avec annulation puis confirmation, et la purge avec
+  liste explicite des fichiers. Le compte chauffeur ne peut pas modifier,
+  supprimer ou purger les fichiers communs ; le compte admin le peut.
+- Préparer un export couvrant plusieurs périodes : la grille présente toutes les
+  pièces de l'intervalle ; le CSV ne dépend ni de la page ni des filtres STM.
+- Répéter sur téléphone physique, en portrait/paysage et thèmes clair/sombre :
+  liste au-dessus de l'aperçu, boutons accessibles, clavier et lecteur PDF
+  utilisables. Un viewport mobile émulé ne remplace pas cet essai tactile.
+
+Reporter R08 dans la fiche de recette de la livraison. La présence de ce scénario
+ne signifie pas qu'il a été exécuté.
+
+## Compléments pour la livraison Fichiers du 22 septembre 2026
+
+- R04 puis R08 : annoter une carte avec PyMuPDF, la retrouver dans Fichiers,
+  la lire et la télécharger ; vérifier les annotations dans le PDF téléchargé.
+- R05/R07/R08 : vérifier un ancien rapport HTML au fond initialement transparent
+  et un rapport nouvellement généré, dans Fichiers et Ma journée, ainsi que
+  l’aperçu de Rapports. Répéter en clair/sombre.
+- Vérifier les tableaux d’événements dans Fichiers, Pièces de travail et les
+  résultats de rafraîchissement : texte, lignes alternées, états et instructions
+  doivent rester lisibles en clair/sombre.
+- R01/R08 : ouvrir Administration avec le compte administrateur, vérifier
+  tableau, sélection de compte et boutons en portrait/paysage ; vérifier
+  l’absence d’accès pour le compte chauffeur.
+- Vérifier le healthcheck Docker sur l’image candidate et consigner son ID.
+  Un état sain confirme la réponse du serveur, pas la réussite des parcours.

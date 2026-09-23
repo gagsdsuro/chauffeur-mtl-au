@@ -14,6 +14,8 @@ from datetime import date
 
 import streamlit as st
 
+from app.components.apercu_html import afficher_rapport_html
+
 from gen_rapport_v2 import generer_rapport as _gen_v2
 
 from app.components.result_display import _afficher_resultat_rafraichissement
@@ -292,7 +294,7 @@ else:
 
     if latest_html_jour:
         with st.expander(f"📊 Rapport v2 — Aperçu  ({latest_html_jour.name})"):
-            st.iframe(
+            afficher_rapport_html(
                 latest_html_jour.read_text(encoding="utf-8"),
                 height=600,
             )
@@ -313,6 +315,9 @@ else:
             f"  ({piece.get('duree', '?')})",
             expanded=False,
         ):
+            if piece.get("type_horaire") == "absence":
+                st.write(piece.get("motif_absence") or "Absence")
+                continue
             pc1, pc2, pc3 = st.columns([2, 2, 2])
 
             with pc1:
@@ -553,7 +558,7 @@ else:
                         f"Aperçu — {tl} {td.capitalize()} ID {tid}",
                         expanded=rpt_just_generated,
                     ):
-                        st.iframe(
+                        afficher_rapport_html(
                             rpt_html.decode("utf-8"),
                             height=600,
                         )

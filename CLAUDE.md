@@ -15,10 +15,10 @@ La langue de travail est le **français** (noms de champs, messages, documentati
 streamlit run app/main.py                   # développement local (pages dans app/pages/)
 docker compose up --build                   # production (port 8501, volume ./data)
 ```
-L'app expose 5 pages (navigation latérale, `st.navigation` dans `main.py`) : Ma journée (liste J−2/J+5 et saisie manuelle d'une date AAAA-MM-JJ pour consulter l'historique, rafraîchissement des lignes restantes, consultation par pièce/trajet) · Préparation d'une journée (état synthétique, imports manuels, récupération des événements et rapports conditionnels) · Rapports (2 sous-onglets) · Fichiers (5 sous-onglets, avec purge des fichiers obsolètes) · Logs. La 6e page **Administration** (gestion des comptes) n'apparaît que pour un Chauffeur-admin ; garde-fou `st.stop` en page pour un accès direct par URL.
+L'app expose 5 pages (navigation latérale, `st.navigation` dans `main.py`) : Ma journée (liste J−2/J+5 et saisie manuelle d'une date AAAA-MM-JJ pour consulter l'historique, rafraîchissement des lignes restantes, consultation par pièce/trajet) · Préparation d'une journée (état synthétique, imports manuels, récupération des événements et rapports conditionnels) · Rapports (2 sous-onglets) · Fichiers (5 catégories, liste paginée et aperçus, classement par liste STM, édition JSON selon le rôle et export CSV séparé ; voir `docs/fichiers.md`) · Logs. La 6e page **Administration** (gestion des comptes) n'apparaît que pour un Chauffeur-admin ; garde-fou `st.stop` en page pour un accès direct par URL.
 
 **Dépendances** — référence de déploiement : Python 3.12.14 / Streamlit 1.64.0. Dépendances directes dans `requirements.in` ; `requirements.txt` généré sous Python 3.12 avec versions exactes et empreintes, jamais édité manuellement. Installation : `python -m pip install --require-hashes -r requirements.txt`, puis `python -m pip check` (venv Python 3.12 recommandé). Le Dockerfile fixe aussi l'empreinte de l'image Python. Procédure de mise à jour : `docs/dependances.md` ; tableau paquet→usage dans le `README.md`. Points à savoir :
-- `pymupdf` (`fitz`) : annotation carte agent + tests `test_carte_agent.py`/`test_rapport_evenements.py`/`creer_cas_test.py`.
+- `pymupdf` : annotation carte agent + tests `test_carte_agent.py`/`test_rapport_evenements.py`/`creer_cas_test.py`.
 - `reportlab` : PDF des rapports v1/v2 + tests `test_rapport.py`/`test_rapport_evenements.py`.
 - Pas de dépendance protobuf : le GTFS-RT est décodé en wire-format minimal par `chauffeur/gtfs_rt.py`.
 - `openpyxl` (hors requirements) : uniquement pour `scripts/import_journees_historique.py`.
@@ -53,6 +53,10 @@ python3 scripts/parse_journee.py --log < raw.txt               # idem + trace da
 La date est auto-détectée depuis le champ « Mis à jour le » si `--date` est absent.
 Les pièces `ContinuHoraire` sont conservées avec `type_horaire: "continu"`;
 plusieurs pièces peuvent légitimement partager le même `id`.
+Les sommaires `Absence` sont conservés avec `id: "Absence"`,
+`type_horaire: "absence"`, leurs heures et durée, et `motif_absence`
+(code et libellé du portail), sans autobus ni trajets. `temps_travaille`
+reste la valeur déclarée par le portail, y compris lorsqu'elle inclut l'absence.
 Import automatique depuis une session valide :
 ```bash
 python3 scripts/fetch_journee.py                         # aujourd'hui
@@ -192,7 +196,7 @@ python3 scripts/fetch_gtfs_rt.py
 ```
 `fetch_gtfs.py` construit `stops_index.json` après extraction (scan unique de `stop_times.txt`) ; `chauffeur.gtfs.stops_for_line()` lit cet index (~80x plus rapide qu'un scan CSV) avec repli automatique si l'index est absent.
 
-- `parse_gd.py`, `parse_event.py` et `parse_journee.py` importent `chauffeur` (`journal`, `modeles`, `depots` — stdlib, pas de package externe). Les autres scripts requièrent `requests` et/ou `PyMuPDF (fitz)`.
+- `parse_gd.py`, `parse_event.py` et `parse_journee.py` importent `chauffeur` (`journal`, `modeles`, `depots` — stdlib, pas de package externe). Les autres scripts requièrent `requests` et/ou `PyMuPDF (`pymupdf`)`.
 - Les trois parseurs acceptent `--log` : la sortie est ajoutée au journal de la source (**roulage par nature des données**, `chauffeur.journal.SOURCES_COMMUNES`) — imports de la flotte (G-D/Événements/GTFS/GTFS-RT) → `data/log/<source>.log` **commun** ; journaux personnels (journée, carte agent) → `data/<matricule>/log/<source>.log`. Opt-in en CLI (un import de test ne salit pas le journal) ; **toujours actif** pour les imports faits depuis l'app, où chaque import est une action à tracer.
 - Tous les scripts résolvent les chemins via `Path(__file__).parent.parent` ; ils fonctionnent peu importe le répertoire courant.
 - Code de sortie : `0` si tout réussit, `1` si une section échoue (erreurs sur stderr).

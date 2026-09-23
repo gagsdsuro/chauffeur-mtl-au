@@ -22,12 +22,12 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 ## Python / dépendances
 
-* [ ] **P2** — Migrer l'utilisation de l'API PyMuPDF `fitz` vers `pymupdf`.
+* [x] **P2** — Migrer l'utilisation de l'API PyMuPDF `fitz` vers `pymupdf`.
 
   * Reclassé de P1 à P2 le 16 septembre 2026 : dépréciation confirmée, mais les cartes agent fonctionnent avec PyMuPDF 1.28.2 verrouillé. Effort faible ; à traiter avant une prochaine mise à jour de PyMuPDF. Voir l'[historique officiel](https://pymupdf.readthedocs.io/en/latest/changes.html).
   * Remplacer les imports et usages dans `scripts/carte_agent_stm.py`, `tests/test_carte_agent.py` et `tests/creer_cas_test.py`.
   * Actualiser les références dans `README.md` et `CLAUDE.md`.
-  * Vérifier les cartes agent, l'absence d'avertissement lié à `fitz` et toute la suite de tests.
+  * Migration réalisée le 22 septembre 2026, sans changement de version ; documentation actualisée et suite complète 37/37 réussie dans l’environnement verrouillé. La recette tactile de la carte annotée reste à rejouer pour cette livraison.
 
 * [ ] **P2** — Vérifier la compatibilité Python 3.14 de toutes les dépendances.
 
@@ -81,9 +81,9 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
   * Les notes enregistrées sont relues ; les brouillons ne sont pas conservés lors d'un changement de page ou d'identité. Comportements et limites consignés dans le [suivi de l'audit](docs/audit-streamlit-1.50.md#corrections-des-aperçus-et-des-états-de-widgets).
   * Validation : dix nouveaux tests AppTest réussis sur 1.64.0, suite complète **33/33**. La saisie tactile, les vrais téléversements/téléchargements navigateur et le rendu restent dans la recette manuelle.
 
-* [-] **P2** — Remplacer les douze `use_container_width=True` par `width="stretch"`, signalés dans l'[audit Streamlit](docs/audit-streamlit-1.50.md).
+* [x] **P2** — Remplacer les douze `use_container_width=True` par `width="stretch"`, signalés dans l'[audit Streamlit](docs/audit-streamlit-1.50.md).
 
-  * Six usages migrés dans Connexion, Préparation et le dialogue de session portail lors des corrections d'état ; six restent dans Administration.
+  * Les six derniers usages, dans Administration, ont été migrés le 22 septembre 2026 ; aucun usage ne reste dans `app/`. Tests AppTest réussis ; vérification sur téléphone physique à compléter.
   * Vérifier les boutons, formulaires et le tableau d'administration sur 1.64.0, notamment leur disposition et leur accessibilité sur téléphone.
 
 * [ ] **P2** — Améliorer les messages d'erreur affichés à l'utilisateur.
@@ -154,7 +154,9 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 # 8. Docker / déploiement
 
-* [ ] **P2** — Vérifier le healthcheck Streamlit.
+* [x] **P2** — Vérifier le healthcheck Streamlit.
+
+  * Image `chauffeur-stm:candidate-20260922` démarrée sans port exposé ni données personnelles : état Docker `healthy`, sonde terminée avec code 0. Voir [la fiche de validation](docs/recettes/2026-09-22-preparation-version.md).
 * [ ] **P2** — Documenter les variables d'environnement nécessaires.
 * [ ] **P2** — Comparer le comportement local Python 3.14 avec Python 3.12 dans Docker.
 
@@ -186,11 +188,12 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
     * Évaluer la faisabilité d'automatiser la lecture d'une journée de travail à partir d'une session valide. Garder la version manuel de la même manière que pour les évènements. Prévoir les variantes pour aujourd'hui, demain, après-demain, Lundi le jj, Mardi le jj, etc. Prévoir la variante avec TS (temps supplémentaire) Voir le fichier ci-joint du 22 août
     * Repenser le workflow de l'import des CA
       * Récupérer, annoter, Imprimer
-* [ ] **P3** — Identifier les informations actuellement difficiles à consulter dans l'interface.
-  * "Fichiers"/"Gestion des fichiers"/"Journée" déplacer les sections "Aperçu" et "Export" devant la liste de fichier ou mettre la liste de fichier dans une section refermable.
+* [x] **P3** — Faciliter l’accès aux aperçus et à l’export dans Fichiers.
+  * Explorateur paginé avec aperçu et actions accessibles ; export des journées séparé en haut de page. Implémentation terminée ; recette R08 partielle, voir [le compte rendu](docs/recettes/2026-09-21-fichiers.md).
 * [x] **P1** - Créer un tableau résumé des durées à partir des informations de la journée. Voir le fichier [fonction-résumé des durées.md](<docs/fonction-résumé des durées.md>)
 * [x] **P2** - [Ma journée](app/pages/1_ma_journee.py) ajuster le sélecteur de date de manière à permettre la saisie manuelle d'une date différente que ceux de la liste déroulante. Ceci permettant de visualiser des journées antérieurs.
-* [ ] **P4** - ajusté l'affichage dans le cas du mode "Dark"
+* [-] **P4** — Ajuster l’affichage en mode sombre.
+  * Palette claire explicite des tableaux d’événements partagés et des aperçus HTML dans Fichiers, Ma journée et Rapports, y compris les anciens rapports. Contrôles navigateur ciblés et recette sur téléphone physique suivis dans [la préparation de livraison](docs/recettes/2026-09-22-preparation-version.md). Ne vaut pas audit complet de tous les écrans.
 
 # 13. Dette technique / investigations
 

@@ -6,6 +6,32 @@ tel que produit par parse_journee.py.
 from __future__ import annotations
 
 from datetime import datetime
+import re
+
+
+def parser_sommaire_absence(entete: str, lignes: list[str]) -> dict:
+    """Lit une absence du portail, sans déduire ses heures des autres pièces.
+
+    Les balises HTML peuvent séparer les heures, le tiret et le motif.
+    Une absence illisible doit faire échouer l'import, pas disparaître.
+    """
+    heure = r"[0-9]{1,2}:[0-5][0-9]"
+    sommaire = re.fullmatch(
+        rf"Sommaire\s*Absence\s*En vigueur\s*({heure})\s*Horaire",
+        entete, re.IGNORECASE,
+    )
+    horaire = re.fullmatch(
+        rf"({heure})\s*-\s*({heure})\s+(.+)",
+        " ".join(l.strip() for l in lignes if l.strip()),
+    )
+    if not sommaire or not horaire:
+        raise ValueError("Sommaire d'absence incomplet : durée, heures ou motif introuvables")
+    return {
+        "id": "Absence", "type_horaire": "absence",
+        "duree": sommaire.group(1),
+        "prise": horaire.group(1), "debut": horaire.group(1),
+        "fin": horaire.group(2), "motif_absence": horaire.group(3),
+    }
 
 
 def _as_dict(journee) -> dict:

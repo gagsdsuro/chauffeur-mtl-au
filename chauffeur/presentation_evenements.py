@@ -207,10 +207,11 @@ def rendre_table_evenements_html(evenements: list[EvenementAffiche]) -> str:
         )
 
     return """<style>
-.evt-wrap{overflow-x:auto;width:100%;margin:.25rem 0 1rem}
-.evt-table{border-collapse:collapse;width:100%;min-width:980px;font-size:.88rem}
+.evt-wrap{overflow-x:auto;width:100%;margin:.25rem 0 1rem;background:#fff;color:#1A1A2E;color-scheme:light}
+.evt-table{border-collapse:collapse;width:100%;min-width:980px;font-size:.88rem;color:#1A1A2E}
 .evt-table th{background:#0072ce;color:white;text-align:left;white-space:nowrap}
 .evt-table th,.evt-table td{border:1px solid #ccc;padding:.45rem;vertical-align:top}
+.evt-table td{color:#1A1A2E}
 .evt-table tbody tr:nth-child(odd){background:#f7f7f7}
 .evt-ok{color:#176b2c;font-weight:600}.evt-non{color:#666;font-weight:600}
 .evt-raison{color:#8a5a00;font-size:.8rem;margin-top:.2rem}

@@ -51,7 +51,7 @@ from datetime import datetime
 from pathlib import Path
 
 try:
-    import fitz  # PyMuPDF
+    import pymupdf  # PyMuPDF
 except ImportError:
     sys.exit("ERREUR : PyMuPDF manquant.  Installe-le avec :  pip install pymupdf")
 
@@ -101,7 +101,7 @@ def to_min(t: str) -> int:
 def extract_meta(spans: list) -> dict:
     """
     Lit dans l'en-tête du PDF :
-      • carte  : numéro de la carte agent (3-6 chiffres, y < 130)
+      • carte  : numéro de la carte agent (1 à 9999, y < 130)
       • debut  : min de la colonne « Prise » gauche
       • fin    : max de la colonne « Prise » droite
       • lignes : liste ordonnée des numéros de ligne ("XX - P")
@@ -126,10 +126,10 @@ def extract_meta(spans: list) -> dict:
     heure_debut = min(debut_times, key=to_min) if debut_times else None
     heure_fin   = max(fin_times,   key=to_min) if fin_times   else None
 
-    # --- numéro de carte : 1er span purement numérique (3-6 chiffres) y<130 --
+    # --- numéro de carte : 1er span numérique de 1 à 9999, y<130 ------------
     carte_num = "?"
     for s in spans:
-        if s['bbox'][1] < 130 and re.match(r'^\d{3,6}$', s['text']):
+        if s['bbox'][1] < 130 and re.fullmatch(r'[1-9][0-9]{0,3}', s['text']):
             carte_num = s['text']
             break
 
@@ -315,7 +315,7 @@ def highlight_prise(page, spans) -> None:
         for s in spans:
             bx0, by0, bx1, _ = s['bbox']
             if px0 <= bx0 and bx1 <= px1 and 92 < by0 < 120:
-                page.draw_rect(fitz.Rect(bx0 - 2, by0 - 2, bx1 + 2, by1_safe(s) + 2),
+                page.draw_rect(pymupdf.Rect(bx0 - 2, by0 - 2, bx1 + 2, by1_safe(s) + 2),
                                color=None, fill=JAUNE, fill_opacity=0.4, overlay=False)
 
 
@@ -381,14 +381,14 @@ def pick_direction(dep_stop: str, stop_a: str, stop_b: str) -> bool:
     return sum(k in dn for k in ka) >= sum(k in dn for k in kb)
 
 
-def num_rect_in_span(page, span, ligne) -> fitz.Rect:
+def num_rect_in_span(page, span, ligne) -> pymupdf.Rect:
     """Rectangle couvrant uniquement le numéro de ligne dans le span."""
-    rect = fitz.Rect(span['bbox'])
+    rect = pymupdf.Rect(span['bbox'])
     hits = page.search_for(str(ligne), clip=rect)
     if hits:
         return hits[0]
     ratio = len(str(ligne)) / max(len(span['text']), 1)
-    return fitz.Rect(rect.x0, rect.y0, rect.x0 + rect.width * ratio, rect.y1)
+    return pymupdf.Rect(rect.x0, rect.y0, rect.x0 + rect.width * ratio, rect.y1)
 
 
 def plan_annotations(page, spans: list, schedules: dict) -> list:
@@ -412,7 +412,7 @@ def plan_annotations(page, spans: list, schedules: dict) -> list:
 
         if it['kind'] == 'marker':
             plan.append({'type': 'jaune', 'texte': it['span']['text'],
-                         'rect': fitz.Rect(it['span']['bbox'])})
+                         'rect': pymupdf.Rect(it['span']['bbox'])})
             continue
 
         # --- segment -------------------------------------------------------
@@ -449,19 +449,19 @@ def apply_annotations(page, plan: list) -> None:
     for a in plan:
         if a['type'] == 'jaune':
             r = a['rect']
-            page.draw_rect(fitz.Rect(r.x0 - 2, r.y0 - 2, r.x1 + 2, r.y1 + 2),
+            page.draw_rect(pymupdf.Rect(r.x0 - 2, r.y0 - 2, r.x1 + 2, r.y1 + 2),
                            color=None, fill=JAUNE, fill_opacity=0.4, overlay=False)
         elif a['type'] == 'bleu':
             page.draw_rect(a['rect'], color=None, fill=BLEU,
                            fill_opacity=0.4, overlay=False)
         elif a['type'] == 'rouge':
-            page.insert_text(fitz.Point(*a['point']), a['texte'],
+            page.insert_text(pymupdf.Point(*a['point']), a['texte'],
                              fontsize=7, color=ROUGE, fontname='helv')
 
 
 def annotate(src: str, dst: str, schedules: dict) -> dict:
     """Annote le PDF et le sauvegarde. Retourne les métadonnées extraites."""
-    doc = fitz.open(src)
+    doc = pymupdf.open(src)
     page = doc[0]
     spans = get_spans(page)
 
@@ -541,7 +541,7 @@ def main() -> int:
         sys.exit(f"ERREUR : PDF introuvable : {src}")
 
     if args.meta_only:
-        doc = fitz.open(str(src))
+        doc = pymupdf.open(str(src))
         meta = extract_meta(get_spans(doc[0]))
         meta.update(extract_jour_type(doc[0].get_text()))
         doc.close()
@@ -554,7 +554,7 @@ def main() -> int:
     log(f"Date retenue : {date_str}")
 
     # Pré-lecture pour connaître les lignes avant d'interroger le GTFS
-    doc = fitz.open(str(src))
+    doc = pymupdf.open(str(src))
     meta_pre = extract_meta(get_spans(doc[0]))
     doc.close()
     log(f"Lignes détectées : {meta_pre['lignes']}")

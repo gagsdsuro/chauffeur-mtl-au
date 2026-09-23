@@ -51,7 +51,7 @@ _routes = [
     }
     for c in _comptes
 ]
-st.dataframe(_routes, use_container_width=True, hide_index=True)
+st.dataframe(_routes, width="stretch", hide_index=True)
 
 # ── Actions sur un compte ──────────────────────────────────────────────────────
 st.subheader("Actions sur un compte")
@@ -75,13 +75,13 @@ _btn_col, _ = st.columns([1, 2])
 with _btn_col:
     if _cible_role == auth.ROLE_CHAUFFEUR:
         if st.button("Promouvoir en Chauffeur-admin", key="btn_promouvoir",
-                     use_container_width=True):
+                     width="stretch"):
             _executer("Compte promu Chauffeur-admin.",
                       lambda: auth.changer_role(_choix, _admin_matricule,
                                                 auth.ROLE_ADMIN))
     elif _est_soi:
         if st.button("Se destituer (revenir Chauffeur)", key="btn_destituer",
-                     use_container_width=True):
+                     width="stretch"):
             _executer("Vous êtes redevenu Chauffeur.",
                       lambda: auth.changer_role(_choix, _admin_matricule,
                                                 auth.ROLE_CHAUFFEUR))
@@ -90,14 +90,14 @@ with _btn_col:
 
     if _cible["verrouille"]:
         if st.button("Déverrouiller", key="btn_deverrouiller",
-                     use_container_width=True):
+                     width="stretch"):
             _executer("Compte déverrouillé.",
                       lambda: auth.deverrouiller_compte(_choix, _admin_matricule))
 
     if _cible_role == auth.ROLE_CHAUFFEUR and not _est_soi:
         confirmer = st.checkbox("Confirmer la révocation", key="admin_revoquer_conf")
         if st.button("Révoquer le compte", key="btn_revoquer",
-                     disabled=not confirmer, use_container_width=True):
+                     disabled=not confirmer, width="stretch"):
             _executer(f"Compte {_choix} révoqué.",
                       lambda: auth.revoquer_compte(_choix, _admin_matricule))
 
@@ -112,7 +112,7 @@ with st.expander("🔑 Réinitialiser le PIN", expanded=False):
         key="admin_pin_confirmation",
     )
     if st.button("Réinitialiser le PIN", key="btn_reset_pin",
-                 use_container_width=True):
+                 width="stretch"):
         if nouveau != confirmation:
             st.error("Les deux PIN ne correspondent pas.")
         else:

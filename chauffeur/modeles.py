@@ -111,12 +111,14 @@ def _trajet_to_dict(t: TrajetService | TrajetHlp | dict) -> dict:
 
 @dataclass
 class Piece:
-    """Une pièce de travail (bloc d'activité entre deux repos).
+    """Une pièce de travail ou d'absence (type_horaire="absence").
 
     Champs horaires :
       prise  — heure de début de la prise de service (arrivée au lieu_prise).
       debut  — heure du premier trajet de service.
       fin    — heure du dernier trajet de service.
+    Pour une absence, prise/debut et fin bornent la période indiquée par le
+    portail ; motif_absence conserve le code et le libellé, sans trajet.
     """
     id: str
     duree: str
@@ -129,6 +131,7 @@ class Piece:
     trajets: list = field(default_factory=list)   # list[TrajetService | TrajetHlp | dict]
     numero_autobus: str | None = None
     releve: dict | None = None
+    motif_absence: str | None = None
 
     @classmethod
     def from_dict(cls, d: dict) -> Piece:
@@ -143,6 +146,7 @@ class Piece:
             type_horaire=d.get("type_horaire", "horaire"),
             numero_autobus=d.get("numero_autobus"),
             releve=d.get("releve"),
+            motif_absence=d.get("motif_absence"),
             trajets=[_trajet_from_dict(t) for t in d.get("trajets", [])],
         )
 
@@ -150,6 +154,7 @@ class Piece:
         return {
             "id": self.id,
             "type_horaire": self.type_horaire,
+            **({"motif_absence": self.motif_absence} if self.motif_absence is not None else {}),
             "numero_autobus": self.numero_autobus,
             "duree": self.duree,
             "prise": self.prise,

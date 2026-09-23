@@ -20,6 +20,7 @@ from chauffeur.depots import (  # noqa: E402
     JOURNEES_DIR as DEPOTS_JOURNEES_DIR, sauvegarder_journee,
 )
 from chauffeur.journal import ecrire_bloc  # noqa: E402
+from chauffeur.journee import parser_sommaire_absence  # noqa: E402
 from chauffeur.modeles import Journee  # noqa: E402
 from chauffeur.portail import texte_visible_html  # noqa: E402
 
@@ -267,6 +268,20 @@ class JourneeParser:
                 if prochain:
                     morceaux.append(prochain)
             entete = "".join(morceaux)
+            if re.match(r"^Sommaire\s*Absence", entete, re.IGNORECASE):
+                j = fin_entete + 1
+                while j < len(lines) and not lines[j].strip().startswith(("Sommaire", "Détails")):
+                    j += 1
+                try:
+                    s = parser_sommaire_absence(entete, lines[fin_entete + 1:j])
+                except ValueError as exc:
+                    self.errors.append(f"❌ {exc}")
+                    return []
+                if len(sommaires) < len(self._ancres_sommaire):
+                    s["_ancre"] = self._ancres_sommaire[len(sommaires)]
+                sommaires.append(s)
+                i = j
+                continue
             # \d{1,3} pour le numéro de pièce (01, 02, … 15, etc.)
             # (?:(\d{5})|--)? pour le numéro d'autobus : 5 chiffres, ou "--"
             # littéral si pas encore assigné (optionnel dans les deux cas)
@@ -440,9 +455,10 @@ class JourneeParser:
         markers: list[tuple[int, str]] = []
 
         for idx, line in enumerate(lines):
-            m = re.match(r'^Détails\s+(\d+\s*-\s*\d+)\s*$', line.strip(), re.IGNORECASE)
+            m = re.match(r'^Détails\s+(Absence|\d+\s*-\s*\d+)\s*$', line.strip(), re.IGNORECASE)
             if m:
-                markers.append((idx, re.sub(r'\s+', '', m.group(1))))
+                pid = re.sub(r'\s+', '', m.group(1))
+                markers.append((idx, "Absence" if pid.lower() == "absence" else pid))
 
         details: dict[tuple[str, int], tuple] = {}
         occurrences: dict[str, int] = {}
@@ -469,6 +485,8 @@ class JourneeParser:
             return None
 
         sommaires = self._parse_sommaires()
+        if self.errors:
+            return None
         if not sommaires:
             self.errors.append("❌ Aucun sommaire (Sommaire…Horaire) trouvé")
             return None
@@ -486,9 +504,12 @@ class JourneeParser:
                 cle_ancre,
                 details.get((pid, occurrence), ([], None)),
             )
+            if s.get("type_horaire") == "absence":
+                traj, releve = [], None
             pieces.append({
                 "id":              pid,
                 "type_horaire":    s.get("type_horaire", "horaire"),
+                **({"motif_absence": s["motif_absence"]} if "motif_absence" in s else {}),
                 "numero_autobus":  s.get("numero_autobus"),
                 "duree":           s.get("duree"),
                 "prise":           s.get("prise"),
@@ -531,6 +552,11 @@ class JourneeParser:
             )
             from chauffeur.modeles import TrajetService, TrajetHlp
             for p in journee.pieces:
+                if p.type_horaire == "absence":
+                    lines.append(
+                        f"   Pièce Absence : {p.debut} → {p.fin} ({p.duree}), {p.motif_absence}"
+                    )
+                    continue
                 bus   = p.numero_autobus or "–"
                 ntraj = sum(1 for t in p.trajets if isinstance(t, TrajetService))
                 nhlp  = sum(1 for t in p.trajets if isinstance(t, TrajetHlp))

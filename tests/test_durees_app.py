@@ -23,6 +23,7 @@ import bootstrap
 from app.components.resume_durees import TYPES_SEGMENTS, rendre_table_durees_html
 from chauffeur import ca, depots, notes, portail
 from chauffeur.durees import resumer_durees
+from scripts.parse_journee import JourneeParser
 from cas_durees import journee_443, journee_475
 
 
@@ -146,6 +147,27 @@ class TestPage(unittest.TestCase):
         self.assertIn('data-type="ligne"', tableau(at))
         self.assertNotIn('class="durees-nombre durees-max"', tableau(at))
         self.assertTrue(any("1 (185-62)" in w.value and "2 (136-28)" in w.value for w in at.warning))
+
+    def test_page_piece_absence(self):
+        texte = (ROOT / "tests/cas_journee/47-absence-repos.txt").read_text(encoding="utf-8")
+        j = JourneeParser(texte).parse().to_dict()
+        self.ecrire(j)
+        self.fichiers.append((date.fromisoformat(j["date"]), self.chemin(j["date"])))
+        at = self.ouvrir("2026-09-21")
+        for cle, valeur in {"Prise début": "05:18", "Prise fin": "15:24", "Temps travaillé": "7:48"}.items():
+            self.assertEqual(indicateurs(at)[cle], valeur)
+        absence = next(e for e in at.expander if e.label.startswith("Pièce Absence"))
+        self.assertIn("05:18 → 10:23", absence.label)
+        self.assertIn("(5:05)", absence.label)
+        self.assertTrue(any("P441 - REPO-Repos minimum 9 hrs manuel" in m.value for m in absence.markdown))
+        self.assertFalse(absence.text_input)
+        self.assertFalse(absence.button)
+        self.assertFalse(any("Horaires incomplets" in w.value for w in at.warning))
+        self.assertIn('data-type="absence"', tableau(at))
+        self.assertIn('>305</td>', tableau(at))
+        self.assertTrue(any(e.label.startswith("Pièce 85-07") for e in at.expander))
+        self.assertEqual(len([c for c in at.text_input if c.label == "Numéro d'autobus"]), 1)
+        self.assertEqual(json.loads(self.chemin(j["date"]).read_text()), j)
 
     def test_page_sans_piece(self):
         j = journee_475()

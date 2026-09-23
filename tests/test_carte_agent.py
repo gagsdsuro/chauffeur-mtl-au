@@ -19,7 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import fitz  # noqa: E402
+import pymupdf  # noqa: E402
 import carte_agent_stm as cas  # noqa: E402
 
 KEEP = ("type", "texte", "ligne", "heure", "prec")
@@ -30,7 +30,7 @@ def jouer_cas(dossier: Path) -> list:
     attendu = json.loads((dossier / "attendu.json").read_text(encoding="utf-8"))
     horaires = json.loads((dossier / "horaires.json").read_text(encoding="utf-8"))
 
-    doc = fitz.open(str(dossier / "carte.pdf"))
+    doc = pymupdf.open(str(dossier / "carte.pdf"))
     page = doc[0]
     spans = cas.get_spans(page)
     meta = cas.extract_meta(spans)
@@ -50,6 +50,25 @@ def jouer_cas(dossier: Path) -> list:
             a = att[i] if i < len(att) else "(absent)"
             if o != a:
                 ecarts.append(f"annotation {i}: obtenu {o}, attendu {a}")
+    return ecarts
+
+
+def verifier_extract_numero() -> list:
+    """Identifiants de 1 à 9999, aux coordonnées d'en-tête de la carte 47."""
+    ecarts = []
+    for numero in ("1", "9", "10", "47", "99", "100", "999", "1000", "9999",
+                   "0", "10000", "123456", "-1", "47A", ""):
+        spans = [
+            {"text": "Société de Transport de Montréal", "bbox": (158, 13, 442, 33)},
+            {"text": numero, "bbox": (12.75, 72.13, 42, 86.60)},
+            {"text": "21/09/2026", "bbox": (96, 72.99, 156, 86.39)},
+            # Un numéro dans le corps ne doit pas servir de repli.
+            {"text": "85", "bbox": (12.75, 150, 27, 164)},
+        ]
+        attendu = numero if numero.isdecimal() and 1 <= int(numero) <= 9999 else "?"
+        obtenu = cas.extract_meta(spans)["carte"]
+        if obtenu != attendu:
+            ecarts.append(f"numéro {numero!r}: obtenu {obtenu!r}, attendu {attendu!r}")
     return ecarts
 
 
@@ -101,6 +120,15 @@ def verifier_extract_jour_type() -> list:
 def main() -> int:
     echecs = 0
 
+    ecarts = verifier_extract_numero()
+    if ecarts:
+        echecs += 1
+        print("ECHEC  extract_numero:")
+        for e in ecarts:
+            print(f"       - {e}")
+    else:
+        print("OK     extract_numero")
+
     ecarts = verifier_extract_jour_type()
     if ecarts:
         echecs += 1
@@ -131,7 +159,7 @@ def main() -> int:
         else:
             print(f"OK     {nom}")
 
-    total = len(noms) + 1  # +1 pour verifier_extract_jour_type
+    total = len(noms) + 2  # numéro et jour-type
     print(f"\n{total - echecs}/{total} cas passent.")
     return 1 if echecs else 0
 

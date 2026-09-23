@@ -290,15 +290,15 @@ class TestInterface(unittest.TestCase):
         )
         at = self.ouvrir()
         contenus = [i.proto.srcdoc for i in at.get("iframe")]
-        self.assertIn(complet.read_text(encoding="utf-8"), contenus)
-        self.assertIn(trajet.read_text(encoding="utf-8"), contenus)
+        self.assertTrue(any(complet.read_text(encoding="utf-8") in c for c in contenus))
+        self.assertTrue(any(trajet.read_text(encoding="utf-8") in c for c in contenus))
         self.assertTrue(all(i.proto.scrolling for i in at.get("iframe")))
         self.changer_page(at, "3_rapports")
         at.date_input(key="rpt_v2_date").set_value(date.fromisoformat(jour)).run()
         at.button(key="rpt_v2_btn").click().run()
         self.sans_exception(at)
         self.assertFalse(at.error)
-        self.assertEqual(at.get("iframe")[0].proto.srcdoc, complet.read_text(encoding="utf-8"))
+        self.assertIn(complet.read_text(encoding="utf-8"), at.get("iframe")[0].proto.srcdoc)
         self.assertTrue(at.get("iframe")[0].proto.scrolling)
         self.assertTrue(any(d.proto.label == "⬇️ Télécharger (HTML)" and d.proto.url
                             for d in at.get("download_button")))

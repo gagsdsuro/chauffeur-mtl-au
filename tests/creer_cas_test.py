@@ -24,7 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import fitz  # noqa: E402
+import pymupdf  # noqa: E402
 import carte_agent_stm as cas  # noqa: E402
 
 
@@ -45,7 +45,7 @@ def main() -> int:
     src = Path(args.pdf).expanduser()
     date_str = cas.resolve_date(src, args.date)
 
-    doc = fitz.open(str(src))
+    doc = pymupdf.open(str(src))
     page = doc[0]
     spans = cas.get_spans(page)
     meta = cas.extract_meta(spans)

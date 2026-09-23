@@ -13,6 +13,8 @@ from datetime import date
 
 import streamlit as st
 
+from app.components.apercu_html import afficher_rapport_html
+
 from gen_rapport_v2 import generer_rapport
 
 from app.components.session_dialog import declencher_dialog_si_requis
@@ -179,7 +181,7 @@ with rpt_tabs[1]:
                     )
                     if v2_fmt == "html":
                         with st.expander("Aperçu HTML"):
-                            st.iframe(
+                            afficher_rapport_html(
                                 _out.read_text(encoding="utf-8"),
                                 height=600,
                             )

@@ -124,6 +124,16 @@ def resumer_durees(journee: Journee | dict) -> ResumeDurees:
                     battement=pause, duree_totale=pause,
                 ))
 
+        if piece.get("type_horaire") == "absence":
+            duree = calcul.intervalle(prise, fin, "Absence")
+            resultat.lignes.append(LigneDuree(
+                index, "absence", _heure(prise), "absence",
+                duree=duree, duree_totale=duree,
+            ))
+            resultat.lignes.append(LigneDuree(index, "fin", _heure(fin), "fin"))
+            precedent, fin_precedente = calcul, fin
+            continue
+
         if not trajets:
             calcul.signaler("Aucun trajet renseigné.")
         duree_prise = calcul.intervalle(prise, departs[0] if departs else None, "Prise")
