@@ -53,6 +53,17 @@ EV_104 = {
 
 JOURNEE = {"date": "2026-06-15", "journee_numero": "439", "pieces": []}
 
+GD_24E = {
+    "ligne": "24e", "direction": "ouest",
+    "routes": [{
+        "line_number": "24e", "direction": "Ouest",
+        "parcours": [{
+            "id": 9, "name": "Parcours secondaire",
+            "direction": ["Via - Sherbrooke", "Droite - Décarie"],
+        }],
+    }],
+}
+
 
 def main() -> int:
     echecs = []
@@ -65,6 +76,8 @@ def main() -> int:
         rep = Path(tmp)
         (rep / "gd104_est.json").write_text(
             json.dumps(GD_104, ensure_ascii=False), encoding="utf-8")
+        (rep / "gd24e_ouest.json").write_text(
+            json.dumps(GD_24E, ensure_ascii=False), encoding="utf-8")
         (rep / "104_est.json").write_text(
             json.dumps(EV_104, ensure_ascii=False), encoding="utf-8")
         (rep / "journee-2026-06-15.json").write_text(
@@ -73,12 +86,20 @@ def main() -> int:
         # ── Chemins canoniques ───────────────────────────────────────────────
         check(chemin_gd("104", "Est", rep).name == "gd104_est.json",
               "chemin_gd: direction devrait être minusculisée (gd104_est.json)")
+        check(chemin_gd("24E", "Ouest", rep).name == "gd24e_ouest.json",
+              "chemin_gd: suffixe de ligne et direction attendus en minuscules")
         check(chemin_evenements("104", "Est", rep).name == "104_est.json",
               "chemin_evenements: nom attendu 104_est.json")
         check(chemin_journee("2026-06-15", rep).name == "journee-2026-06-15.json",
               "chemin_journee: nom attendu journee-2026-06-15.json")
 
         # ── charger_gd ───────────────────────────────────────────────────────
+        for ligne in ("24E", "24e"):
+            instr, parc = charger_gd(ligne, "ouest", 9, gd_dir=rep)
+            check(parc and parc["id"] == 9
+                  and instr == ["Via - Sherbrooke", "Droite - Décarie"],
+                  f"charger_gd {ligne}: parcours 9 du fichier gd24e_ouest attendu")
+
         instr, parc = charger_gd("104", "est", 3, gd_dir=rep)
         check(instr == ["Via - Victoria"] and parc and parc["name"] == "École",
               f"charger_gd id=3: attendu parcours École, obtenu {parc}")
@@ -129,6 +150,10 @@ def main() -> int:
               f"sauvegarder_journee: relecture inattendue : {relu}")
 
         # ── info_gd (fraîcheur par mtime) ────────────────────────────────────
+        i = info_gd("24E", "ouest", gd_dir=rep)
+        check(i["exists"] and i["fresh"] and i["path"] == rep / "gd24e_ouest.json",
+              f"info_gd 24E: fichier gd24e_ouest présent et frais attendu, obtenu {i}")
+
         i = info_gd("999", "est", gd_dir=rep)
         check(not i["exists"] and i["path"] is None and not i["fresh"],
               "info_gd: fichier absent → exists=False attendu")

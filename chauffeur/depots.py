@@ -195,8 +195,8 @@ FRAICHEUR_GD_JOURS   = 90   # fichiers Gauche-Droite : ré-import périodique
 # ── Chemins canoniques ────────────────────────────────────────────────────────
 
 def chemin_gd(ligne: str, direction: str, gd_dir: Path | None = None) -> Path:
-    """gd<ligne>_<direction>.json (direction minuscule)."""
-    return (gd_dir or GD_DIR) / f"gd{ligne}_{(direction or '').lower()}.json"
+    """gd<ligne>_<direction>.json (ligne et direction en minuscules)."""
+    return (gd_dir or GD_DIR) / f"gd{str(ligne).lower()}_{(direction or '').lower()}.json"
 
 
 def chemin_evenements(ligne: str, direction: str,

@@ -325,7 +325,9 @@ def _anchor_detour_span(rows: list, instructions: list, max_gap: int = 2):
       2. fin du contournement = dernier match de la rue de rejointe dans la
          *grappe contiguë* qui suit (tolérance de `max_gap` étapes « connecteur »
          non-matchantes, ex. « carrefour giratoire »), pour ne pas avaler une
-         réapparition lointaine de la même rue ;
+         réapparition lointaine de la même rue. Ne pas prolonger cette grappe
+         à travers un arrêt non repris explicitement par le détour (code cité
+         ou nom complet égal à une étape), même si sa ligne G-D est vide ;
       3. le détour s'insère APRÈS l'ancre et barre les étapes (ancre, fin].
 
     Retourne (insert_pos, bypass_end). bypass_end == -1 si rien n'est barré
@@ -369,10 +371,24 @@ def _anchor_detour_span(rows: list, instructions: list, max_gap: int = 2):
         return insert_pos, -1
 
     # Grappe contiguë de la rue de rejointe après l'ancre.
-    reg_after = [i for i in reg if i >= first_exit]
+    rues_detour = {normalize_street(extract_street(instr)) for instr in instructions}
+    codes_detour = set(re.findall(r"\b\d{5}\b", "\n".join(instructions)))
     bypass_end = first_exit
     gap = 0
-    for i in reg_after[1:]:
+    for i in range(first_exit + 1, len(rows)):
+        r = rows[i]
+        if r.get("detour_added") or r.get("added_inline"):
+            continue
+        # Une boucle de desserte (Cardinal → Gare Dorval Nord → Cardinal)
+        # n'est pas un simple raccord. Examiner aussi les arrêts sans G-D.
+        if r.get("stop_id") or r.get("stop_code"):
+            code = str(r.get("stop_code") or "")
+            nom = normalize_street(r.get("stop_name") or "")
+            repris = code in codes_detour or bool(nom and nom in rues_detour)
+            if not repris:
+                break
+        if not r.get("gd"):
+            continue
         if matches(i, exit_street):
             bypass_end = i
             gap = 0
