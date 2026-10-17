@@ -40,6 +40,36 @@ Ce document décrit les interactions des utilisateurs avec le système, indépen
 7. Génère le Rapport quotidien s'il est absent ou si une de ses sources a changé, puis l'imprime au besoin.
 8. Vérifie que la carte agent annotée, le Rapport quotidien et le Rapport V2 sont disponibles pour consultation le lendemain.
 
+**Fonction future :** Dès que la journée est chargée, peut demander le [partage de son horaire de travail](#chauffeur--partage-de-lhoraire-de-travail) dans un agenda Google déjà partagé avec son entourage.
+
+---
+
+## Chauffeur — Partage de l’horaire de travail
+
+**fonction future**
+
+**Contexte :** Dès que sa journée est disponible dans l’application, le chauffeur souhaite partager son horaire de travail avec son entourage, lors de la préparation de sa journée.
+
+**Pré-requis :** La journée est chargée. Le chauffeur a choisi un agenda Google accessible en écriture et autorisé le système à y publier son horaire. Il gère le partage de cet agenda avec ses proches directement dans Google.
+
+1. Le chauffeur demande la publication de son horaire dans l’agenda choisi.
+2. Le système crée un événement par pièce de travail, y compris les pièces sans ligne et le temps supplémentaire. Les absences sont exclues.
+3. Chaque événement commence à la **prise début** et se termine à la **prise fin**, selon les [règles du résumé des durées](<docs/fonction-résumé des durées.md#prise-début-et-prise-fin>) : la prise début correspond au champ `prise` ; la prise fin correspond à l’arrivée de l’entrée au garage plus 10 minutes si la pièce se termine par une entrée, sinon au champ `fin` de la pièce.
+4. Le titre contient les lignes de service distinctes de la pièce, dans leur ordre d’apparition, et les heures : **« Travail STM: ligne 24 et ligne 85 de 12:32 à 16:37 »**. Sans ligne, le titre est **« Travail STM de 12:32 à 16:37 »**.
+5. Le système confirme le résultat de la publication ou signale les pièces qui n’ont pas pu être publiées.
+6. À la prochaine publication, le système actualise les événements existants, ajoute les nouvelles pièces et retire les événements correspondant aux pièces supprimées, sans doublons. Seuls les événements gérés par l’application pour cette journée sont concernés.
+
+### Règles et critères d’acceptation
+
+- Deux pièces produisent deux événements, même si elles partagent un identifiant ou se suivent sans pause.
+- Les pauses entre pièces restent libres dans l’agenda.
+- Les heures utilisent le fuseau `America/Toronto`. Une heure de quart comme `25:11` devient 01:11 le lendemain, dans l’événement et son titre.
+- Une pièce dont les bornes sont absentes ou incohérentes est signalée sans inventer d’horaire.
+- Une nouvelle publication inchangée ne crée aucun doublon.
+- Un échec de publication ne bloque pas la préparation de la journée et permet une nouvelle tentative.
+
+Les choix techniques de connexion Google feront l’objet d’une étape ultérieure.
+
 ---
 
 ## Chauffeur — Préparation avant le départ

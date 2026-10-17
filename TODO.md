@@ -46,7 +46,7 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 ## Code
 
-* [ ] **P3** — Uniformiser progressivement le typage Python.
+* [ ] **P2** — Uniformiser progressivement le typage Python.
 * [ ] **P3** — Évaluer l'utilisation de `ruff` pour le linting et le formatage.
 * [ ] **P4** — Évaluer l'utilisation de `mypy` ou d'un autre type checker.
 
@@ -60,11 +60,30 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 ## Automatisation
 
+* [ ] **P1** — Créer une tâche VS Code pour exécuter toute la suite.
+* [ ] **P2** — Créer des tâches VS Code pour les suites principales.
+* [ ] **P2** — Ajouter éventuellement une commande unique de validation avant commit.
+* [ ] **P2** — Évaluer l'ajout d'un script `check.sh` ou équivalent regroupant les validations.
 * [ ] **P3** — Évaluer l'intérêt de migrer tout ou partie de la suite actuelle vers `pytest`.
 
 ---
 
-# 3. Application Streamlit
+# 3. VS Code / environnement de développement
+
+* [x] **P1** — Créer le `.venv` du projet.
+* [x] **P1** — Configurer `.vscode/settings.json`.
+* [x] **P1** — Configurer `launch.json` pour l'application Streamlit.
+* [ ] **P2** — Créer `.vscode/tasks.json`.
+* [ ] **P2** — Ajouter une tâche « Tests complets ».
+* [ ] **P2** — Ajouter une tâche « Lancer Streamlit ».
+* [ ] **P2** — Ajouter une tâche « Docker Compose ».
+* [ ] **P2** — Vérifier le débogage des modules `chauffeur`.
+* [ ] **P2** — Documenter l'environnement de développement dans `README.md`.
+* [ ] **P3** — Évaluer les améliorations possibles du workflow terminal / VS Code.
+
+---
+
+# 4. Application Streamlit
 
 * [x] **P0** — Corriger les notes de relève associées au mauvais matricule.
 
@@ -89,13 +108,19 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 * [ ] **P2** — Améliorer les messages d'erreur affichés à l'utilisateur.
 * [ ] **P3** — Vérifier les temps de chargement lorsque `data/` devient volumineux.
 * [ ] **P3** — Évaluer la mise en cache des données calculées.
+* [ ] **P1** — Vérifier le comportement lorsqu'une donnée attendue est absente ou invalide.
+* [ ] **P2** — Identifier les améliorations prioritaires de l'interface Streamlit.
 
 ---
 
-# 4. Données STM
+# 5. Données STM
 
 ## GTFS / GTFS-RT
 
+* [ ] **P1** — Documenter précisément le flux d'import GTFS.
+* [ ] **P1** — Documenter précisément le flux GTFS-RT.
+* [ ] **P1** — Vérifier la gestion des erreurs réseau.
+* [ ] **P1** — Vérifier la gestion des réponses invalides ou incomplètes.
 * [ ] **P3** — Vérifier la conservation des données historiques.
 * [ ] **P3** — Définir une politique de nettoyage et d'archivage des anciennes données.
 
@@ -106,7 +131,7 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 ---
 
-# 5. Rapports
+# 6. Rapports
 
 ## Génération
 
@@ -119,15 +144,25 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
   * Répéter l'en-tête du tableau et permettre le fractionnement des événements longs.
 
 * [x] **P4** - "Rapport journalier" et "Rapport V2": Remplacer le sélecteur de date par une liste [j-5, aujourd'hui, j+7], n'afficher que les date où un fichier journée json est présent. Par défaut, la date du jour ou la journée la plus proche valide.
+* [ ] **P2** — Documenter les différences entre les versions de rapports existantes.
+* [ ] **P2** — Identifier les générateurs encore utilisés et ceux devenus historiques.
+* [ ] **P2** — Uniformiser le nommage des rapports.
+* [ ] **P2** — Vérifier la gestion des caractères accentués dans les noms de fichiers.
+* [ ] **P1** — Vérifier la génération des PDF sur l'environnement Docker.
 
 ## Qualité
 
 * [x] **P1** — Ajouter un cas de test de rapport complexe couvrant les événements de la ligne 10, les arrêts ajoutés, une fin indéterminée et la pagination paysage.
+* [ ] **P1** — Vérifier les cas limites concernant les parcours et horaires.
+* [ ] **P2** — Comparer automatiquement certains rapports de référence avec les résultats attendus.
 
 ---
 
-# 6. Scripts d'import et de traitement
+# 7. Scripts d'import et de traitement
 
+* [ ] **P1** — Documenter les scripts sous `scripts/`.
+* [ ] **P1** — Documenter l'ordre d'exécution des scripts lorsqu'un traitement complet est requis.
+* [ ] **P1** — Vérifier les dépendances entre scripts.
 * [x] **P1** — Uniformiser le compte rendu des événements ajoutés, modifiés et retirés.
 
   * Utiliser la même comparaison structurée pour l'import manuel, le rafraîchissement portail, l'UI et les journaux.
@@ -140,47 +175,75 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 * [x] **P1** — Préserver les retours à la ligne des G-D lors de l'import, avec repli compatible pour les anciennes chaînes aplaties.
 * [ ] **P3** — Uniformiser les conventions de ligne de commande.
 * [ ] **P2** — Ajouter une gestion d'erreur cohérente.
+* [ ] **P2** — Vérifier les messages de log.
+* [ ] **P3** — Évaluer l'ajout d'un point d'entrée CLI unique pour les opérations courantes.
 * [ ] **P4** — Adapter `parse_journee.py` au format multiligne produit par un copier-coller depuis Firefox, si ce navigateur devient officiellement pris en charge par `employe.stm.info`.
 
 ---
 
-# 7. Gestion des données générées
+# 8. Gestion des données générées
 
 * [ ] **P2** — Définir clairement quelles données sous `data/` sont des sources.
 * [ ] **P2** — Définir quelles données sont générées par les scripts.
+* [ ] **P1** — Définir ce qui doit être versionné dans Git.
+* [ ] **P1** — Définir ce qui doit rester uniquement sur l'environnement local.
+* [ ] **P2** — Examiner les fichiers `.bak`, logs et autres artefacts 
 * [ ] **P3** — Documenter la stratégie d'archivage des données historiques.
+* [ ] **P1** — Séparer, lorsque pertinent, les données de développement des données de production.
 
 ---
 
-# 8. Docker / déploiement
+# 9. Docker / déploiement
 
+* [ ] **P1** — Tester `docker compose up --build` sur une installation propre.
+* [ ] **P1** — Vérifier que l'UID/GID du conteneur correspond bien à l'utilisateur de l'hôte.
+* [ ] **P1** — Vérifier les permissions des fichiers générés dans `data/`.
 * [x] **P2** — Vérifier le healthcheck Streamlit.
 
   * Image `chauffeur-stm:candidate-20260922` démarrée sans port exposé ni données personnelles : état Docker `healthy`, sonde terminée avec code 0. Voir [la fiche de validation](docs/recettes/2026-09-22-preparation-version.md).
 * [ ] **P2** — Documenter les variables d'environnement nécessaires.
+* [ ] **P0** — Vérifier le traitement sécurisé de `Installation/config/secrets.*`.
+* [ ] **P2** — Évaluer une stratégie de versionnement des images Docker.
 * [ ] **P2** — Comparer le comportement local Python 3.14 avec Python 3.12 dans Docker.
 
 ---
 
-# 9. Sécurité
+# 10. Sécurité
 
+* [ ] **P0** — Vérifier qu'aucun secret ou identifiant sensible n'est actuellement suivi par Git.
+* [ ] **P0** — Vérifier les permissions des fichiers de session et cookies.
+* [ ] **P0** — Vérifier le contenu de `Installation/config/`.
+* [ ] **P0** — Vérifier que les données sensibles restent exclues du dépôt.
+* [ ] **P2** — Évaluer un scan automatique des secrets avant commit.
 
 ---
 
-# 10. Documentation
+# 11. Documentation
 
-
+* [ ] **P2** — Mettre à jour `README.md` au fur et à mesure des changements.
+* [ ] **P2** — Documenter l'installation complète sur Ubuntu.
+* [ ] **P2** — Documenter l'installation avec Docker.
+* [ ] **P2** — Documenter le workflow de développement VS Code.
+* [ ] **P2** — Documenter l'exécution des tests.
+* [ ] **P2** — Documenter le workflow de mise à jour des données STM.
+* [ ] **P1** — Vérifier la cohérence entre `README.md`, `AGENTS.md`, `CLAUDE.md` et les scripts.
+* [ ] **P2** — Documenter les principaux modules du package `chauffeur`.
 * [x] **P3** — Documenter le format réel des fichiers d'événements et les ID dupliqués légitimes.
-* [ ] **P3** — Documenter les formats de données importants.
+* [ ] **P2** — Documenter les formats de données importants.
 
 ---
 
-# 11. Git / gestion du projet
+# 12. Git / gestion du projet
 
-
+* [ ] **P1** — Vérifier que `.gitignore` correspond effectivement aux données qui doivent être versionnées.
+* [ ] **P2** — Établir les conventions de commit.
+* [ ] **P2** — Vérifier les branches et le workflow Git.
+* [ ] **P3** — Évaluer l'ajout de hooks Git pour les vérifications automatiques.
+* [ ] **P2** — Vérifier régulièrement `git status` avant commit.
+* [ ] **P1** — Documenter la procédure de sauvegarde/restauration du dépôt.
 ---
 
-# 12. Améliorations fonctionnelles
+# 13. Améliorations fonctionnelles
 
 * [-] **P3** — Identifier les traitements manuels pouvant être automatisés.
   * Préparation de la journée
@@ -194,8 +257,42 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 * [x] **P2** - [Ma journée](app/pages/1_ma_journee.py) ajuster le sélecteur de date de manière à permettre la saisie manuelle d'une date différente que ceux de la liste déroulante. Ceci permettant de visualiser des journées antérieurs.
 * [-] **P4** — Ajuster l’affichage en mode sombre.
   * Palette claire explicite des tableaux d’événements partagés et des aperçus HTML dans Fichiers, Ma journée et Rapports, y compris les anciens rapports. Contrôles navigateur ciblés et recette sur téléphone physique suivis dans [la préparation de livraison](docs/recettes/2026-09-22-preparation-version.md). Ne vaut pas audit complet de tous les écrans.
+* [ ] **P2** — Publier à la demande l’horaire de travail dans un agenda Google déjà partagé avec l’entourage, dès que la journée est chargée lors de sa préparation. Voir le [cas d’utilisation](USECASES.md#chauffeur--partage-de-lhoraire-de-travail).
+  * Un événement par pièce de travail, y compris sans ligne et en temps supplémentaire, hors absences ; bornes de prise début et prise fin, titre avec les lignes distinctes et les heures, passage à minuit dans le fuseau `America/Toronto`.
+  * À chaque nouvelle publication, synchroniser uniquement les événements de cette journée gérés par l’application : ajouts, modifications et retraits sans doublons. Signaler les bornes invalides et les échecs sans bloquer la préparation ; permettre une nouvelle tentative.
+  * Cas d’utilisation formalisé ; implémentation et choix techniques de connexion Google à réaliser.
+* [ ] **P2** - Automatiser le téléchargement de la carte agent PDF au moment de la préparation de la journée.
+* [ ] **P3** - Prévoir un mode manuel, semi-automatique et automatique pour la préparation de la journée
+  * en mode manuel les étapes sont exécutées à la demande et permet l'utilisation des import manuel de secours.
+  * en mode semi automatique, les étapes de préparation sont déclanché en bloc à la demande.
+  * en mode automatique, la préparation se fait de façon autonome à une heure spécifiée dans la mesure où la session est valide.
+* [ ] **P3** - Fonction permettant de garder vivante une session active.
+* Revoir la présentation de la page ma journée afin de combiner le tableau des durées avec la section Pièces de travail.
+* [ ] **P4** - Rebranding l'application afin de ne pas utiliser STM
+  * idée: Chauffeur d'autobus urbain à Montréal avisé (CAUMA)
+  * idée: Aide au chauffeur d'autobus urbain à Montréal (ACAUM)
+  * idée: Mon employé numérique (MEN)
+* [ ] **P4** - Rebranding du rapport V2
+  * idée: Rapport Gauche-Droite
+  * idée: Rapport GD+
+* [ ] **P4** - Rebranding de la section Fichier
+  * idée: Plutôt que de mettre l'emphase sur les contenants (fichiers), présenter les éléments comme des entités ou objets. Ajouter une couche d'abstraction moins technique. 
+* [ ] **P2** - Rapport V2, ajouter un mode de fonctionnement sans fichier journée
+  * En option, passer une liste de ligne/id-parcours/direction/heure de départ
+    * ajout du filtre heure de départ
+    * générer chaque groupe ligne/id-parcours/direction
+      * si le résultat pour un groupe est identique, indiquer l'heure applicable, sinon garder le résultat 
+        * par exemple si un détour est applicable pour les trajets de 12:30 et 14:18 mais pas pour celui 15:12, les 2 résultats seront conserver.
+  * Ajuster la page Rapports/Rapport V2 (journée) afin de sélectionner les lignes/directions souhaités
+    * Afficher une liste des lignes/directions/id-parcours avec un checkbox ou équivalent
+      * par défaut toutes les lignes sont sélectionnées
+* [ ] **P2** - Recherche croisée CA/journée et journée/CA
+* [ ] **P3** _ Profil chauffeur épurer
+  * Réduire au minimum l'exposition des éléments techniques (fichier, json, GTFS, etc)  
+* [ ] **P3** - Affichage des check point  
+---
 
-# 13. Dette technique / investigations
+# 14. Dette technique / investigations
 
 **Bilan de réévaluation de l'[audit Streamlit](docs/audit-streamlit-1.50.md) — 16 septembre 2026 :** la correction des notes d'autobus et le verrouillage des versions sont présents. Les vérifications ciblées de cette réévaluation passent sous Python 3.14.4 / Streamlit 1.62.0 : cinq tests de `test_durees_app.py`, le scénario Logs de `test_logs_app.py` et trois cas de `test_carte_agent.py`. L'import `fitz` émet encore un avertissement de dépréciation. L'anomalie des notes de relève a été reproduite séparément sur fichiers temporaires ; elle est suivie en P0 dans « Application Streamlit ».
 
@@ -213,10 +310,13 @@ L'audit consigne déjà 32/32 suites réussies sous Python 3.12.14 / Streamlit 1
 * [ ] **P2** — Déterminer si Python 3.14 doit devenir la version officiellement supportée hors Docker.
 * [ ] **P2** — Déterminer si Python 3.12 doit également être utilisé pour le développement local afin d'assurer une parité stricte avec Docker.
 * [ ] **P3** — Déterminer si le projet doit rester basé sur `requirements.txt` ou évoluer vers `pyproject.toml`.
+* [ ] **P2** — Déterminer si pytest est pertinent ou si `tests/run_all.py` doit rester la référence.
+* [ ] **P2** — Évaluer l'intérêt d'une CI Git pour automatiser les tests.
+* [ ] **P1** — Évaluer une stratégie de séparation entre données de développement et données de production.
 
 ---
 
-# 14. UI
+# 15. UI
 * [x] **P1** - Réorganisation de la page "Ma journée"
 
   * Limité le contenu de la liste déroulante "Journée" à [-2, aujourd'hui, +5]
@@ -273,3 +373,75 @@ L'audit consigne déjà 32/32 suites réussies sous Python 3.12.14 / Streamlit 1
   * Chauffeur : changement de son propre PIN en autonomie (ancien requis, barre latérale) ; l'admin réinitialise sans l'ancien (`reinitialiser_pin`) et déverrouille (`deverrouiller_compte`).
   * Page `app/pages/6_administration.py` : liste, création (rôle au choix), promotion/destitution, réinitialisation de PIN, déverrouillage, révocation — visible uniquement aux Chauffeur-admin (`st.navigation` filtré dans `main.py` + garde-fou en page).
   * Tests : `tests/test_auth_roles.py` (matrice d'autorisations) et `tests/test_administration_app.py` (AppTest : garde-fou Chauffeur + gestion par l'admin).
+# 16. Backlog initial
+
+Ce backlog constitue le point de départ opérationnel au **30 août 2026**. Les tâches doivent être déplacées dans les sections appropriées lorsqu'elles deviennent suffisamment définies.
+
+## Environnement et outillage
+
+* [ ] **P1** — Vérifier que toutes les dépendances de `requirements.txt` s'installent correctement dans `.venv`.
+* [ ] **P1** — Exécuter `python tests/run_all.py` et établir l'état initial de la suite de tests.
+* [ ] **P1** — Tester le lancement de l'application avec `streamlit run app/ui.py`.
+* [ ] **P1** — Tester le lancement avec `docker compose up --build`.
+* [ ] **P2** — Créer `.vscode/tasks.json`.
+* [ ] **P2** — Documenter dans `README.md` le workflow de développement local avec `.venv` et VS Code.
+
+## Maintenance immédiate
+
+* [ ] **P1** — Investiguer l'avertissement de dépréciation de l'API `fitz`.
+* [ ] **P1** — Vérifier tous les usages de `fitz` avant d'effectuer la migration vers `pymupdf`.
+* [ ] **P1** — Vérifier la compatibilité Python 3.14 de l'application et de ses dépendances.
+* [ ] **P1** — Comparer le comportement Python 3.14 local avec Python 3.12 dans Docker.
+* [ ] **P2** — Déterminer si `requirements.txt` doit rester la méthode de gestion des dépendances ou évoluer vers `pyproject.toml`.
+
+## Tests / qualité
+
+* [ ] **P1** — Identifier les tests critiques couvrant les traitements métier principaux.
+* [ ] **P1** — Ajouter un test de régression pour chaque anomalie fonctionnelle rencontrée.
+* [ ] **P2** — Évaluer l'intérêt de migrer tout ou partie de la suite actuelle vers `pytest`.
+* [ ] **P2** — Évaluer l'ajout de `ruff` pour le linting et le formatage.
+
+## Données et dépôt
+
+* [ ] **P0** — Vérifier qu'aucun secret ou identifiant sensible n'est actuellement suivi par Git.
+* [ ] **P1** — Vérifier que le `.gitignore` correspond effectivement aux données qui doivent être versionnées.
+* [ ] **P1** — Examiner les fichiers `.bak`, logs et autres artefacts présents ou générés sous `data/`.
+* [ ] **P1** — Documenter clairement quelles données de `data/` sont des sources et lesquelles sont générées.
+* [ ] **P2** — Définir une stratégie d'archivage des anciennes données.
+
+## Application et architecture
+
+* [ ] **P2** — Documenter les principaux modules du package `chauffeur`.
+* [ ] **P2** — Documenter les dépendances et l'ordre d'exécution des scripts sous `scripts/`.
+* [ ] **P3** — Évaluer la création d'un point d'entrée CLI unique pour les traitements courants.
+
+## Fonctionnel
+
+* [ ] **P1** — Recenser les améliorations fonctionnelles déjà envisagées mais non documentées.
+* [ ] **P1** — Classer les besoins fonctionnels selon leur valeur métier.
+* [ ] **P2** — Identifier les traitements manuels qui pourraient être automatisés.
+* [ ] **P2** — Identifier les améliorations prioritaires de l'interface Streamlit.
+
+---
+
+# 17. Backlog — idées
+
+Cette section contient les idées qui ne sont pas encore suffisamment définies pour devenir des tâches.
+
+* [ ] **P3** — ...
+* [ ] **P3** — ...
+* [ ] **P3** — ...
+
+---
+
+# 18. Historique des décisions
+
+## 2026-08-30
+
+* L'environnement Python local est basé sur le `.venv` du projet.
+* Docker conserve Python 3.12 comme environnement de production.
+* VS Code doit utiliser l'interpréteur `.venv` propre au projet.
+* L'application Streamlit est lancée par VS Code via `python -m streamlit`.
+* Le serveur Streamlit du mode debug VS Code est lié à `127.0.0.1`.
+* L'avertissement concernant `fitz` est suivi dans le TODO plutôt que corrigé immédiatement.
+* `.vscode/` et `.venv/` restent des éléments locaux exclus du dépôt Git.
