@@ -287,6 +287,8 @@ if valider:
     except reg.ConflitAppariement:
         st.error("Un autre chauffeur a modifié cet appariement pendant votre révision. "
                  "Annulez vos modifications pour recharger sa version, puis recommencez.")
+    except ValueError as exc:
+        st.error(f"Validation refusée : {exc}.")
     else:
         _oublier(cle)
         st.session_state[FLASH] = ("success", f"Appariement {ligne} {direction} id {pid} validé.")

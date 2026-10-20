@@ -38,11 +38,15 @@ def _cached_arrets_pour_parcours(
         return None
 
 def _mtime_gtfs(gtfs_dir: Path) -> float:
-    """Clé d'invalidation des caches GTFS : date de modification de stops.txt."""
-    try:
-        return (Path(gtfs_dir) / "stops.txt").stat().st_mtime
-    except OSError:
-        return 0.0
+    """Clé d'invalidation des caches GTFS : dernière modification de stops.txt
+    ou de stops_index.json (reconstruit après l'extraction, donc plus tard)."""
+    dates = []
+    for nom in ("stops.txt", "stops_index.json"):
+        try:
+            dates.append((Path(gtfs_dir) / nom).stat().st_mtime)
+        except OSError:
+            pass
+    return max(dates, default=0.0)
 
 
 @st.cache_data(show_spinner=False, max_entries=2)

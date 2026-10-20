@@ -176,8 +176,15 @@ def valider_appariement(ligne: str, direction: str, parcours: dict, stops: list,
     (source « confirme ») — c'est l'ensemble que le chauffeur a sous les yeux
     au moment de valider. Si une source change plus tard, seuls les choix
     « manuel » sont reportés : le reste est recalculé puis reconfirmé.
-    Lève ConflitAppariement si le fichier a changé entre-temps.
+    Lève ValueError si un arrêt de `stops` est absent de `noms` (versions
+    GTFS mélangées) et ConflitAppariement si le fichier a changé entre-temps.
     """
+    inconnus = [sid for _, sid in stops if sid not in noms]
+    if inconnus:
+        # Séquence et noms d'arrêts de deux versions GTFS différentes : ne
+        # jamais figer comme « validé » un parcours qui cite des arrêts disparus.
+        raise ValueError(f"arrêt(s) absent(s) du GTFS courant : {', '.join(inconnus)} — "
+                         "séquence GTFS périmée, recharger la page")
     ancres = {int(k): int(v) for k, v in ancres.items()}
     resultat = algo.apparier(parcours.get("direction", []), stops, noms, ancres=ancres)
     for a in resultat["arrets"]:

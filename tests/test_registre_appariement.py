@@ -7,7 +7,8 @@ journal commun ; entrées G-D/GTFS reprises du cas figé 811-ouest-13.
 
 Couvre : création et idempotence, validation (statut, auteur, .bak,
 sources manuel/confirme),
-contrôle de version optimiste (conflits), G-D modifié → « à revalider » avec
+contrôle de version optimiste (conflits), refus de valider une séquence
+GTFS périmée (arrêt absent des noms), G-D modifié → « à revalider » avec
 choix humains reportés, GTFS modifié lu par le rapport sans écriture,
 recalcul sur changement de VERSION_ALGO, boucle (même stop_id deux fois),
 gestes de révision (modifier_ancres), parcours renuméroté (choix repris)
@@ -75,6 +76,16 @@ def scenario(rep: Path) -> list:
             e.append(f"conflit non détecté : {cas}")
         except reg.ConflitAppariement:
             pass
+
+    # Séquence d'une ancienne version GTFS (arrêt disparu des noms) : refus.
+    noms_sans = {k: v for k, v in NOMS.items() if k != "53039"}
+    try:
+        reg.valider_appariement(L, D, PARCOURS, STOPS, noms_sans, {}, "43863", 2, app_dir)
+        e.append("validation acceptée avec un arrêt absent du GTFS courant")
+    except ValueError:
+        pass
+    verifier(e, reg.charger_appariement(L, D, 13, app_dir)["version"] == 2,
+             "validation refusée : rien ne doit être écrit")
 
     # Validé + réimport identique → inchangé (un validé n'est jamais recalculé).
     _, action = reg.synchroniser_parcours(L, D, PARCOURS, STOPS, NOMS, app_dir)

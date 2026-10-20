@@ -155,6 +155,11 @@ python3 tests/test_depots.py
 python3 tests/test_effectif.py
 ```
 
+**Tests unitaires GTFS statique** — couvre le cache mémoire de `stops_index.json` (`chauffeur.gtfs`) : un index modifié sur disque par un autre processus (`fetch_gtfs.py`) est relu au prochain appel (régression 51281 « Décarie / Duquette » du 24 est, octobre 2026 : ancienne séquence servie avec les nouveaux noms) :
+```bash
+python3 tests/test_gtfs.py
+```
+
 **Tests unitaires GTFS-RT** — couvre `chauffeur.gtfs_rt` (décodage wire-format sur messages synthétiques encodés dans le test, robustesse aux octets invalides, `find_vehicle` avec normalisation xx-xxx) :
 ```bash
 python3 tests/test_gtfs_rt.py
