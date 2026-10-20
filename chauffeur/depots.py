@@ -205,6 +205,22 @@ def chemin_evenements(ligne: str, direction: str,
     return (events_dir or EVENTS_DIR) / f"{ligne}_{(direction or '').lower()}.json"
 
 
+def repertoire_appariements(gd_dir: Path | None = None) -> Path:
+    """Appariements G-D ↔ GTFS (flotte) : toujours à côté des G-D qu'ils décrivent.
+
+    `data/Gauche-Droite/` → `data/Appariements/`. Un GD_DIR redirigé (tests)
+    redirige donc aussi les appariements.
+    """
+    return (gd_dir or GD_DIR).parent / "Appariements"
+
+
+def chemin_appariement(ligne: str, direction: str, id_parcours,
+                       appariements_dir: Path | None = None) -> Path:
+    """<ligne>_<direction>_<id>.json (ligne et direction en minuscules)."""
+    return ((appariements_dir or repertoire_appariements())
+            / f"{str(ligne).lower()}_{(direction or '').lower()}_{id_parcours}.json")
+
+
 def chemin_journee(date_str: str, journees_dir: Path | None = None) -> Path:
     """journee-YYYY-MM-DD.json."""
     return (journees_dir or repertoire_prive("journees")) / f"journee-{date_str}.json"

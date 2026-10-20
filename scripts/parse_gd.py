@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from chauffeur.depots import sauvegarder_gd  # noqa: E402
 from chauffeur.journal import ecrire_bloc  # noqa: E402
+from chauffeur.registre_appariement import synchroniser_ligne  # noqa: E402
 from chauffeur.portail import texte_visible_html  # noqa: E402
 
 
@@ -34,6 +35,7 @@ class GDParser:
         self.parcours = []
         self.errors = []
         self.report = ""
+        self.appariements: list[str] = []
         self._expected_ligne: str | None = None
         self._expected_direction: str | None = None
 
@@ -85,6 +87,13 @@ class GDParser:
         if not self._save_file(json_data):
             return None
         self.report = self._format_report(summary)
+        # Appariement G-D ↔ GTFS des parcours modifiés (non bloquant), à côté
+        # du répertoire G-D du parseur — commun à tous les chemins d'import
+        # (CLI, portail, collage dans l'app), qui affichent et journalisent le rapport.
+        self.appariements = synchroniser_ligne(self.ligne, self.direction, gd_dir=self.gd_dir)
+        if self.appariements:
+            self.report += "\n[APPARIEMENT]\n" + "\n".join(
+                f"   {m}" for m in self.appariements) + "\n"
         return json_data
 
     def _filename(self) -> str:
