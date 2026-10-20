@@ -132,6 +132,20 @@ class GTFSDownloader:
         except Exception as e:
             self.log(f"Erreur construction index: {e}", "WARNING")
 
+    def synchroniser_appariements(self):
+        """Revérifie les appariements G-D ↔ GTFS : la séquence d'arrêts a pu changer."""
+        self.log("Vérification des appariements G-D ↔ GTFS...")
+        try:
+            sys.path.insert(0, str(self.project_root))
+            from chauffeur.registre_appariement import synchroniser_tout
+            messages = synchroniser_tout(gtfs_dir=self.current_dir, log=True)
+            for message in messages:
+                self.log(message, "WARNING" if message.startswith("⚠") else "INFO")
+            if not messages:
+                self.log("Appariements inchangés")
+        except Exception as e:
+            self.log(f"Erreur appariements: {e}", "WARNING")
+
     def run(self):
         temp_zip = None
         try:
@@ -143,6 +157,7 @@ class GTFSDownloader:
             self.archive_old_version()
             self.extract_gtfs(temp_zip)
             self.build_stops_index()
+            self.synchroniser_appariements()
             self.update_manifest(temp_zip)
             self.cleanup_old_archives(keep_count=4)
 
@@ -178,6 +193,7 @@ def main():
             print("ERREUR: dossier GTFS absent — téléchargez d'abord sans --index-only")
             sys.exit(1)
         downloader.build_stops_index()
+        downloader.synchroniser_appariements()
         sys.exit(0)
 
     success = downloader.run()

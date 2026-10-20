@@ -14,20 +14,27 @@ import json
 from pathlib import Path
 
 # Cache mémoire : évite de relire stops_index.json à chaque appel dans le
-# même processus (Streamlit, rapport multi-groupes).
+# même processus (Streamlit, rapport multi-groupes). Clé = (dossier, date de
+# modification du fichier) : une mise à jour GTFS faite par un AUTRE processus
+# (fetch_gtfs.py, cron) est prise en compte au prochain appel — sans quoi
+# l'app servait l'ancienne séquence d'arrêts avec les nouveaux noms.
 _idx_cache: dict | None = None
 _idx_cache_dir: Path | None = None
+_idx_cache_mtime: int | None = None
 
 
 def _load_index(gtfs_dir: Path) -> dict | None:
-    """Charge stops_index.json en mémoire (avec cache module-level)."""
-    global _idx_cache, _idx_cache_dir
+    """Charge stops_index.json en mémoire (cache invalidé si le fichier change)."""
+    global _idx_cache, _idx_cache_dir, _idx_cache_mtime
     index_path = gtfs_dir / "stops_index.json"
-    if not index_path.exists():
+    try:
+        mtime = index_path.stat().st_mtime_ns
+    except OSError:
         return None
-    if _idx_cache is None or _idx_cache_dir != gtfs_dir:
+    if _idx_cache is None or _idx_cache_dir != gtfs_dir or _idx_cache_mtime != mtime:
         _idx_cache = json.loads(index_path.read_text(encoding="utf-8"))
         _idx_cache_dir = gtfs_dir
+        _idx_cache_mtime = mtime
     return _idx_cache
 
 
@@ -134,7 +141,7 @@ def build_stops_index(gtfs_dir: Path) -> Path:
     Valeur : [[seq, stop_id], ...] trié par seq.
     Retourne le chemin du fichier écrit.
     """
-    global _idx_cache, _idx_cache_dir
+    global _idx_cache, _idx_cache_dir, _idx_cache_mtime
     gtfs_dir = Path(gtfs_dir)
 
     # Étape 1 : trips.txt → trip_id → (route_id, dir_id, shape_id)
@@ -174,5 +181,6 @@ def build_stops_index(gtfs_dir: Path) -> Path:
     # Invalider le cache mémoire
     _idx_cache = None
     _idx_cache_dir = None
+    _idx_cache_mtime = None
 
     return index_path

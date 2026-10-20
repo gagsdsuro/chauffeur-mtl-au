@@ -7,10 +7,18 @@
   "rows": [
     {
       "gd": "Via - Pierre-De Coubertin",
-      "seq": null,
-      "stop_id": null,
-      "stop_code": "",
-      "stop_name": "",
+      "seq": 1,
+      "stop_id": "54200",
+      "stop_code": "54200",
+      "stop_name": "Station Viau",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 2,
+      "stop_id": "53117",
+      "stop_code": "53117",
+      "stop_name": "Pierre-De Coubertin / Viau",
       "cancelled": []
     },
     {
@@ -31,22 +39,6 @@
     },
     {
       "gd": "Droite - Viau",
-      "seq": 1,
-      "stop_id": "54200",
-      "stop_code": "54200",
-      "stop_name": "Station Viau",
-      "cancelled": []
-    },
-    {
-      "gd": "",
-      "seq": 2,
-      "stop_id": "53117",
-      "stop_code": "53117",
-      "stop_name": "Pierre-De Coubertin / Viau",
-      "cancelled": []
-    },
-    {
-      "gd": "",
       "seq": 3,
       "stop_id": "61588",
       "stop_code": "61588",
@@ -445,7 +437,7 @@
       ]
     },
     {
-      "gd": "",
+      "gd": "Via - du Président-Kennedy",
       "seq": 39,
       "stop_id": "52516",
       "stop_code": "52516",
@@ -453,7 +445,7 @@
       "cancelled": []
     },
     {
-      "gd": "Via - du Président-Kennedy",
+      "gd": "",
       "seq": 40,
       "stop_id": "52438",
       "stop_code": "52438",

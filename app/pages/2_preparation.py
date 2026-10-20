@@ -44,7 +44,8 @@ from chauffeur.depots import (
     info_gtfs,
 )
 from chauffeur.journal import ecrire_bloc
-from chauffeur.journee import lignes_de_service
+from chauffeur.journee import groupes_de_service, lignes_de_service
+from chauffeur.registre_appariement import parcours_a_reviser
 from chauffeur.periodes import identite_ca
 from chauffeur.portail import etat_session
 from chauffeur.preparation import (
@@ -146,6 +147,11 @@ _s7.markdown(
     f"{_statut_lisible.get(_prep_rj.statut, _prep_rj.statut) if _prep_rj else 'à déterminer'}; "
     f"v2: {_statut_lisible.get(_prep_v2.statut, _prep_v2.statut) if _prep_v2 else 'à déterminer'}"
 )
+_prep_app = parcours_a_reviser(groupes_de_service(_prep_data)) if _prep_data else []
+if _prep_app:
+    with st.container(horizontal=True, vertical_alignment="center"):
+        st.markdown("⚠️ **Appariements à réviser** — " + ", ".join(_prep_app))
+        st.page_link("pages/7_appariement.py", label="Réviser", icon="🧭")
 if _prep_error:
     st.error(f"Erreur de préparation : {_prep_error}")
 st.divider()

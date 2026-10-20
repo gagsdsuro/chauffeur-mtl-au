@@ -7,10 +7,10 @@
   "rows": [
     {
       "gd": "Via - Sainte-Catherine",
-      "seq": null,
-      "stop_id": null,
-      "stop_code": "",
-      "stop_name": "",
+      "seq": 1,
+      "stop_id": "54148",
+      "stop_code": "54148",
+      "stop_name": "Station Atwater (Ste-Catherine / Lambert-Closse)",
       "cancelled": []
     },
     {
@@ -81,10 +81,10 @@
     },
     {
       "gd": "Gauche - Atwater",
-      "seq": 1,
-      "stop_id": "54148",
-      "stop_code": "54148",
-      "stop_name": "Station Atwater (Ste-Catherine / Lambert-Closse)",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
       "cancelled": [],
       "detour_removed": true
     },

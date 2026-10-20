@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from chauffeur.depots import sauvegarder_gd  # noqa: E402
 from chauffeur.journal import ecrire_bloc  # noqa: E402
+from chauffeur.registre_appariement import synchroniser_ligne  # noqa: E402
 from chauffeur.portail import texte_visible_html  # noqa: E402
 
 
@@ -33,7 +34,9 @@ class GDParser:
         self.direction = None
         self.parcours = []
         self.errors = []
+        self.avertissements: list[str] = []
         self.report = ""
+        self.appariements: list[str] = []
         self._expected_ligne: str | None = None
         self._expected_direction: str | None = None
 
@@ -85,6 +88,13 @@ class GDParser:
         if not self._save_file(json_data):
             return None
         self.report = self._format_report(summary)
+        # Appariement G-D ↔ GTFS des parcours modifiés (non bloquant), à côté
+        # du répertoire G-D du parseur — commun à tous les chemins d'import
+        # (CLI, portail, collage dans l'app), qui affichent et journalisent le rapport.
+        self.appariements = synchroniser_ligne(self.ligne, self.direction, gd_dir=self.gd_dir)
+        if self.appariements:
+            self.report += "\n[APPARIEMENT]\n" + "\n".join(
+                f"   {m}" for m in self.appariements) + "\n"
         return json_data
 
     def _filename(self) -> str:
@@ -129,11 +139,32 @@ class GDParser:
             parcours = self._parse_single_parcours(block, default_id)
             if parcours is None:
                 return False
-            self.parcours.append(parcours)
+            self._ajouter_parcours(parcours)
         if not self.parcours:
             self.errors.append("Aucun parcours trouve")
             return False
         return True
+
+    def _ajouter_parcours(self, parcours: Dict) -> None:
+        """Ajoute un parcours en écartant les doublons du collage source.
+
+        Un même bloc « Parcours … ID n » présent deux fois à l'identique
+        (collage répété, export portail doublé) n'est gardé qu'une fois. Un
+        même id au contenu différent est conservé, mais signalé : c'est une
+        anomalie de la source à examiner, pas un doublon à trancher en silence.
+        """
+        memes_id = [p for p in self.parcours if p["id"] == parcours["id"]]
+        if parcours in memes_id:
+            self.avertissements.append(
+                f"Parcours ID {parcours['id']} ({parcours['name']}) present en double "
+                f"a l'identique dans la source : une seule copie conservee")
+            return
+        if memes_id:
+            self.avertissements.append(
+                f"Parcours ID {parcours['id']} present plusieurs fois avec un contenu "
+                f"different ({parcours['name']}) : toutes les versions sont conservees, "
+                f"verifier la source")
+        self.parcours.append(parcours)
 
     def _parse_single_parcours(self, block: str, default_id: int) -> Optional[Dict]:
         lines = [l.strip() for l in block.split('\n') if l.strip()]
@@ -268,6 +299,10 @@ class GDParser:
                 lines.append(f"  - {error}")
             return "\n".join(lines)
         filename = self._filename()
+        if self.avertissements:
+            lines.append("\n[AVERTISSEMENTS]:")
+            for avertissement in self.avertissements:
+                lines.append(f"  - {avertissement}")
         if summary["status"] == "created":
             lines.append(f"\n[OK] Nouveau Gauche-Droite cree: {filename}")
             lines.append(f"   Ligne: {self.ligne}")

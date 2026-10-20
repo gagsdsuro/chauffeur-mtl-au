@@ -32,6 +32,7 @@ from chauffeur.evenements import (
     trier_evenements_par_arrets,
 )
 from chauffeur.journee import groupes_de_service
+from chauffeur.registre_appariement import appariement_pour_rapport
 
 GTFS_DIR   = ROOT / "data" / "gtfs" / "gtfs_stm"
 OUTPUT_DIR = ROOT / "data" / "rapports"
@@ -107,9 +108,16 @@ def process_groupe(groupe: dict, date_str: str, ev_all_cache: dict) -> dict:
 
     if not instructions:
         return dict(groupe=groupe, rows=[], added=[], events=events,
-                    events_all=events_all, parcours=parcours)
+                    events_all=events_all, parcours=parcours, appariement=None)
 
-    rows = build_rows(instructions, stops_ordered, snames)
+    # Appariement persisté (validé par un chauffeur) s'il est à jour, sinon
+    # calcul automatique — jamais bloquant, l'avertissement suit le groupe.
+    appariement = None
+    if stops_ordered:
+        rows, appariement = appariement_pour_rapport(
+            ligne, direction, parcours, stops_ordered, snames)
+    else:
+        rows = build_rows(instructions, stops_ordered, snames)
 
     # Filtrer les évènements non-applicables à ce parcours spécifique.
     # Un évènement dont les arrêts annulés ou les rues de détour ne concernent
@@ -127,7 +135,20 @@ def process_groupe(groupe: dict, date_str: str, ev_all_cache: dict) -> dict:
     rows = apply_gd_detours(rows, events)
     rows, added = insert_added_stops_inline(rows, added)
     return dict(groupe=groupe, rows=rows, added=added, events=events,
-                events_all=events_all, parcours=parcours)
+                events_all=events_all, parcours=parcours, appariement=appariement)
+
+
+def avertissement_appariement(info: dict | None) -> str:
+    """Texte d'avertissement du groupe, ou "" si l'appariement est sûr."""
+    if not info:
+        return ""
+    if info["statut"] == "a_revalider":
+        return ("⚠ Appariement des arrêts à revalider : le G-D ou le GTFS a changé "
+                "depuis la dernière validation.")
+    if info["statut"] == "incertain":
+        return (f"⚠ Appariement des arrêts incertain ({info['blocs']} segment(s)) : "
+                "la position de certains arrêts est à vérifier.")
+    return ""
 
 
 # ── Rendu HTML ────────────────────────────────────────────────────────────────
@@ -141,6 +162,7 @@ h2{font-size:14px;margin:22px 0 2px;padding:4px 8px;background:#0072CE;color:#ff
 h3{font-size:12px;margin:10px 0 2px;color:#1a4a7a}
 .trips{font-size:11px;color:#555;margin-bottom:6px}
 .no-gd{color:#888;font-style:italic;margin:6px 0 10px}
+.avert-app{color:#E65100;font-weight:bold;font-size:11px;margin:2px 0 6px}
 table{border-collapse:collapse;width:100%;margin-bottom:12px}
 th{background:#2c5f8a;color:#fff;padding:5px 8px;text-align:left;font-size:12px}
 td{padding:4px 8px;border-bottom:1px solid #ddd;vertical-align:top}
@@ -408,6 +430,9 @@ def render_html(groupes_data: list, journee: dict, niveau: str,
         if pstart:
             sub += f" — {_h(pstart)} → {_h(pend)}"
         body.append(f'<h3>{sub}</h3><div class="trips">Départs : {times}</div>')
+        avert = avertissement_appariement(gd.get("appariement"))
+        if avert:
+            body.append(f'<p class="avert-app">{_h(avert)}</p>')
 
         filtered = filter_rows_by_niveau(rows, niveau)
 
@@ -466,6 +491,8 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
         "trips": _s("trips", fontSize=7, textColor=rl_colors.grey, spaceAfter=3),
         "no_gd": _s("no_gd", fontSize=8, textColor=LGREY,
                      fontName="Helvetica-Oblique", spaceAfter=4),
+        "avert_app": _s("avert_app", fontSize=7, textColor=AMBER,
+                        fontName="Helvetica-Bold", spaceAfter=3),
         "body" : _s("body"),
     }
 
@@ -536,6 +563,9 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
             sub += f"  —  {pstart} → {pend}"
         story.append(Paragraph(sub, S["h3"]))
         story.append(Paragraph(f"Départs : {times}", S["trips"]))
+        avert = avertissement_appariement(gd.get("appariement"))
+        if avert:
+            story.append(Paragraph(_h(avert.replace("⚠ ", "")), S["avert_app"]))
 
         filtered = filter_rows_by_niveau(rows, niveau)
 

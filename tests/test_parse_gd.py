@@ -14,6 +14,10 @@ même couple (ligne, direction), en retirant l'en-tête répété des sections
 suivantes (sinon il se fait mal interpréter comme une instruction G-D, ex.
 « Gauche-Droite / 24 Est » matche le pattern « Gauche - <rue> »).
 
+Régression couverte (ligne 460 est, octobre 2026) : parcours présents en
+double dans la source — doublon exact écarté, même id au contenu différent
+conservé, les deux signalés dans [AVERTISSEMENTS] du rapport d'import.
+
 Usage : python3 tests/test_parse_gd.py   (code de sortie 0 si tout passe)
 """
 import sys
@@ -76,6 +80,34 @@ def main() -> int:
                 echecs.append(f"report: '[OK]' absent du rapport : {parser2.report!r}")
             if "gd24_est.json" not in parser2.report:
                 echecs.append(f"report: nom de fichier gd24_est.json absent du rapport")
+
+    # Doublons (460 est, octobre 2026) : le fichier contenait les parcours 24 et
+    # 25 deux fois chacun, à l'identique. Un doublon exact est écarté avec un
+    # avertissement ; un même id au contenu différent est gardé et signalé.
+    double = split_sections(txt + "\n" + txt)[0]
+    parser3 = GDParser(double)
+    if not (parser3._extract_header() and parser3._parse_parcours()):
+        echecs.append(f"doublon exact: parsing échoué — {parser3.errors}")
+    else:
+        if [p["id"] for p in parser3.parcours] != [1, 4]:
+            echecs.append(f"doublon exact: ids {[p['id'] for p in parser3.parcours]}, attendu [1, 4]")
+        if len(parser3.avertissements) != 2 or "double" not in parser3.avertissements[0]:
+            echecs.append(f"doublon exact: avertissements {parser3.avertissements}")
+
+    variante = txt + "\n" + txt.split("Parcours secondaire")[0].replace(
+        "Droite - Montgomery", "Droite - Saint-Laurent")
+    parser4 = GDParser(split_sections(variante)[0])
+    if not (parser4._extract_header() and parser4._parse_parcours()):
+        echecs.append(f"même id différent: parsing échoué — {parser4.errors}")
+    else:
+        if [p["id"] for p in parser4.parcours] != [1, 4, 1]:
+            echecs.append(f"même id différent: ids {[p['id'] for p in parser4.parcours]}, attendu [1, 4, 1]")
+        if len(parser4.avertissements) != 1 or "different" not in parser4.avertissements[0]:
+            echecs.append(f"même id différent: avertissements {parser4.avertissements}")
+    with tempfile.TemporaryDirectory() as tmp:
+        parser5 = GDParser(double, gd_dir=Path(tmp))
+        if parser5.parse() is None or "[AVERTISSEMENTS]" not in parser5.report:
+            echecs.append("doublon exact: [AVERTISSEMENTS] absent du rapport d'import")
 
     # Réponse réelle simplifiée de /listeBus : le PDFMake caché doit être
     # ignoré au profit de la liste HTML sémantique multi-parcours.

@@ -595,19 +595,11 @@
       "cancelled": []
     },
     {
-      "gd": "",
+      "gd": "Gauche - Pierre-De Coubertin",
       "seq": 40,
       "stop_id": "54200",
       "stop_code": "54200",
       "stop_name": "Station Viau",
-      "cancelled": []
-    },
-    {
-      "gd": "Gauche - Pierre-De Coubertin",
-      "seq": null,
-      "stop_id": null,
-      "stop_code": "",
-      "stop_name": "",
       "cancelled": []
     }
   ],

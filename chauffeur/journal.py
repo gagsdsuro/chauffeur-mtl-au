@@ -7,8 +7,9 @@ carte_agent.log, fetch_gtfs.log, fetch_gtfs_rt.log). Consultables dans la page
 Logs de l'app.
 
 Deux familles, suivant la nature des données importées :
-  • **flotte (commune à tous)** — G-D, Événements, GTFS, GTFS-RT : les sources
-    `parse_gd`, `parse_event`, `fetch_gtfs`, `fetch_gtfs_rt` (SOURCES_COMMUNES)
+  • **flotte (commune à tous)** — G-D, Événements, GTFS, GTFS-RT, appariements :
+    les sources `parse_gd`, `parse_event`, `fetch_gtfs`, `fetch_gtfs_rt`,
+    `appariement` (SOURCES_COMMUNES)
     sont journalisées dans `data/log/` (LOG_DIR_COMMUN), partagé. C'est la
     piste d'audit des données communes.
   • **personnel** — journée, carte agent : les autres sources vont dans
@@ -34,7 +35,7 @@ SEPARATEUR = "=" * 60
 
 # Sources dont les imports touchent la flotte partagée → journal commun.
 SOURCES_COMMUNES = frozenset({
-    "parse_gd", "parse_event", "fetch_gtfs", "fetch_gtfs_rt",
+    "parse_gd", "parse_event", "fetch_gtfs", "fetch_gtfs_rt", "appariement",
 })
 
 
