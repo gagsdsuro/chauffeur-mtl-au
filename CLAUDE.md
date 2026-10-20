@@ -117,6 +117,12 @@ python3 tests/test_parse_gd.py        # régression parse_gd.py (cas : multi-par
 python3 tests/test_parse_journee.py   # régression parse_journee.py (cas : sommaire sans bus, placeholders "--"+"--")
 ```
 
+**Tests appariement G-D ↔ GTFS** — couvre `chauffeur.appariement` (alignement global monotone par programmation dynamique, confiance par arrêt, blocs incertains, ancres manuelles) sur des cas gelés dans `tests/cas_appariement/<ligne>-<direction>-<id>/` (811 ouest : boucle ; 460 est : voies de desserte) + tests unitaires :
+```bash
+python3 tests/test_appariement.py
+python3 tests/creer_cas_appariement.py --ligne 811 --direction ouest --id 13   # figer un cas (vérifier attendu.json)
+```
+
 **Tests unitaires appariement** — couvre `chauffeur.matching` (stations vs rues, parenthèses, REM, troncature) :
 ```bash
 python3 tests/test_matching.py

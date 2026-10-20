@@ -168,14 +168,6 @@
       ]
     },
     {
-      "gd": "",
-      "seq": 14,
-      "stop_id": "62134",
-      "stop_code": "62134",
-      "stop_name": "Station Île-des-Soeurs",
-      "cancelled": []
-    },
-    {
       "gd": "Via - vers aut. 10 Est/ aut. 15/ aut. 20/ Bonaventure",
       "seq": null,
       "stop_id": null,
@@ -314,12 +306,11 @@
     },
     {
       "gd": "Via - de l'Île-des-Soeurs",
-      "seq": null,
-      "stop_id": null,
-      "stop_code": "",
-      "stop_name": "",
-      "cancelled": [],
-      "detour_removed": true
+      "seq": 14,
+      "stop_id": "62134",
+      "stop_code": "62134",
+      "stop_name": "Station Île-des-Soeurs",
+      "cancelled": []
     },
     {
       "gd": "Via - carrefour giratoire",
@@ -327,8 +318,7 @@
       "stop_id": null,
       "stop_code": "",
       "stop_name": "",
-      "cancelled": [],
-      "detour_removed": true
+      "cancelled": []
     },
     {
       "gd": "Via - de l'Île-des-Soeurs",
@@ -336,8 +326,7 @@
       "stop_id": null,
       "stop_code": "",
       "stop_name": "",
-      "cancelled": [],
-      "detour_removed": true
+      "cancelled": []
     },
     {
       "gd": "Via - de la Pointe-Nord",

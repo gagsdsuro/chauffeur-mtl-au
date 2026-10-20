@@ -6,7 +6,7 @@
   },
   "rows": [
     {
-      "gd": "",
+      "gd": "Via - De La Gauchetière",
       "seq": 1,
       "stop_id": "62148",
       "stop_code": "62148",
@@ -22,14 +22,6 @@
           "type_evenement": "arrêt déplacé"
         }
       ]
-    },
-    {
-      "gd": "Via - De La Gauchetière",
-      "seq": null,
-      "stop_id": null,
-      "stop_code": "",
-      "stop_name": "",
-      "cancelled": []
     },
     {
       "gd": "Via - GAUCHETIERE",
@@ -275,22 +267,6 @@
       "cancelled": []
     },
     {
-      "gd": "",
-      "seq": 10,
-      "stop_id": "62153",
-      "stop_code": "62153",
-      "stop_name": "Casino de Montréal",
-      "cancelled": []
-    },
-    {
-      "gd": "",
-      "seq": 11,
-      "stop_id": "54335",
-      "stop_code": "54335",
-      "stop_name": "Station Jean-Drapeau",
-      "cancelled": []
-    },
-    {
       "gd": "Via - de la Concorde",
       "seq": null,
       "stop_id": null,
@@ -308,10 +284,10 @@
     },
     {
       "gd": "Droite - du Casino",
-      "seq": null,
-      "stop_id": null,
-      "stop_code": "",
-      "stop_name": "",
+      "seq": 10,
+      "stop_id": "62153",
+      "stop_code": "62153",
+      "stop_name": "Casino de Montréal",
       "cancelled": []
     },
     {
@@ -340,10 +316,10 @@
     },
     {
       "gd": "Gauche - Terminus Jean-Drapeau",
-      "seq": null,
-      "stop_id": null,
-      "stop_code": "",
-      "stop_name": "",
+      "seq": 11,
+      "stop_id": "54335",
+      "stop_code": "54335",
+      "stop_name": "Station Jean-Drapeau",
       "cancelled": []
     }
   ],

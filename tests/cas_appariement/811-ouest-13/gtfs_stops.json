@@ -1,0 +1,194 @@
+{
+  "stops": [
+    [
+      1,
+      "62138"
+    ],
+    [
+      2,
+      "53196"
+    ],
+    [
+      3,
+      "53149"
+    ],
+    [
+      4,
+      "53099"
+    ],
+    [
+      5,
+      "53080"
+    ],
+    [
+      6,
+      "53039"
+    ],
+    [
+      7,
+      "52862"
+    ],
+    [
+      8,
+      "52784"
+    ],
+    [
+      9,
+      "52234"
+    ],
+    [
+      10,
+      "52116"
+    ],
+    [
+      11,
+      "52164"
+    ],
+    [
+      12,
+      "52280"
+    ],
+    [
+      13,
+      "52319"
+    ],
+    [
+      14,
+      "52462"
+    ],
+    [
+      15,
+      "53740"
+    ],
+    [
+      16,
+      "52722"
+    ],
+    [
+      17,
+      "52785"
+    ],
+    [
+      18,
+      "52863"
+    ],
+    [
+      19,
+      "53041"
+    ],
+    [
+      20,
+      "53081"
+    ],
+    [
+      21,
+      "61692"
+    ],
+    [
+      22,
+      "60440"
+    ],
+    [
+      23,
+      "62344"
+    ],
+    [
+      24,
+      "62138"
+    ]
+  ],
+  "stop_names": {
+    "62138": {
+      "code": "62138",
+      "name": "du Trianon / Joseph-Daoust (Terminus Radisson Sud"
+    },
+    "53196": {
+      "code": "53196",
+      "name": "Station Radisson (Sherbrooke / Des Groseilliers)"
+    },
+    "53149": {
+      "code": "53149",
+      "name": "Station Langelier (Sherbrooke / Langelier)"
+    },
+    "53099": {
+      "code": "53099",
+      "name": "Station Cadillac (Sherbrooke / De Cadillac)"
+    },
+    "53080": {
+      "code": "53080",
+      "name": "Station Assomption (Assomption/Chauveau)"
+    },
+    "53039": {
+      "code": "53039",
+      "name": "de l'Assomption / Sherbrooke"
+    },
+    "52862": {
+      "code": "52862",
+      "name": "de l'Assomption / des Saules (Polyclinique)"
+    },
+    "52784": {
+      "code": "52784",
+      "name": "de l'Assomption / des Sapins (Hôp. M.-Rosemont)"
+    },
+    "52234": {
+      "code": "52234",
+      "name": "Viau / Saint-Zotique"
+    },
+    "52116": {
+      "code": "52116",
+      "name": "Viau / Bélanger (Institut de cardiologie)"
+    },
+    "52164": {
+      "code": "52164",
+      "name": "Bélanger / 40e Avenue"
+    },
+    "52280": {
+      "code": "52280",
+      "name": "Bélanger / Châtelain"
+    },
+    "52319": {
+      "code": "52319",
+      "name": "Bélanger / de Pontoise"
+    },
+    "52462": {
+      "code": "52462",
+      "name": "Lacordaire / Saint-Zotique"
+    },
+    "53740": {
+      "code": "53740",
+      "name": "Rosemont / Pavillon Rosemont"
+    },
+    "52722": {
+      "code": "52722",
+      "name": "Rosemont / Châtelain"
+    },
+    "52785": {
+      "code": "52785",
+      "name": "de l'Assomption / des Sapins (Hôp. M.-Rosemont)"
+    },
+    "52863": {
+      "code": "52863",
+      "name": "de l'Assomption / des Saules (Polyclinique)"
+    },
+    "53041": {
+      "code": "53041",
+      "name": "de l'Assomption / Sherbrooke"
+    },
+    "53081": {
+      "code": "53081",
+      "name": "Chauveau / de l'Assomption"
+    },
+    "61692": {
+      "code": "61692",
+      "name": "Station Cadillac (Sherbrooke / De Cadillac)"
+    },
+    "60440": {
+      "code": "60440",
+      "name": "Station Langelier (Sherbrooke / Langelier)"
+    },
+    "62344": {
+      "code": "62344",
+      "name": "Sherbrooke / du Trianon"
+    }
+  }
+}

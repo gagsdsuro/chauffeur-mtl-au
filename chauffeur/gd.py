@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 
+from .appariement import apparier, rows_depuis_appariement
 from .matching import normalize_street, stops_match
 
 
@@ -39,72 +40,23 @@ def extract_street(instruction):
 
 def build_rows(gd_instructions, stops_ordered, stop_names):
     """
-    Aligne les instructions G-D avec les arrêts GTFS par correspondance de rue.
+    Aligne les instructions G-D avec les arrêts GTFS.
     Retourne une liste de dicts : {gd, seq, stop_id, stop_name, stop_code}
 
-    Alignement à deux pointeurs (instructions / arrêts), tous deux monotones :
-      - Pour chaque arrêt, on cherche la première instruction restante dont la rue
-        figure dans le nom de l'arrêt. On compare d'abord à la **rue principale**
-        (avant le « / »), pour qu'un arrêt « René-Lévesque / Berlioz » s'associe à
-        « Droite - René-Lévesque » plutôt qu'à « Droite - Berlioz ».
-      - Les instructions sautées (segments sans arrêt GTFS : autoroutes, virages)
-        sont émises sans arrêt, dans l'ordre.
-      - Un arrêt qui ne correspond à aucune instruction restante (terminus/stations
-        nommés différemment, ex. « Station McGill ») est rattaché au groupe courant
-        (l'instruction active la plus récente), sans bloquer l'alignement.
+    Délègue à `chauffeur.appariement.apparier` (alignement global monotone,
+    voir ce module) : chaque arrêt est rattaché à une instruction, les
+    instructions sans arrêt (virages, autoroutes) sont émises seules, dans
+    l'ordre. Sans instruction, les arrêts sont émis sans cellule G-D.
     """
-    streets = [extract_street(instr) for instr in gd_instructions]
-    n_instr = len(gd_instructions)
-
-    def _match_index(name_low, start):
-        """Première instruction >= start dont la rue est dans le nom (rue principale d'abord)."""
-        primary = name_low.split(" / ", 1)[0]
-        for haystack in (primary, name_low):
-            for k in range(start, n_instr):
-                if streets[k] and streets[k] in haystack:
-                    return k
-        return None
-
-    rows = []
-    cur = -1            # instruction active (dernier appariement), -1 si aucune
-    emitted = -1        # index de la dernière instruction déjà écrite
-
-    for seq, sid in stops_ordered:
-        name_low = stop_names.get(sid, {}).get("name", "").lower()
-        search_start = cur if cur >= 0 else 0
-        j = _match_index(name_low, search_start)
-
-        if j is None:
-            # Arrêt orphelin : rattaché au groupe courant (cellule G-D vide).
-            rows.append({"gd": "", "seq": seq, "stop_id": sid})
-            continue
-
-        if j == cur:
-            # Même rue que l'instruction active : arrêt groupé.
-            rows.append({"gd": "", "seq": seq, "stop_id": sid})
-            continue
-
-        # Nouvelle instruction : émet d'abord les instructions sautées (sans arrêt).
-        for k in range(emitted + 1, j):
-            rows.append({"gd": gd_instructions[k], "seq": None, "stop_id": None})
-        rows.append({"gd": gd_instructions[j], "seq": seq, "stop_id": sid})
-        emitted = j
-        cur = j
-
-    # Instructions restantes sans arrêt
-    for k in range(emitted + 1, n_instr):
-        rows.append({"gd": gd_instructions[k], "seq": None, "stop_id": None})
-
-    # Enrichissement avec les noms
-    for r in rows:
-        if r["stop_id"]:
+    if not gd_instructions:
+        rows = [{"gd": "", "seq": seq, "stop_id": sid} for seq, sid in stops_ordered]
+        for r in rows:
             s = stop_names.get(r["stop_id"], {})
             r["stop_code"] = s.get("code", "")
             r["stop_name"] = s.get("name", "")
-        else:
-            r["stop_code"] = ""
-            r["stop_name"] = ""
-    return rows
+        return rows
+    resultat = apparier(gd_instructions, stops_ordered, stop_names)
+    return rows_depuis_appariement(gd_instructions, resultat, stop_names)
 
 
 def filter_rows_by_stop_range(rows, arret_debut, arret_fin):
