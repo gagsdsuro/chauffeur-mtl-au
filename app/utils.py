@@ -36,3 +36,29 @@ def _cached_arrets_pour_parcours(
         return tuple(sid for _, sid in stops)
     except Exception:
         return None
+
+def _mtime_gtfs(gtfs_dir: Path) -> float:
+    """Clé d'invalidation des caches GTFS : date de modification de stops.txt."""
+    try:
+        return (Path(gtfs_dir) / "stops.txt").stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+@st.cache_data(show_spinner=False, max_entries=2)
+def _cached_noms_arrets(gtfs_dir_str: str, mtime: float) -> dict:
+    """{stop_id: {code, name}} du GTFS (rechargé quand stops.txt change)."""
+    from chauffeur.gtfs import stop_names
+    return stop_names(Path(gtfs_dir_str))
+
+
+@st.cache_data(show_spinner=False, max_entries=256)
+def _cached_sequence_parcours(
+    gtfs_dir_str: str, mtime: float, ligne: str, direction: str, id_parcours
+) -> list | None:
+    """[(seq, stop_id), …] d'un parcours, ou None si le GTFS ne le connaît pas."""
+    try:
+        from chauffeur.gtfs import stops_for_parcours
+        return [tuple(x) for x in stops_for_parcours(Path(gtfs_dir_str), ligne, direction, id_parcours)]
+    except Exception:
+        return None

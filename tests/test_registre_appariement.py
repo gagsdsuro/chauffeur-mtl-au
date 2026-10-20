@@ -10,7 +10,7 @@ sources manuel/confirme),
 contrôle de version optimiste (conflits), G-D modifié → « à revalider » avec
 choix humains reportés, GTFS modifié lu par le rapport sans écriture,
 recalcul sur changement de VERSION_ALGO, boucle (même stop_id deux fois),
-parcours renuméroté (choix repris)
+gestes de révision (modifier_ancres), parcours renuméroté (choix repris)
 puis retiré du G-D (archivé dans orphelins/),
 déclencheur non bloquant sans GTFS.
 
@@ -127,6 +127,25 @@ def boucle() -> list:
     return [] if ancres == {1: 0, 24: 16} and abandonnes == 0 else [f"boucle : {ancres}, {abandonnes}"]
 
 
+def gestes_revision() -> list:
+    """modifier_ancres : déplacer, fixer, libérer, refuser un ordre impossible."""
+    e = []
+    instr = PARCOURS["direction"]
+    etapes = {a["seq"]: a["etape"] for a in algo.apparier(instr, STOPS, NOMS)["arrets"]}
+    a = reg.modifier_ancres({}, [(2, 3, None)], etapes, instr, STOPS, NOMS)
+    verifier(e, a == {2: 3}, f"déplacer : {a}")
+    a = reg.modifier_ancres(a, [(5, None, True)], etapes, instr, STOPS, NOMS)
+    verifier(e, a == {2: 3, 5: etapes[5]}, f"fixer : {a}")
+    a = reg.modifier_ancres(a, [(2, None, False)], etapes, instr, STOPS, NOMS)
+    verifier(e, a == {5: etapes[5]}, f"libérer : {a}")
+    try:
+        reg.modifier_ancres(a, [(4, 14, None)], etapes, instr, STOPS, NOMS)
+        e.append("ordre impossible accepté (seq 4 après seq 5 fixé)")
+    except ValueError:
+        pass
+    return e
+
+
 def _gtfs_minimal(dossier: Path) -> Path:
     """GTFS réduit au cas 811 ouest : juste ce que lisent stops_for_parcours/stop_names."""
     dossier.mkdir(parents=True)
@@ -198,13 +217,16 @@ def main() -> int:
     echecs = 0
     try:
         for nom, test in (("scénario complet", scenario), ("VERSION_ALGO", recalcul_version_algo),
-                          ("boucle", None),
+                          ("boucle", None), ("gestes de révision", None),
                           ("renumérotation et retrait", renumerotation),
                           ("sans GTFS", sans_gtfs)):
             with tempfile.TemporaryDirectory() as tmp:
                 rep = Path(tmp)
                 journal.LOG_DIR_COMMUN = rep / "log"
-                erreurs = boucle() if test is None else test(rep)
+                if test is None:
+                    erreurs = boucle() if nom == "boucle" else gestes_revision()
+                else:
+                    erreurs = test(rep)
             print(("✅" if not erreurs else "❌") + f" {nom}")
             for err in erreurs:
                 print("   ", err)

@@ -199,6 +199,44 @@ def ancres_courantes(contenu: dict | None) -> dict:
             if a.get("source") == "manuel"}
 
 
+def modifier_ancres(ancres: dict, changements: list, etapes: dict,
+                    instructions: list, stops: list, noms: dict) -> dict:
+    """Applique des gestes de révision et retourne les nouvelles ancres.
+
+    changements : [(seq, etape, fixe)] — `etape` (int) déplace et fixe l'arrêt ;
+    sinon `fixe` True le fige à son étape actuelle (`etapes[seq]`), False le
+    rend à l'automatique. Lève ValueError si l'ordre du parcours serait rompu
+    (un arrêt placé avant, dans le G-D, un arrêt qui le précède).
+    """
+    nouvelles = dict(ancres)
+    for seq, etape, fixe in changements:
+        if etape is not None:
+            nouvelles[seq] = int(etape)
+        elif fixe is True:
+            nouvelles[seq] = etapes[seq]
+        elif fixe is False:
+            nouvelles.pop(seq, None)
+    algo.apparier(instructions, stops, noms, ancres=nouvelles)   # valide l'ordre
+    return nouvelles
+
+
+def parcours_a_reviser(groupes: list, gd_dir: Path | None = None) -> list[str]:
+    """Libellés « 460 est id 24 » des groupes d'une journée dont l'appariement
+    enregistré est incertain ou à revalider. Un parcours sans appariement
+    (GTFS qui ne connaît pas la ligne) n'est pas révisable : il n'est pas listé."""
+    libelles = []
+    for g in groupes:
+        _, parcours = depots.charger_gd(g["ligne"], g["direction"], g.get("id_parcours"), gd_dir)
+        if not parcours:
+            continue
+        pid = parcours.get("id")
+        contenu = charger_appariement(g["ligne"], g["direction"], pid,
+                                      depots.repertoire_appariements(gd_dir))
+        if contenu and contenu.get("statut") in ("incertain", "a_revalider"):
+            libelles.append(f"{g['ligne']} {g['direction']} id {pid}")
+    return list(dict.fromkeys(libelles))
+
+
 def lister_appariements(appariements_dir: Path | None = None) -> dict:
     """{(ligne, direction, id_parcours): contenu} de tous les appariements stockés."""
     resultat = {}
