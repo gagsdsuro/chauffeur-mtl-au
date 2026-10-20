@@ -113,7 +113,7 @@ python3 tests/creer_cas_rapport_gd.py --ligne 125 --direction ouest --date 2026-
 **Tests de régression parseurs** — rejoue des collages bruts figés dans `tests/cas_event/`, `tests/cas_gd/` et `tests/cas_journee/` :
 ```bash
 python3 tests/test_parse_event.py     # régression parse_event.py (cas : détour sans annulation, arrêts vides)
-python3 tests/test_parse_gd.py        # régression parse_gd.py (cas : multi-parcours même ligne/direction)
+python3 tests/test_parse_gd.py        # régression parse_gd.py (cas : multi-parcours même ligne/direction, parcours en double → [AVERTISSEMENTS])
 python3 tests/test_parse_journee.py   # régression parse_journee.py (cas : sommaire sans bus, placeholders "--"+"--")
 ```
 
