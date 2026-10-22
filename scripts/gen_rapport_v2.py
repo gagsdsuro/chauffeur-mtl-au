@@ -22,7 +22,7 @@ if str(ROOT) not in sys.path:
 
 from chauffeur.gd import (
     build_rows, annotate_events, apply_gd_detours, insert_added_stops_inline,
-    event_applicable_to_parcours,
+    event_applicable_to_parcours, rows_de_rendu,
 )
 from chauffeur.gtfs import stops_for_parcours, stop_names as gtfs_stop_names
 from chauffeur.depots import charger_journee, charger_gd, evenements_pour_date
@@ -126,7 +126,7 @@ def process_groupe(groupe: dict, date_str: str, ev_all_cache: dict) -> dict:
     # GTFS indisponible (stops_ordered vide) → stop_ids=None : les arrêts du
     # parcours sont inconnus et les évènements à arrêts annulés sont présumés
     # applicables (fail-safe, même règle que l'onglet Ma journée).
-    stop_ids = ({r["stop_id"] for r in rows if r.get("stop_id")}
+    stop_ids = ({r.get("stop_code") or r["stop_id"] for r in rows if r.get("stop_id")}
                 if stops_ordered else None)
     events = [e for e in events
               if event_applicable_to_parcours(e, stop_ids, instructions)]
@@ -134,6 +134,7 @@ def process_groupe(groupe: dict, date_str: str, ev_all_cache: dict) -> dict:
     rows, added, _ = annotate_events(rows, events)
     rows = apply_gd_detours(rows, events)
     rows, added = insert_added_stops_inline(rows, added)
+    rows = rows_de_rendu(rows)
     return dict(groupe=groupe, rows=rows, added=added, events=events,
                 events_all=events_all, parcours=parcours, appariement=appariement)
 

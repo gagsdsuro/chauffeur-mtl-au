@@ -110,6 +110,11 @@ python3 tests/test_rapport_gd.py
 python3 tests/creer_cas_rapport_gd.py --ligne 125 --direction ouest --date 2026-06-11   # figer un nouveau cas (vérifier attendu.json)
 ```
 
+**Tests unitaires modèle G-D** — `chauffeur.gd` travaille sur une **séquence linéaire** : instruction et arrêt ont chacun leur ligne (un arrêt vient *après* sa manœuvre, il ne la partage pas), donc détours et arrêts ajoutés s'insèrent entre les deux sans ambiguïté ; `rows_de_rendu` refait la mise en page à deux colonnes (instruction + 1er arrêt sur une ligne) en dernier, pour les rendus. Les lignes passées à `annotate_events`/`apply_gd_detours`/`insert_added_stops_inline`/`filter_rows_by_stop_range` sont toujours non fusionnées :
+```bash
+python3 tests/test_gd_modele.py
+```
+
 **Tests de régression parseurs** — rejoue des collages bruts figés dans `tests/cas_event/`, `tests/cas_gd/` et `tests/cas_journee/` :
 ```bash
 python3 tests/test_parse_event.py     # régression parse_event.py (cas : détour sans annulation, arrêts vides)

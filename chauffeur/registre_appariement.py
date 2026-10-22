@@ -260,7 +260,7 @@ def lister_appariements(appariements_dir: Path | None = None) -> dict:
 
 def appariement_pour_rapport(ligne: str, direction: str, parcours: dict, stops: list,
                              noms: dict, appariements_dir: Path | None = None) -> tuple[list, dict]:
-    """(rows au format build_rows, info) — lecture seule, jamais bloquant.
+    """(séquence de lignes non fusionnées de build_rows, info) — lecture seule, jamais bloquant.
 
     info = {"statut", "blocs", "a_jour"} : le rapport s'en sert pour avertir
     quand l'appariement est incertain, à revalider ou pas encore persisté.

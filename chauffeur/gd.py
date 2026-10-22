@@ -2,7 +2,15 @@
 
 Pipeline pur (sans I/O fichier) anciennement dans rapport_gd.py :
   build_rows → annotate_events → apply_gd_detours → insert_added_stops_inline
-  (+ filter_rows_by_stop_range, _select_parcours, parse_description_gd).
+  (+ filter_rows_by_stop_range, _select_parcours, parse_description_gd)
+  → rows_de_rendu.
+
+Modèle : tout le pipeline travaille sur une **séquence linéaire** où chaque
+instruction G-D et chaque arrêt GTFS occupent leur propre ligne (un arrêt vient
+après sa manœuvre, il ne la partage pas). Les détours et les arrêts ajoutés
+s'insèrent donc entre l'instruction et l'arrêt sans ambiguïté. La mise en page
+à deux colonnes (instruction + 1er arrêt sur une même ligne) n'est refaite
+qu'à la toute fin par `rows_de_rendu`, pour les rendus.
 
 rapport_gd conserve son rendu HTML/MD et délègue ces transformations ici.
 La normalisation de rue vit dans chauffeur.matching.
@@ -41,7 +49,9 @@ def extract_street(instruction):
 def build_rows(gd_instructions, stops_ordered, stop_names):
     """
     Aligne les instructions G-D avec les arrêts GTFS.
-    Retourne une liste de dicts : {gd, seq, stop_id, stop_name, stop_code}
+    Retourne la séquence linéaire : une ligne par instruction ({gd, seq=None,
+    stop_id=None, …}) puis une ligne par arrêt ({gd="", seq, stop_id,
+    stop_name, stop_code}). Rien n'est fusionné : voir `rows_de_rendu`.
 
     Délègue à `chauffeur.appariement.apparier` (alignement global monotone,
     voir ce module) : chaque arrêt est rattaché à une instruction, les
@@ -57,6 +67,44 @@ def build_rows(gd_instructions, stops_ordered, stop_names):
         return rows
     resultat = apparier(gd_instructions, stops_ordered, stop_names)
     return rows_depuis_appariement(gd_instructions, resultat, stop_names)
+
+
+def _code_arret(r) -> str:
+    """Code d'arrêt d'une ligne : celui que les évènements citent (`id`)."""
+    return str(r.get("stop_code") or r.get("stop_id") or "")
+
+
+def _est_instruction(r) -> bool:
+    """Instruction G-D régulière : ni étape de détour, ni arrêt, ni arrêt ajouté."""
+    return bool(r.get("gd")) and not r.get("detour_added") \
+        and not r.get("stop_id") and not r.get("added_inline")
+
+
+def rows_de_rendu(rows):
+    """Mise en page à deux colonnes de la séquence linéaire (étape finale).
+
+    Une instruction immédiatement suivie de son arrêt les partage sur une même
+    ligne ; si un détour ou un arrêt ajouté s'intercale, ils restent séparés.
+    L'état de chaque moitié reste distinct : `detour_removed` vient de
+    l'instruction, `cancelled` de l'arrêt. Ne modifie pas `rows`.
+    """
+    out = []
+    i = 0
+    while i < len(rows):
+        r = rows[i]
+        nxt = rows[i + 1] if i + 1 < len(rows) else None
+        if (_est_instruction(r) and nxt is not None and nxt.get("stop_id")
+                and not nxt.get("gd")):
+            fusion = dict(nxt)
+            fusion["gd"] = r["gd"]
+            if r.get("detour_removed"):
+                fusion["detour_removed"] = True
+            out.append(fusion)
+            i += 2
+        else:
+            out.append(r)
+            i += 1
+    return out
 
 
 def filter_rows_by_stop_range(rows, arret_debut, arret_fin):
@@ -77,6 +125,9 @@ def filter_rows_by_stop_range(rows, arret_debut, arret_fin):
         )
         if found is not None:
             start_idx = found
+            # L'instruction qui mène à cet arrêt reste dans le tableau.
+            if found > 0 and _est_instruction(rows[found - 1]):
+                start_idx = found - 1
         else:
             print(f"  ⚠ Arrêt de départ '{arret_debut}' introuvable dans les arrêts GTFS — borne ignorée.")
 
@@ -105,7 +156,7 @@ def annotate_events(rows, events):
     """
     cancelled_ids = {}   # stop_id -> list of {label, effectif}
     added = []           # arrêts ajoutés avec descriptions
-    stop_ids_in_rows = {r["stop_id"] for r in rows if r.get("stop_id")}
+    codes_in_rows = {_code_arret(r) for r in rows if r.get("stop_id")}
 
     for e in events:
         titre       = e.get("titre", "")
@@ -138,9 +189,9 @@ def annotate_events(rows, events):
                           "evenement_id": e.get("evenement_id", "")})
 
     for r in rows:
-        sid = r.get("stop_id")
-        if sid and sid in cancelled_ids:
-            r["cancelled"] = cancelled_ids[sid]
+        code = _code_arret(r) if r.get("stop_id") else ""
+        if code and code in cancelled_ids:
+            r["cancelled"] = cancelled_ids[code]
         else:
             r["cancelled"] = []
 
@@ -148,7 +199,7 @@ def annotate_events(rows, events):
     orphan_events = []
     for e in events:
         arrets = e.get("arrets_annules", [])
-        if arrets and not any(a["id"] in stop_ids_in_rows for a in arrets):
+        if arrets and not any(a["id"] in codes_in_rows for a in arrets):
             orphan_events.append(e)
 
     return rows, added, orphan_events
@@ -280,7 +331,8 @@ def _anchor_detour_span(rows: list, instructions: list, max_gap: int = 2):
          réapparition lointaine de la même rue. Ne pas prolonger cette grappe
          à travers un arrêt non repris explicitement par le détour (code cité
          ou nom complet égal à une étape), même si sa ligne G-D est vide ;
-      3. le détour s'insère APRÈS l'ancre et barre les étapes (ancre, fin].
+      3. le détour s'insère APRÈS l'ancre et ses arrêts (juste avant l'instruction
+         suivante, la 1re contournée) et barre les étapes (ancre, fin].
 
     Retourne (insert_pos, bypass_end). bypass_end == -1 si rien n'est barré
     (ancre seule, comportement conservateur). Faute d'ancre exploitable,
@@ -316,7 +368,11 @@ def _anchor_detour_span(rows: list, instructions: list, max_gap: int = 2):
     else:
         anchor = entry_hits[0]
 
+    # Les arrêts de l'instruction d'entrée la suivent : le détour vient après eux.
     insert_pos = anchor + 1
+    while insert_pos < len(rows) and not _est_instruction(rows[insert_pos]) \
+            and not rows[insert_pos].get("detour_added"):
+        insert_pos += 1
 
     # Pas de rejointe exploitable → insertion seule, rien barré.
     if first_exit is None or first_exit <= anchor:
@@ -325,6 +381,11 @@ def _anchor_detour_span(rows: list, instructions: list, max_gap: int = 2):
     # Grappe contiguë de la rue de rejointe après l'ancre.
     rues_detour = {normalize_street(extract_street(instr)) for instr in instructions}
     codes_detour = set(re.findall(r"\b\d{5}\b", "\n".join(instructions)))
+    def arret_repris(r):
+        code = _code_arret(r)
+        nom = normalize_street(r.get("stop_name") or "")
+        return code in codes_detour or bool(nom and nom in rues_detour)
+
     bypass_end = first_exit
     gap = 0
     for i in range(first_exit + 1, len(rows)):
@@ -334,13 +395,16 @@ def _anchor_detour_span(rows: list, instructions: list, max_gap: int = 2):
         # Une boucle de desserte (Cardinal → Gare Dorval Nord → Cardinal)
         # n'est pas un simple raccord. Examiner aussi les arrêts sans G-D.
         if r.get("stop_id") or r.get("stop_code"):
-            code = str(r.get("stop_code") or "")
-            nom = normalize_street(r.get("stop_name") or "")
-            repris = code in codes_detour or bool(nom and nom in rues_detour)
-            if not repris:
+            if not arret_repris(r):
                 break
         if not r.get("gd"):
             continue
+        # Instruction suivie d'un arrêt non repris : la boucle de desserte
+        # commence avec elle, elle n'est pas un raccord du détour.
+        nxt = rows[i + 1] if i + 1 < len(rows) else None
+        if nxt is not None and (nxt.get("stop_id") or nxt.get("stop_code")) \
+                and not arret_repris(nxt):
+            break
         if matches(i, exit_street):
             bypass_end = i
             gap = 0
@@ -371,23 +435,34 @@ def apply_gd_detours(rows: list, events: list) -> list:
 
         cancelled_positions = [
             i for i, r in enumerate(rows)
-            if r.get("stop_code") in cancelled_codes
+            if r.get("stop_id") and _code_arret(r) in cancelled_codes
         ]
 
         if cancelled_positions:
             first_pos = cancelled_positions[0]
             last_pos  = cancelled_positions[-1]
 
+            # L'instruction qui mène au premier arrêt annulé est contournée :
+            # le détour la précède et la barre.
+            if first_pos > 0 and _est_instruction(rows[first_pos - 1]):
+                first_pos -= 1
+
             # Étendre last_pos pour inclure les instructions G-D sans arrêt GTFS
             # qui suivent immédiatement le dernier arrêt annulé.
             # Ex. : "Gauche - Clément" dont le stop a été consommé par une
             # instruction précédente ("Droite - Clément") et qui se retrouve
-            # sans stop_code → tombe en dehors de la plage sans cette extension.
+            # sans arrêt → tombe en dehors de la plage sans cette extension.
+            # L'instruction qui mène à un arrêt régulier non annulé appartient
+            # à la suite régulière : l'extension s'arrête avant elle.
             i = last_pos + 1
             while i < len(rows):
-                sc = rows[i].get("stop_code", "")
-                if sc and sc not in cancelled_codes:
+                if _code_arret(rows[i]) and rows[i].get("stop_id") \
+                        and _code_arret(rows[i]) not in cancelled_codes:
                     break  # premier arrêt régulier non annulé : fin de la zone
+                nxt = rows[i + 1] if i + 1 < len(rows) else None
+                if (_est_instruction(rows[i]) and nxt is not None and nxt.get("stop_id")
+                        and _code_arret(nxt) not in cancelled_codes):
+                    break
                 last_pos = i
                 i += 1
         else:
@@ -626,7 +701,8 @@ def insert_added_stops_inline(rows: list, added: list) -> tuple:
             best_idx = _anchor_added_by_streets(rows, ev_id, cross_street, main_street)
 
         if best_idx is not None:
-            rows = rows[: best_idx + 1] + [_added_row(stop_info)] + rows[best_idx + 1 :]
+            pos = best_idx + 1
+            rows = rows[:pos] + [_added_row(stop_info)] + rows[pos:]
         else:
             still_added.append(stop_info)
 
