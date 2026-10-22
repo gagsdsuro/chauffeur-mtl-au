@@ -171,12 +171,27 @@ def _entree(ligne: str, direction: str, evenement: dict) -> dict:
         "titre": evenement.get("titre", ""),
         "description_gd": evenement.get("description_gd") or "",
         "arrets_annules": sorted(str(a.get("id", "")) for a in evenement.get("arrets_annules", [])),
-        "arrets_ajoutes": [a if isinstance(a, str) else a.get("nom", "")
+        "arrets_ajoutes": [{"id": "", "nom": a} if isinstance(a, str)
+                           else {"id": str(a.get("id", "") or ""), "nom": a.get("nom", "")}
                            for a in evenement.get("arrets_ajoutes", [])],
+        "arrets_annules_noms": {str(a.get("id", "")): a.get("nom", "")
+                                for a in evenement.get("arrets_annules", [])},
         "evenement_ids": [evenement.get("evenement_id", "")],
         "parcours": [], "diagnostics": [], "choix": None,
         "valide_par": None, "valide_le": None,
     }
+
+
+def evenement_depuis_entree(entree: dict) -> dict:
+    """Évènement minimal reconstruit d'une entrée (l'original n'est plus dans les
+    fichiers d'évènements) : de quoi rejouer le pipeline et retrouver sa signature."""
+    noms = entree.get("arrets_annules_noms", {})
+    return {"evenement_id": (entree.get("evenement_ids") or [""])[0],
+            "titre": entree.get("titre", ""), "motif": "", "effectif": "",
+            "description_gd": entree.get("description_gd", ""),
+            "arrets_annules": [{"id": i, "nom": noms.get(i, "")}
+                               for i in entree.get("arrets_annules", [])],
+            "arrets_ajoutes": [dict(a) for a in entree.get("arrets_ajoutes", [])]}
 
 
 def valider_detour(ligne: str, direction: str, evenement: dict, choix: dict, par: str,
@@ -256,7 +271,8 @@ def fournisseurs(ligne: str, direction: str, detours_dir: Path | None = None,
 
 # ── Synchronisation (import d'évènements, G-D) ───────────────────────────────
 
-def _non_expire(evenement: dict, jour: date) -> bool:
+def non_expire(evenement: dict, jour: date) -> bool:
+    """L'évènement n'est pas terminé à cette date (début futur compris)."""
     try:
         fin = evenement.get("date_heure_fin")
         return not fin or datetime.fromisoformat(fin).date() >= jour
@@ -288,7 +304,7 @@ def synchroniser_evenements_ligne(ligne: str, direction: str, base: Path | None 
     jour = jour or date.today()
 
     evenements = [e for e in depots.charger_evenements(ligne, direction, events_dir)
-                  if _non_expire(e, jour)]
+                  if non_expire(e, jour)]
     path_gd = depots.chemin_gd(ligne, direction, gd_dir)
     if not evenements or not path_gd.exists():
         return []

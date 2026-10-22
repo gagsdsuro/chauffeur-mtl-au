@@ -887,6 +887,24 @@ def insert_added_stops_inline(rows: list, added: list,
 
 # ── Diagnostics lisibles ──────────────────────────────────────────────────────
 
+def etapes_des_arrets_ajoutes(rows: list) -> list:
+    """[(ligne d'arrêt ajouté, étape, avant)] telles que le pipeline les a posées.
+
+    `etape` = rang (à partir de 0) de l'étape de détour du même évènement qui
+    précède l'arrêt, `avant` False ; un arrêt posé avant la 1re étape donne
+    (0, True). Sert à préremplir un choix humain avec ce que l'automatique a fait.
+    """
+    resultat, rang = [], {}
+    for r in rows:
+        ev = r.get("evenement_id", "")
+        if r.get("detour_added") and r.get("gd"):
+            rang[ev] = rang.get(ev, -1) + 1
+        elif r.get("added_inline"):
+            courant = rang.get(ev)
+            resultat.append((r, 0 if courant is None else courant, courant is None))
+    return resultat
+
+
 def message_diagnostic(d: dict) -> str:
     """Texte lisible d'un diagnostic (`_diag` ou diagnostic d'arrêt ajouté)."""
     ev = f"Évènement {d.get('evenement_id') or '?'}"
