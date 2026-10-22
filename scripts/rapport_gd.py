@@ -30,7 +30,7 @@ from chauffeur.evenements import (  # noqa: E402
 )
 from chauffeur.gd import (  # noqa: E402
     _select_parcours, build_rows, filter_rows_by_stop_range, annotate_events,
-    apply_gd_detours, insert_added_stops_inline, rows_de_rendu,
+    apply_gd_detours, insert_added_stops_inline, rows_de_rendu, message_diagnostic,
 )
 from chauffeur.modeles import FichierGD, ParcoursGD  # noqa: E402
 from chauffeur import gtfs as _gtfs  # noqa: E402
@@ -508,8 +508,11 @@ def main():
 
     rows = build_rows(gd_instructions, stops, stop_names)
     rows, added, orphan_events = annotate_events(rows, events)
-    rows = apply_gd_detours(rows, events)
-    rows, added = insert_added_stops_inline(rows, added)
+    diagnostics = []
+    rows = apply_gd_detours(rows, events, diagnostics)
+    rows, added = insert_added_stops_inline(rows, added, diagnostics)
+    for message in dict.fromkeys(message_diagnostic(d) for d in diagnostics):
+        print(f"  ⚠️  {message}")
 
     # Tronquer selon la plage d'arrêts effective du chauffeur
     if args.arret_debut or args.arret_fin:

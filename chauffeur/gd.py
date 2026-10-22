@@ -316,7 +316,7 @@ def _regular_steps(rows: list) -> list:
             if r.get("gd") and not r.get("detour_added")]
 
 
-def _anchor_detour_span(rows: list, instructions: list, max_gap: int = 2):
+def _ancrer_detour(rows: list, instructions: list, max_gap: int = 2):
     """
     Détour sans arrêt annulé : on ne peut pas ancrer sur un arrêt contourné.
     On ancre sur les rues d'entrée et de rejointe lues dans la description_gd :
@@ -337,16 +337,20 @@ def _anchor_detour_span(rows: list, instructions: list, max_gap: int = 2):
       3. le détour s'insère APRÈS l'ancre et ses arrêts (juste avant l'instruction
          suivante, la 1re contournée) et barre les étapes (ancre, fin].
 
-    Retourne (insert_pos, bypass_end). bypass_end == -1 si rien n'est barré
-    (ancre seule, comportement conservateur). Faute d'ancre exploitable,
-    retombe sur (0, -1) — insertion en tête, ancien comportement.
+    Retourne (insert_pos, bypass_end, raison). bypass_end == -1 si rien n'est
+    barré (ancre seule, comportement conservateur). Faute d'ancre exploitable,
+    retombe sur (0, -1) — insertion en tête, ancien comportement. `raison`
+    vaut None quand l'ancrage est complet, sinon « description_vide »,
+    « entree_introuvable » (début du détour absent du G-D) ou
+    « rejointe_introuvable » (retour au parcours régulier absent) : l'échec
+    n'est plus silencieux, l'appelant peut le signaler.
     """
     if not instructions:
-        return 0, -1
+        return 0, -1, "description_vide"
     entry_street = extract_street(instructions[0])
     reg = _regular_steps(rows)
     if not reg or not entry_street:
-        return 0, -1
+        return 0, -1, "entree_introuvable"
 
     # Rue de rejointe = dernière instruction nommée avant le « R.R. » final.
     exit_street = ""
@@ -364,7 +368,7 @@ def _anchor_detour_span(rows: list, instructions: list, max_gap: int = 2):
 
     entry_hits = [i for i in reg if matches(i, entry_street)]
     if not entry_hits:
-        return 0, -1
+        return 0, -1, "entree_introuvable"
     if first_exit is not None:
         before = [i for i in entry_hits if i < first_exit]
         anchor = before[-1] if before else entry_hits[0]
@@ -379,7 +383,7 @@ def _anchor_detour_span(rows: list, instructions: list, max_gap: int = 2):
 
     # Pas de rejointe exploitable → insertion seule, rien barré.
     if first_exit is None or first_exit <= anchor:
-        return insert_pos, -1
+        return insert_pos, -1, "rejointe_introuvable"
 
     # Grappe contiguë de la rue de rejointe après l'ancre.
     rues_detour = {normalize_street(extract_street(instr)) for instr in instructions}
@@ -415,10 +419,21 @@ def _anchor_detour_span(rows: list, instructions: list, max_gap: int = 2):
             gap += 1
             if gap > max_gap:
                 break
-    return insert_pos, bypass_end
+    return insert_pos, bypass_end, None
 
 
-def apply_gd_detours(rows: list, events: list) -> list:
+def _anchor_detour_span(rows: list, instructions: list, max_gap: int = 2):
+    """(insert_pos, bypass_end) de `_ancrer_detour`, sans la raison d'échec."""
+    return _ancrer_detour(rows, instructions, max_gap)[:2]
+
+
+def _diag(event: dict, type_: str, raison: str = "", **extra) -> dict:
+    """Entrée de diagnostic : ce que le pipeline n'a pas pu décider seul."""
+    return {"evenement_id": event.get("evenement_id", ""),
+            "titre": event.get("titre", ""), "type": type_, "raison": raison, **extra}
+
+
+def apply_gd_detours(rows: list, events: list, diagnostics: list | None = None) -> list:
     """
     Pour chaque événement avec une description_gd parseable :
     - Insère les étapes du détour avant le premier arrêt annulé (detour_added=True)
@@ -427,11 +442,18 @@ def apply_gd_detours(rows: list, events: list) -> list:
     Détour SANS arrêt annulé : ancrage par rues d'entrée/rejointe via
     _anchor_detour_span (le détour se place après l'étape correspondant à sa
     1re instruction et barre les étapes contournées jusqu'à la rejointe).
+
+    `diagnostics` (liste optionnelle, complétée en place) reçoit un `_diag` pour
+    chaque détour que le pipeline n'a pas su placer ou borner seul — plutôt que
+    d'échouer en silence : description illisible, début ou retour du détour
+    introuvables dans le G-D.
     """
     for event in events:
         desc = event.get("description_gd") or ""
         instructions = parse_description_gd(desc)
         if not instructions:
+            if desc.strip() and diagnostics is not None:
+                diagnostics.append(_diag(event, "description_non_interpretee"))
             continue
 
         cancelled_codes = {a["id"] for a in event.get("arrets_annules", [])}
@@ -475,7 +497,9 @@ def apply_gd_detours(rows: list, events: list) -> list:
                 last_pos = i
                 i += 1
         else:
-            first_pos, last_pos = _anchor_detour_span(rows, instructions)
+            first_pos, last_pos, raison = _ancrer_detour(rows, instructions)
+            if raison and diagnostics is not None:
+                diagnostics.append(_diag(event, "detour_non_ancre", raison))
 
         # Toutes les instructions G-D dans la plage sont contournées,
         # y compris celles associées à un arrêt annulé.
@@ -630,10 +654,12 @@ def _apres_arrets_ajoutes(rows: list, idx: int, stop_info: dict) -> int:
 
 
 def _anchor_added_by_streets(rows: list, ev_id: str,
-                             main_street: str, cross_street) -> int | None:
+                             main_street: str, cross_street):
     """
     Cherche l'index de la ligne detour_added (du même événement) où poser un
-    arrêt ajouté circulant sur `main_street`, ou None si aucune ne correspond.
+    arrêt ajouté circulant sur `main_street` : retourne (index, ambigu), ou
+    (None, False) si aucune ne correspond. `ambigu` vaut True quand plusieurs
+    étapes conviennent et que rien ne permet de choisir (dernier candidat pris).
 
     Candidats : les instructions de détour dont la rue ≈ main_street. Parmi
     elles, préfère celle immédiatement suivie d'une instruction sur la rue
@@ -650,7 +676,7 @@ def _anchor_added_by_streets(rows: list, ev_id: str,
             candidates.append(i)
 
     if not candidates:
-        return None
+        return None, False
 
     if cross_street:
         # Préfère le candidat suivi d'une instruction sur la rue transversale
@@ -666,12 +692,13 @@ def _anchor_added_by_streets(rows: list, ev_id: str,
                     and rows[j].get("gd")):
                 next_street = normalize_street(extract_street(rows[j]["gd"]))
                 if cross_street in next_street or next_street in cross_street:
-                    return idx
+                    return idx, False
 
-    return candidates[-1]  # dernier candidat sur cette rue
+    return candidates[-1], len(candidates) > 1  # dernier candidat sur cette rue
 
 
-def insert_added_stops_inline(rows: list, added: list) -> tuple:
+def insert_added_stops_inline(rows: list, added: list,
+                              diagnostics: list | None = None) -> tuple:
     """
     Tente de placer chaque arrêt ajouté directement dans le tableau, par ordre
     de fiabilité décroissante des ancres :
@@ -694,8 +721,20 @@ def insert_added_stops_inline(rows: list, added: list) -> tuple:
 
     Retourne (rows_mis_à_jour, still_added) où still_added contient les
     arrêts qui n'ont pas pu être positionnés inline.
+
+    `diagnostics` (liste optionnelle, complétée en place) reçoit un diagnostic
+    par arrêt non placé, par ancre ambiguë et par groupe d'arrêts posés sur une
+    même étape (leur ordre relatif n'est alors connu que par l'événement).
     """
     still_added = []
+    groupes: dict = {}   # (evenement_id, id de l'étape) -> (étape, [noms])
+
+    def diag(stop_info, type_, raison, **extra):
+        if diagnostics is not None:
+            diagnostics.append({"evenement_id": stop_info.get("evenement_id", ""),
+                                "titre": stop_info.get("short_label", ""),
+                                "type": type_, "raison": raison,
+                                "arret": stop_info["name"], **extra})
 
     for stop_info in added:
         name = stop_info["name"]
@@ -710,22 +749,67 @@ def insert_added_stops_inline(rows: list, added: list) -> tuple:
         main_street, cross_street = _parse_added_stop(name)
         if not main_street:
             still_added.append(stop_info)
+            diag(stop_info, "arret_ajoute_non_place", "nom_sans_rue")
             continue
 
         # Restreindre à l'événement d'origine évite qu'un arrêt ajouté atterrisse
         # dans le détour d'un autre événement (deux détours peuvent partager un nom
         # de rue, ex. « Gauche Ste-Catherine »).
         ev_id = stop_info.get("evenement_id", "")
-        best_idx = _anchor_added_by_streets(rows, ev_id, main_street, cross_street)
+        best_idx, ambigu = _anchor_added_by_streets(rows, ev_id, main_street, cross_street)
         if best_idx is None and cross_street:
             # La 1re rue n'ancre nulle part : l'arrêt est peut-être réquisitionné
             # par un détour circulant sur sa rue transversale (rôles échangés).
-            best_idx = _anchor_added_by_streets(rows, ev_id, cross_street, main_street)
+            best_idx, ambigu = _anchor_added_by_streets(rows, ev_id, cross_street, main_street)
 
         if best_idx is not None:
+            if ambigu:
+                diag(stop_info, "arret_ajoute_ancre_incertaine", "plusieurs_etapes_possibles")
+            etape = rows[best_idx]
+            groupes.setdefault((ev_id, id(etape)), (etape, []))[1].append(stop_info)
             pos = _apres_arrets_ajoutes(rows, best_idx, stop_info)
             rows = rows[:pos] + [_added_row(stop_info)] + rows[pos:]
         else:
             still_added.append(stop_info)
+            raison = "aucune_etape_correspondante" if any(
+                r.get("detour_added") and (not ev_id or r.get("evenement_id", "") == ev_id)
+                for r in rows) else "evenement_sans_detour"
+            diag(stop_info, "arret_ajoute_non_place", raison)
+
+    for etape, arrets in groupes.values():
+        if len(arrets) > 1:
+            diag(arrets[0], "arrets_ajoutes_ordre_incertain", "meme_etape",
+                 arrets=[a["name"] for a in arrets], etape=etape["gd"])
 
     return rows, still_added
+
+
+# ── Diagnostics lisibles ──────────────────────────────────────────────────────
+
+def message_diagnostic(d: dict) -> str:
+    """Texte lisible d'un diagnostic (`_diag` ou diagnostic d'arrêt ajouté)."""
+    ev = f"Évènement {d.get('evenement_id') or '?'}"
+    if d.get("titre"):
+        ev += f" ({d['titre']})"
+    t, raison = d.get("type"), d.get("raison")
+    if t == "description_non_interpretee":
+        return f"{ev} : description G-D illisible, détour non placé."
+    if raison == "entree_introuvable":
+        return f"{ev} : début du détour introuvable dans le G-D, détour placé en tête du parcours."
+    if raison == "rejointe_introuvable":
+        return f"{ev} : retour à la route régulière introuvable dans le G-D, détour placé sans rien barrer."
+    if raison == "description_vide":
+        return f"{ev} : description G-D vide, détour non placé."
+    if t == "arret_ajoute_non_place":
+        motif = {"nom_sans_rue": "le nom ne désigne aucune rue",
+                 "aucune_etape_correspondante": "aucune étape du détour sur sa rue",
+                 "evenement_sans_detour": "le détour n'a pas pu être décrit"}.get(raison, raison)
+        return f"{ev} : arrêt ajouté « {d.get('arret', '')} » non placé ({motif})."
+    if t == "arret_ajoute_ancre_incertaine":
+        return f"{ev} : arrêt ajouté « {d.get('arret', '')} » posé sur l'une de plusieurs étapes possibles."
+    if t == "arrets_ajoutes_ordre_incertain":
+        noms = ", ".join(d.get("arrets", []))
+        return f"{ev} : arrêts ajoutés ({noms}) sur une même étape, ordre à vérifier."
+    if t == "hors_trajet":
+        return f"{ev} : aucun de ses arrêts annulés ne figure sur ce parcours."
+    return f"{ev} : {t or raison}."

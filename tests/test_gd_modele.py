@@ -14,7 +14,10 @@ deux colonnes en dernier. Couvre :
   • un détour qui emprunte d'abord la rue de la manœuvre (445 est : « Droite -
     Beaubien » puis « VIA BEAUBIEN ») s'insère APRÈS elle, qui reste valide ;
   • fin de détour : R.R., RR, R/R, VRR, ROUTE RÉGULIÈRE ; « *** » ignoré ;
-  • arrêts ajoutés sur une même ancre : ordre de l'événement conservé.
+  • arrêts ajoutés sur une même ancre : ordre de l'événement conservé ;
+  • diagnostics : ce que le pipeline ne peut pas décider seul n'échoue plus en
+    silence (début/retour de détour introuvable, texte illisible, arrêt ajouté
+    non placé ou d'ordre incertain) et remonte en avertissement du rapport v2.
 
 Usage : python3 tests/test_gd_modele.py   (code de sortie 0 si tout passe)
 """
@@ -26,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from chauffeur.gd import (  # noqa: E402
     annotate_events, apply_gd_detours, build_rows, filter_rows_by_stop_range,
-    insert_added_stops_inline, parse_description_gd, rows_de_rendu,
+    insert_added_stops_inline, message_diagnostic, parse_description_gd, rows_de_rendu,
 )
 
 INSTR = ["Via - Alpha", "Droite - Beta", "Gauche - Gamma"]
@@ -143,9 +146,66 @@ def arrets_ajoutes_gardent_leur_ordre():
     return erreurs
 
 
+def diagnostics_au_lieu_du_silence():
+    erreurs = []
+    ev = {"evenement_id": "5", "titre": "Détour sans annulation", "motif": "X",
+          "effectif": "En tout temps", "arrets_annules": [],
+          "description_gd": "VIA INCONNUE\nG/ OMEGA\nVIA R.R.",
+          "arrets_ajoutes": [{"id": "", "nom": "Station Nulle part"}]}
+    diag = []
+    rows = annotate_events(build_rows(INSTR, STOPS, NOMS), [ev])[0]
+    rows = apply_gd_detours(rows, [ev], diag)
+    _, restants = insert_added_stops_inline(rows, [{"name": "Station Nulle part", "id": "",
+                                                   "evenement_id": "5", "short_label": "Détour"}], diag)
+    types = [(d["type"] if d["type"].startswith("arret") else d["raison"]) for d in diag]
+    if types != ["entree_introuvable", "arret_ajoute_non_place"] or len(restants) != 1:
+        erreurs.append(f"diagnostics : {diag}")
+    if "début du détour introuvable" not in message_diagnostic(diag[0]):
+        erreurs.append(f"message : {message_diagnostic(diag[0])}")
+
+    libre = dict(ev, description_gd="Voir le portail de la STM", arrets_ajoutes=[])
+    diag = []
+    apply_gd_detours(build_rows(INSTR, STOPS, NOMS), [libre], diag)
+    if [d["type"] for d in diag] != ["description_non_interpretee"]:
+        erreurs.append(f"texte libre : {diag}")
+
+    ok = dict(ev, description_gd="VIA ALPHA\nG/ OMEGA\nVIA R.R.", arrets_ajoutes=[])
+    diag = []
+    apply_gd_detours(build_rows(INSTR, STOPS, NOMS), [ok], diag)
+    if [d["raison"] for d in diag] != ["rejointe_introuvable"]:
+        erreurs.append(f"rejointe : {diag}")   # OMEGA absent du G-D : aucune rejointe
+
+    # Aucun faux signal quand l'ancrage est complet.
+    complet = dict(ev, description_gd="VIA ALPHA\nG/ BETA\nVIA R.R.", arrets_ajoutes=[])
+    diag = []
+    apply_gd_detours(build_rows(INSTR, STOPS, NOMS), [complet], diag)
+    if diag:
+        erreurs.append(f"faux signal : {diag}")
+    return erreurs
+
+
+def ordre_incertain_et_avertissement_v2():
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    import gen_rapport_v2 as v2
+    ev = {"evenement_id": "7", "titre": "Détour avec annulation d'arrêt", "motif": "X",
+          "effectif": "En tout temps", "arrets_annules": [{"id": "2", "nom": ""}],
+          "description_gd": "VIA ALPHA\nD/ DE ROUEN\nD/ LETOURNEUX\nVIA R.R.",
+          "arrets_ajoutes": [{"id": "", "nom": f"Temp. - de Rouen / {c}"} for c in ("A", "B")]}
+    diag = []
+    rows, added, _ = annotate_events(build_rows(INSTR, STOPS, NOMS), [ev])
+    rows = apply_gd_detours(rows, [ev], diag)
+    insert_added_stops_inline(rows, added, diag)
+    messages = [message_diagnostic(d) for d in diag]
+    erreurs = [] if any("ordre à vérifier" in m for m in messages) else [f"ordre : {messages}"]
+    if v2.avertissements_groupe({"alertes": messages}) != [f"⚠ {m}" for m in messages]:
+        erreurs.append("avertissements_groupe ne reprend pas les alertes d'évènements")
+    return erreurs
+
+
 TESTS = [lignes_separees, fusion_de_rendu, detour_contourne_la_manoeuvre,
          plage_garde_instruction, detour_apres_la_manoeuvre_empruntee,
-         fins_de_detour_et_separateurs, arrets_ajoutes_gardent_leur_ordre]
+         fins_de_detour_et_separateurs, arrets_ajoutes_gardent_leur_ordre,
+         diagnostics_au_lieu_du_silence, ordre_incertain_et_avertissement_v2]
 
 
 def main() -> int:

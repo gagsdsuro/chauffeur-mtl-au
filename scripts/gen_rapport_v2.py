@@ -22,7 +22,7 @@ if str(ROOT) not in sys.path:
 
 from chauffeur.gd import (
     build_rows, annotate_events, apply_gd_detours, insert_added_stops_inline,
-    event_applicable_to_parcours, rows_de_rendu,
+    event_applicable_to_parcours, rows_de_rendu, message_diagnostic, _diag,
 )
 from chauffeur.gtfs import stops_for_parcours, stop_names as gtfs_stop_names
 from chauffeur.depots import charger_journee, charger_gd, evenements_pour_date
@@ -131,12 +131,15 @@ def process_groupe(groupe: dict, date_str: str, ev_all_cache: dict) -> dict:
     events = [e for e in events
               if event_applicable_to_parcours(e, stop_ids, instructions)]
 
-    rows, added, _ = annotate_events(rows, events)
-    rows = apply_gd_detours(rows, events)
-    rows, added = insert_added_stops_inline(rows, added)
+    rows, added, orphelins = annotate_events(rows, events)
+    diagnostics = [_diag(e, "hors_trajet") for e in orphelins] if stops_ordered else []
+    rows = apply_gd_detours(rows, events, diagnostics)
+    rows, added = insert_added_stops_inline(rows, added, diagnostics)
     rows = rows_de_rendu(rows)
+    alertes = list(dict.fromkeys(message_diagnostic(d) for d in diagnostics))
     return dict(groupe=groupe, rows=rows, added=added, events=events,
-                events_all=events_all, parcours=parcours, appariement=appariement)
+                events_all=events_all, parcours=parcours, appariement=appariement,
+                alertes=alertes)
 
 
 def avertissement_appariement(info: dict | None) -> str:
@@ -150,6 +153,15 @@ def avertissement_appariement(info: dict | None) -> str:
         return (f"⚠ Appariement des arrêts incertain ({info['blocs']} segment(s)) : "
                 "la position de certains arrêts est à vérifier.")
     return ""
+
+
+def avertissements_groupe(gd: dict) -> list:
+    """Avertissements non bloquants d'un groupe : appariement des arrêts, puis
+    ce que le pipeline n'a pas pu décider seul pour les évènements (détour non
+    ancré, arrêt ajouté non placé ou d'ordre incertain)."""
+    textes = [avertissement_appariement(gd.get("appariement"))]
+    textes += [f"⚠ {a}" for a in gd.get("alertes", [])]
+    return [t for t in textes if t]
 
 
 # ── Rendu HTML ────────────────────────────────────────────────────────────────
@@ -431,8 +443,7 @@ def render_html(groupes_data: list, journee: dict, niveau: str,
         if pstart:
             sub += f" — {_h(pstart)} → {_h(pend)}"
         body.append(f'<h3>{sub}</h3><div class="trips">Départs : {times}</div>')
-        avert = avertissement_appariement(gd.get("appariement"))
-        if avert:
+        for avert in avertissements_groupe(gd):
             body.append(f'<p class="avert-app">{_h(avert)}</p>')
 
         filtered = filter_rows_by_niveau(rows, niveau)
@@ -564,8 +575,7 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
             sub += f"  —  {pstart} → {pend}"
         story.append(Paragraph(sub, S["h3"]))
         story.append(Paragraph(f"Départs : {times}", S["trips"]))
-        avert = avertissement_appariement(gd.get("appariement"))
-        if avert:
+        for avert in avertissements_groupe(gd):
             story.append(Paragraph(_h(avert.replace("⚠ ", "")), S["avert_app"]))
 
         filtered = filter_rows_by_niveau(rows, niveau)
