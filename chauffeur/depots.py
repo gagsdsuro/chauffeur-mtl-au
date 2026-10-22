@@ -221,6 +221,17 @@ def chemin_appariement(ligne: str, direction: str, id_parcours,
             / f"{str(ligne).lower()}_{(direction or '').lower()}_{id_parcours}.json")
 
 
+def repertoire_detours(gd_dir: Path | None = None) -> Path:
+    """Appariements des détours (flotte) : `data/Appariements/detours/`."""
+    return repertoire_appariements(gd_dir) / "detours"
+
+
+def chemin_detours(ligne: str, direction: str, detours_dir: Path | None = None) -> Path:
+    """<ligne>_<direction>.json : tous les détours appariés de cette ligne/direction."""
+    return ((detours_dir or repertoire_detours())
+            / f"{str(ligne).lower()}_{(direction or '').lower()}.json")
+
+
 def chemin_journee(date_str: str, journees_dir: Path | None = None) -> Path:
     """journee-YYYY-MM-DD.json."""
     return (journees_dir or repertoire_prive("journees")) / f"journee-{date_str}.json"

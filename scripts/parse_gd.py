@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from chauffeur.depots import sauvegarder_gd  # noqa: E402
 from chauffeur.journal import ecrire_bloc  # noqa: E402
 from chauffeur.registre_appariement import synchroniser_ligne  # noqa: E402
+from chauffeur.registre_detours import synchroniser_evenements_ligne  # noqa: E402
 from chauffeur.portail import texte_visible_html  # noqa: E402
 
 
@@ -37,6 +38,7 @@ class GDParser:
         self.avertissements: list[str] = []
         self.report = ""
         self.appariements: list[str] = []
+        self.detours: list[str] = []
         self._expected_ligne: str | None = None
         self._expected_direction: str | None = None
 
@@ -95,6 +97,12 @@ class GDParser:
         if self.appariements:
             self.report += "\n[APPARIEMENT]\n" + "\n".join(
                 f"   {m}" for m in self.appariements) + "\n"
+        # Un nouveau G-D peut rendre inapplicable un choix de détour validé.
+        self.detours = synchroniser_evenements_ligne(
+            self.ligne, self.direction, base=Path(self.gd_dir).parent)
+        if self.detours:
+            self.report += "\n[APPARIEMENT DÉTOURS]\n" + "\n".join(
+                f"   {m}" for m in self.detours) + "\n"
         return json_data
 
     def _filename(self) -> str:

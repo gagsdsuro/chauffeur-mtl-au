@@ -33,6 +33,7 @@ from chauffeur.evenements import (
 )
 from chauffeur.journee import groupes_de_service
 from chauffeur.registre_appariement import appariement_pour_rapport
+from chauffeur.registre_detours import fournisseurs as fournisseurs_detours
 
 GTFS_DIR   = ROOT / "data" / "gtfs" / "gtfs_stm"
 OUTPUT_DIR = ROOT / "data" / "rapports"
@@ -133,8 +134,10 @@ def process_groupe(groupe: dict, date_str: str, ev_all_cache: dict) -> dict:
 
     rows, added, orphelins = annotate_events(rows, events)
     diagnostics = [_diag(e, "hors_trajet") for e in orphelins] if stops_ordered else []
-    rows = apply_gd_detours(rows, events, diagnostics)
-    rows, added = insert_added_stops_inline(rows, added, diagnostics)
+    # Choix humains validés (page Détours, communs) : imposés au pipeline.
+    choix, choix_arrets = fournisseurs_detours(ligne, direction)
+    rows = apply_gd_detours(rows, events, diagnostics, choix)
+    rows, added = insert_added_stops_inline(rows, added, diagnostics, choix_arrets)
     rows = rows_de_rendu(rows)
     alertes = list(dict.fromkeys(message_diagnostic(d) for d in diagnostics))
     return dict(groupe=groupe, rows=rows, added=added, events=events,

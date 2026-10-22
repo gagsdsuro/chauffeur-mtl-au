@@ -427,13 +427,69 @@ def _anchor_detour_span(rows: list, instructions: list, max_gap: int = 2):
     return _ancrer_detour(rows, instructions, max_gap)[:2]
 
 
+# ── Choix humains imposés au pipeline ────────────────────────────────────────
+#
+# Un choix (voir chauffeur.registre_detours) remplace l'heuristique d'ancrage :
+#   {"debut": ref | None, "fin": ref | None,
+#    "arrets_ajoutes": [{"cle": str, "etape": int, "avant": bool}] | None}
+# où `ref` désigne un élément de la séquence linéaire, indépendamment de sa
+# position (elle change quand un autre détour s'insère) :
+#   {"type": "instruction" | "arret", "cle": texte G-D | code d'arrêt,
+#    "occurrence": n}   (n-ième élément identique, à partir de 1).
+# `debut` = le détour s'insère AVANT cet élément ; `fin` = dernier élément
+# barré (inclus), None = rien n'est barré. Sans `debut`, l'ancrage reste
+# automatique. `arrets_ajoutes` donne l'ordre et l'étape (rang parmi les
+# étapes du détour, à partir de 0) de chaque arrêt ajouté, désigné par son code
+# ou, à défaut, par son nom normalisé (`cle_arret_ajoute`).
+
+def _cle_ref(r: dict):
+    """(type, clé) d'une ligne de la séquence linéaire, ou None (détour, arrêt ajouté)."""
+    if r.get("detour_added") or r.get("added_inline"):
+        return None
+    if r.get("stop_id"):
+        return "arret", _code_arret(r)
+    if r.get("gd"):
+        return "instruction", r["gd"]
+    return None
+
+
+def reference_ligne(rows: list, i: int) -> dict | None:
+    """Référence stable de la ligne `i` (None pour un détour ou un arrêt ajouté)."""
+    cle = _cle_ref(rows[i])
+    if cle is None:
+        return None
+    occurrence = sum(1 for r in rows[:i + 1] if _cle_ref(r) == cle)
+    return {"type": cle[0], "cle": cle[1], "occurrence": occurrence}
+
+
+def resoudre_ref(rows: list, ref: dict | None) -> int | None:
+    """Index de la ligne désignée par `ref`, ou None si elle n'existe plus."""
+    if not ref:
+        return None
+    cible, n = (ref.get("type"), ref.get("cle")), int(ref.get("occurrence") or 1)
+    vus = 0
+    for i, r in enumerate(rows):
+        if _cle_ref(r) == cible:
+            vus += 1
+            if vus == n:
+                return i
+    return None
+
+
+def cle_arret_ajoute(stop_info: dict) -> str:
+    """Clé d'un arrêt ajouté : son code à 5 chiffres, sinon son nom normalisé."""
+    code = (stop_info.get("id") or "").strip()
+    return code if _STOP_CODE_RE.match(code) else normalize_street(stop_info.get("name", ""))
+
+
 def _diag(event: dict, type_: str, raison: str = "", **extra) -> dict:
     """Entrée de diagnostic : ce que le pipeline n'a pas pu décider seul."""
     return {"evenement_id": event.get("evenement_id", ""),
             "titre": event.get("titre", ""), "type": type_, "raison": raison, **extra}
 
 
-def apply_gd_detours(rows: list, events: list, diagnostics: list | None = None) -> list:
+def apply_gd_detours(rows: list, events: list, diagnostics: list | None = None,
+                     choix=None) -> list:
     """
     Pour chaque événement avec une description_gd parseable :
     - Insère les étapes du détour avant le premier arrêt annulé (detour_added=True)
@@ -447,6 +503,10 @@ def apply_gd_detours(rows: list, events: list, diagnostics: list | None = None) 
     chaque détour que le pipeline n'a pas su placer ou borner seul — plutôt que
     d'échouer en silence : description illisible, début ou retour du détour
     introuvables dans le G-D.
+
+    `choix` (callable évènement → choix humain ou None, voir plus haut) impose
+    le début du détour et la fin du barrage ; un choix qui ne s'applique plus
+    (G-D modifié) est signalé et l'ancrage redevient automatique.
     """
     for event in events:
         desc = event.get("description_gd") or ""
@@ -463,7 +523,20 @@ def apply_gd_detours(rows: list, events: list, diagnostics: list | None = None) 
             if r.get("stop_id") and _code_arret(r) in cancelled_codes
         ]
 
-        if cancelled_positions:
+        impose = None
+        decision = choix(event) if choix else None
+        if decision and decision.get("debut"):
+            debut = resoudre_ref(rows, decision["debut"])
+            fin = resoudre_ref(rows, decision["fin"]) if decision.get("fin") else None
+            if debut is None or (decision.get("fin") and fin is None):
+                if diagnostics is not None:
+                    diagnostics.append(_diag(event, "choix_inapplicable", "element_introuvable"))
+            else:
+                impose = (debut, fin if fin is not None else debut - 1)
+
+        if impose:
+            first_pos, last_pos = impose
+        elif cancelled_positions:
             first_pos = cancelled_positions[0]
             last_pos  = cancelled_positions[-1]
 
@@ -698,7 +771,8 @@ def _anchor_added_by_streets(rows: list, ev_id: str,
 
 
 def insert_added_stops_inline(rows: list, added: list,
-                              diagnostics: list | None = None) -> tuple:
+                              diagnostics: list | None = None,
+                              choix_arrets=None) -> tuple:
     """
     Tente de placer chaque arrêt ajouté directement dans le tableau, par ordre
     de fiabilité décroissante des ancres :
@@ -725,8 +799,23 @@ def insert_added_stops_inline(rows: list, added: list,
     `diagnostics` (liste optionnelle, complétée en place) reçoit un diagnostic
     par arrêt non placé, par ancre ambiguë et par groupe d'arrêts posés sur une
     même étape (leur ordre relatif n'est alors connu que par l'événement).
+
+    `choix_arrets` (callable arrêt ajouté → {"rang", "etape", "avant"} ou None,
+    voir « Choix humains ») impose l'étape du détour sur laquelle un arrêt se
+    pose et l'ordre des arrêts ainsi choisis ; les autres restent automatiques.
     """
     still_added = []
+    imposes = [choix_arrets(a) if choix_arrets else None for a in added]
+    if any(imposes):
+        # Les arrêts à choix reprennent, dans l'ordre de leur rang, les places
+        # qu'ils occupaient dans la liste : le reste ne bouge pas.
+        places = [i for i, c in enumerate(imposes) if c]
+        ordonnes = sorted(places, key=lambda i: (added[i].get("evenement_id", ""),
+                                                 imposes[i]["rang"]))
+        nouveaux, nouveaux_choix = list(added), list(imposes)
+        for place, source in zip(places, ordonnes):
+            nouveaux[place], nouveaux_choix[place] = added[source], imposes[source]
+        added, imposes = nouveaux, nouveaux_choix
     groupes: dict = {}   # (evenement_id, id de l'étape) -> (étape, [noms])
 
     def diag(stop_info, type_, raison, **extra):
@@ -736,8 +825,20 @@ def insert_added_stops_inline(rows: list, added: list,
                                 "type": type_, "raison": raison,
                                 "arret": stop_info["name"], **extra})
 
-    for stop_info in added:
+    for stop_info, impose in zip(added, imposes):
         name = stop_info["name"]
+
+        if impose:
+            ev_id = stop_info.get("evenement_id", "")
+            etapes = [i for i, r in enumerate(rows)
+                      if r.get("detour_added") and r.get("gd")
+                      and (not ev_id or r.get("evenement_id", "") == ev_id)]
+            if 0 <= impose["etape"] < len(etapes):
+                idx = etapes[impose["etape"]]
+                pos = idx if impose.get("avant") else _apres_arrets_ajoutes(rows, idx, stop_info)
+                rows = rows[:pos] + [_added_row(stop_info)] + rows[pos:]
+                continue
+            diag(stop_info, "choix_inapplicable", "etape_introuvable")
 
         ancre = _anchor_added_by_code(rows, stop_info)
         if ancre is not None:
@@ -810,6 +911,9 @@ def message_diagnostic(d: dict) -> str:
     if t == "arrets_ajoutes_ordre_incertain":
         noms = ", ".join(d.get("arrets", []))
         return f"{ev} : arrêts ajoutés ({noms}) sur une même étape, ordre à vérifier."
+    if t == "choix_inapplicable":
+        return (f"{ev} : le choix enregistré ne s'applique plus à ce parcours "
+                "(G-D modifié), calcul automatique.")
     if t == "hors_trajet":
         return f"{ev} : aucun de ses arrêts annulés ne figure sur ce parcours."
     return f"{ev} : {t or raison}."
