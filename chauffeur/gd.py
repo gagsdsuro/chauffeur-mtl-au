@@ -180,10 +180,10 @@ def annotate_events(rows, events):
                 "commentaire":    commentaire,
                 "type_evenement": titre.lower(),
             })
-        for a in e.get("arrets_ajoutes", []):
+        for rang, a in enumerate(e.get("arrets_ajoutes", [])):
             name = a if isinstance(a, str) else a.get("nom", "")
             code = "" if isinstance(a, str) else str(a.get("id", "") or "")
-            added.append({"name": name, "id": code, "label": label,
+            added.append({"name": name, "id": code, "rang": rang, "label": label,
                           "short_label": f"{titre} ({motif})",
                           "commentaire": commentaire, "effectif": effectif,
                           "evenement_id": e.get("evenement_id", "")})
@@ -207,7 +207,8 @@ def annotate_events(rows, events):
 
 # ── Intégration G-D des détours ───────────────────────────────────────────────
 
-_RR_RE = re.compile(r'^R[.\s]?R\.?$', re.IGNORECASE)
+# Retour à la route régulière : « R.R. », « RR », « R/R », « VRR », « ROUTE RÉGULIÈRE ».
+_RR_RE = re.compile(r'^(?:R[./\s]?R\.?|VRR|ROUTE\s+R[ÉE]GULI[ÈE]RE)$', re.IGNORECASE)
 
 
 def parse_description_gd(desc: str):
@@ -229,6 +230,8 @@ def parse_description_gd(desc: str):
     instructions = []
     for part in raw:
         part = part.strip().rstrip('.')
+        if not part or re.fullmatch(r'[*\s]+', part):
+            continue   # séparateur décoratif (« *** »)
         m = re.match(r'^VIA\s+(.+)$', part, re.IGNORECASE)
         if m:
             text = m.group(1).strip()
@@ -442,10 +445,16 @@ def apply_gd_detours(rows: list, events: list) -> list:
             first_pos = cancelled_positions[0]
             last_pos  = cancelled_positions[-1]
 
-            # L'instruction qui mène au premier arrêt annulé est contournée :
-            # le détour la précède et la barre.
+            # L'instruction qui mène au premier arrêt annulé : si c'est la rue
+            # que le détour emprunte en premier (« Droite - Beaubien » puis
+            # « VIA BEAUBIEN »), on roule déjà dessus — le détour s'insère entre
+            # elle et l'arrêt, et elle reste valide. Sinon c'est la manœuvre
+            # contournée : le détour la précède et la barre.
             if first_pos > 0 and _est_instruction(rows[first_pos - 1]):
-                first_pos -= 1
+                entree = extract_street(instructions[0])
+                if not (entree and stops_match(
+                        extract_street(rows[first_pos - 1]["gd"]), entree)):
+                    first_pos -= 1
 
             # Étendre last_pos pour inclure les instructions G-D sans arrêt GTFS
             # qui suivent immédiatement le dernier arrêt annulé.
@@ -607,6 +616,19 @@ def _added_row(stop_info: dict) -> dict:
     }
 
 
+def _apres_arrets_ajoutes(rows: list, idx: int, stop_info: dict) -> int:
+    """Position d'insertion juste après l'étape `idx`, derrière les arrêts du
+    même événement déjà posés sur cette ancre : plusieurs arrêts qui s'ancrent
+    sur la même étape gardent l'ordre de `arrets_ajoutes` (sans quoi chacun
+    passerait devant le précédent)."""
+    ev_id = stop_info.get("evenement_id", "")
+    pos = idx + 1
+    while (pos < len(rows) and rows[pos].get("added_inline")
+           and rows[pos].get("evenement_id", "") == ev_id):
+        pos += 1
+    return pos
+
+
 def _anchor_added_by_streets(rows: list, ev_id: str,
                              main_street: str, cross_street) -> int | None:
     """
@@ -681,7 +703,7 @@ def insert_added_stops_inline(rows: list, added: list) -> tuple:
         ancre = _anchor_added_by_code(rows, stop_info)
         if ancre is not None:
             idx, avant = ancre
-            pos = idx if avant else idx + 1
+            pos = idx if avant else _apres_arrets_ajoutes(rows, idx, stop_info)
             rows = rows[:pos] + [_added_row(stop_info)] + rows[pos:]
             continue
 
@@ -701,7 +723,7 @@ def insert_added_stops_inline(rows: list, added: list) -> tuple:
             best_idx = _anchor_added_by_streets(rows, ev_id, cross_street, main_street)
 
         if best_idx is not None:
-            pos = best_idx + 1
+            pos = _apres_arrets_ajoutes(rows, best_idx, stop_info)
             rows = rows[:pos] + [_added_row(stop_info)] + rows[pos:]
         else:
             still_added.append(stop_info)

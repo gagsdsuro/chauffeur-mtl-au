@@ -104,7 +104,7 @@ python3 tests/run_all.py        # exécute toutes les suites tests/test_*.py
 python3 tests/test_dockerfile.py  # vérifie que le Dockerfile copie tout package source de premier niveau (app/scripts/chauffeur) — évite ModuleNotFoundError en prod
 ```
 
-**Tests de régression domaine G-D** — rejoue le pipeline (build_rows → annotate → détours → placement des arrêts ajoutés) sur des entrées gelées dans `tests/cas_rapport_gd/<nom>/` (G-D + Events + arrêts GTFS, sans dépendre du GTFS volumineux) ; compare rows/added à `attendu.json`. Le cas `gd-10-*-2026-07-12` gèle l'ancrage des arrêts ajoutés par code d'arrêt (terminus temporaire Station Sherbrooke : départ en nord → l'arrêt précède, arrivée en sud → il suit) :
+**Tests de régression domaine G-D** — rejoue le pipeline (build_rows → annotate → détours → placement des arrêts ajoutés) sur des entrées gelées dans `tests/cas_rapport_gd/<nom>/` (G-D + Events + arrêts GTFS, sans dépendre du GTFS volumineux) ; compare rows/added à `attendu.json`. Le cas `gd-445-est-2026-10-21` gèle le détour qui emprunte d'abord la rue de la manœuvre précédant l'arrêt annulé (« Droite - Beaubien » puis « VIA BEAUBIEN ») : il s'insère après elle, qui reste valide. Le cas `gd-10-*-2026-07-12` gèle l'ancrage des arrêts ajoutés par code d'arrêt (terminus temporaire Station Sherbrooke : départ en nord → l'arrêt précède, arrivée en sud → il suit) :
 ```bash
 python3 tests/test_rapport_gd.py
 python3 tests/creer_cas_rapport_gd.py --ligne 125 --direction ouest --date 2026-06-11   # figer un nouveau cas (vérifier attendu.json)

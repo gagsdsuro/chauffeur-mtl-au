@@ -1,0 +1,31 @@
+{
+  "ligne": "445",
+  "direction": "est",
+  "routes": [
+    {
+      "line_number": "445",
+      "direction": "Est",
+      "parcours": [
+        {
+          "id": 20,
+          "name": "Parcours principal",
+          "start": "de la Cathédrale / René-Lévesque",
+          "start_code": 61809,
+          "end": "20e Avenue / de Bellechasse",
+          "end_code": 61804,
+          "direction": [
+            "Via - de la Cathédrale",
+            "Gauche - De La Gauchetière",
+            "Gauche - Mansfield",
+            "Droite - René-Lévesque",
+            "Gauche - De Lorimier",
+            "Gauche - Saint-Joseph",
+            "Droite - Papineau",
+            "Droite - Beaubien",
+            "Droite - 20e Avenue"
+          ]
+        }
+      ]
+    }
+  ]
+}
