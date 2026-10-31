@@ -1,6 +1,6 @@
 # Dépendances et mises à jour
 
-La référence de déploiement est **Python 3.12.14 / Streamlit 1.64.0**.
+La référence de déploiement est **Python 3.12.16 / Streamlit 1.66.1**.
 Le verrouillage fixe les dépendances d'une livraison ; il est mis à jour
 explicitement pour profiter des nouvelles versions.
 
@@ -10,7 +10,7 @@ explicitement pour profiter des nouvelles versions.
 | --- | --- |
 | `requirements.in` | Dépendances directes ; version exacte de Streamlit et contraintes des autres paquets |
 | `requirements.txt` | Généré par pip-tools sous Linux / Python 3.12 ; versions exactes et empreintes SHA-256 de toutes les dépendances Python |
-| `Dockerfile` | Python 3.12.14 et empreinte de l'image de base ; installation avec `--require-hashes`, puis `pip check` |
+| `Dockerfile` | Python 3.12.16 et empreinte de l'image de base ; installation avec `--require-hashes`, puis `pip check` |
 
 Versionner les deux fichiers de dépendances ensemble. Ne pas modifier le fichier
 généré à la main. Les paquets de maintenance (`pip-tools`, etc.) ne sont pas

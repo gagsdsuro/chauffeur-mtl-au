@@ -1,5 +1,5 @@
 # Mettre à jour le tag ET l'empreinte lors d'une mise à jour de Python.
-FROM python:3.12.14-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea
+FROM python:3.12.16-slim@sha256:8523d6abeb48ceae0b7240d30c5808fc26cb79c1a635bacdf19cf3baecfbec07
 
 WORKDIR /app
 
