@@ -19,6 +19,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from chauffeur.depots import (  # noqa: E402
     JOURNEES_DIR as DEPOTS_JOURNEES_DIR, sauvegarder_journee,
 )
+from chauffeur.calendrier import (  # noqa: E402
+    dossier_calendrier, ecrire_calendrier_sans_echec, lignes_calendrier,
+)
 from chauffeur.journal import ecrire_bloc  # noqa: E402
 from chauffeur.journee import parser_sommaire_absence  # noqa: E402
 from chauffeur.modeles import Journee  # noqa: E402
@@ -153,6 +156,8 @@ class JourneeParser:
     def __init__(self, raw_text: str, date_str: str | None = None):
         self.raw_text = raw_text.replace('\r\n', '\n').replace('\r', '\n')
         self.errors   = []
+        self.calendrier: list[Path] = []
+        self.erreur_calendrier = ""
         self._ancres_sommaire: list[str] = []
         self._ancres_detail: list[str] = []
         if date_str:
@@ -536,7 +541,11 @@ class JourneeParser:
     def save(self, journee: Journee) -> Path:
         self.JOURNEES_DIR.mkdir(parents=True, exist_ok=True)
         out = self.JOURNEES_DIR / f"journee-{self.date_str}.json"
-        sauvegarder_journee(out, journee.to_dict())
+        contenu = journee.to_dict()
+        sauvegarder_journee(out, contenu)
+        self.calendrier, self.erreur_calendrier = ecrire_calendrier_sans_echec(
+            contenu, dossier_calendrier(out)
+        )
         return out
 
     def get_summary(self, journee: Journee | None = None, saved_path: Path | None = None) -> str:
@@ -567,6 +576,7 @@ class JourneeParser:
                 )
         if saved_path:
             lines.append(f"\n📁 Sauvegardé : data/journees/{saved_path.name}")
+            lines += lignes_calendrier(self.calendrier, self.erreur_calendrier)
         return "\n".join(lines)
 
 

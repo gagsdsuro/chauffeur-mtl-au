@@ -7,9 +7,11 @@ import bootstrap  # noqa: F401  (configure sys.path avant tout import)
 
 bootstrap.initialiser_page()
 
+import io
 import json
 import subprocess
 import sys
+import zipfile
 from datetime import date
 
 import streamlit as st
@@ -35,6 +37,7 @@ from parse_gd import GDParser, split_sections
 from parse_journee import JourneeParser
 
 from chauffeur.ca import ranger_ca, resoudre_ca
+from chauffeur.calendrier import dossier_calendrier, evenements_ics, rendre_ics
 from chauffeur.depots import (
     FRAICHEUR_GTFS_JOURS,
     charger_journee,
@@ -243,6 +246,42 @@ with st.expander("1 — Importer la journée", expanded=not bool(_prep_data)):
                 st.error("Échec du parsing.")
                 st.code(resume_j)
                 ecrire_bloc("parse_journee", resume_j)
+
+# ── 1b — Calendrier ──────────────────────────────────────────────────────
+_prep_ics = evenements_ics(_prep_data) if _prep_data else []
+with st.expander(
+    f"1b — Calendrier (.ics){f' · {len(_prep_ics)} pièce(s)' if _prep_ics else ''}",
+    expanded=False,
+):
+    if not _prep_ics:
+        st.caption("Importez d'abord la journée : un fichier .ics est créé par pièce de travail.")
+    else:
+        st.caption(
+            "Un fichier par pièce, à ouvrir ou importer dans votre calendrier. "
+            f"Copies générées à l'import dans `{dossier_calendrier(_prep_path) / _prep_date_str}/`."
+        )
+        _ics_fichiers = {ev["nom_fichier"]: rendre_ics(ev).encode("utf-8") for ev in _prep_ics}
+        for _ev in _prep_ics:
+            with st.container(horizontal=True, vertical_alignment="center"):
+                st.markdown(
+                    f"**{_ev['titre']}** · {_ev['debut']:%H:%M} → {_ev['fin']:%H:%M}"
+                    + (" (+1 j)" if _ev["fin"].date() > _ev["debut"].date() else "")
+                )
+                st.download_button(
+                    "Télécharger", data=_ics_fichiers[_ev["nom_fichier"]],
+                    file_name=_ev["nom_fichier"], mime="text/calendar",
+                    icon=":material/event:", key=f"ics_{_prep_date_str}_{_ev['rang']}",
+                )
+        if len(_ics_fichiers) > 1:
+            _zip = io.BytesIO()
+            with zipfile.ZipFile(_zip, "w", zipfile.ZIP_DEFLATED) as _z:
+                for _nom, _contenu in _ics_fichiers.items():
+                    _z.writestr(_nom, _contenu)
+            st.download_button(
+                "Tout télécharger (.zip)", data=_zip.getvalue(),
+                file_name=f"calendrier-{_prep_date_str}.zip", mime="application/zip",
+                icon=":material/download:", key=f"ics_zip_{_prep_date_str}",
+            )
 
 # ── 2b — Carte Agent ──────────────────────────────────────────────────────
 with st.expander("2 — Importer ou vérifier la carte agent", expanded=bool(_prep_data and not _prep_ca.get("annotee"))):
