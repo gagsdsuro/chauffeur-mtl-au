@@ -18,6 +18,7 @@ from .depots import (
     charger_journee, chemin_evenements, chemin_gd,
     chemin_journee, info_gd, sauvegarder_journee,
 )
+from .calendrier import dossier_calendrier, ecrire_calendrier_sans_echec, lignes_calendrier
 from .journal import ecrire_bloc
 from .journee import lignes_de_service
 from .evenements import (
@@ -185,6 +186,7 @@ class ResultatImportationJournee:
     message: str = ""
     chemin: Path | None = None
     session_expiree: bool = False
+    calendrier: list[Path] = field(default_factory=list)
 
 
 def importer_journee_portail(
@@ -222,11 +224,15 @@ def importer_journee_portail(
     avant = charger_journee(path) if path.exists() else None
     contenu = journee.to_dict()
     sauvegarder_journee(path, contenu)
-    message = parser.get_summary(journee, path)
+    calendrier, erreur = ecrire_calendrier_sans_echec(contenu, dossier_calendrier(path))
+    message = "\n".join(
+        [parser.get_summary(journee, path), *lignes_calendrier(calendrier, erreur)]
+    )
     if log:
         ecrire_bloc("parse_journee", message)
     return ResultatImportationJournee(
-        True, date_str, modifie=avant != contenu, message=message, chemin=path
+        True, date_str, modifie=avant != contenu, message=message, chemin=path,
+        calendrier=calendrier,
     )
 
 

@@ -205,6 +205,10 @@ def main() -> int:
                     "horaire", "horaire", "continu"
                 ]:
                     echecs.append("import journée: pièce continue non conservée")
+                if not imp.calendrier or not all(c.exists() for c in imp.calendrier):
+                    echecs.append("import journée: fichiers .ics non générés")
+                if "📅" not in imp.message:
+                    echecs.append("import journée: résumé sans ligne calendrier")
         finally:
             preparation.chemin_journee = original_chemin_journee
 
