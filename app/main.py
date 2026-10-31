@@ -89,6 +89,7 @@ _pages = [
     st.Page("pages/4_fichiers.py", title="Fichiers"),
     st.Page("pages/5_logs.py", title="Logs"),
     st.Page("pages/7_appariement.py", title="Appariement"),
+    st.Page("pages/8_detours.py", title="Détours"),
 ]
 if est_admin():
     _pages.append(st.Page("pages/6_administration.py", title="Administration"))

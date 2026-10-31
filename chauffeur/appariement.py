@@ -353,22 +353,23 @@ def blocs_incertains(incertitudes: list, stops_ordered: list) -> list:
 
 
 def rows_depuis_appariement(instructions: list, appariement: dict, stop_names: dict) -> list:
-    """Lignes de rapport au format de `chauffeur.gd.build_rows`.
+    """Séquence linéaire instruction / arrêt, une ligne par élément.
 
-    Chaque instruction est émise dans l'ordre ; son premier arrêt partage sa
-    ligne, les suivants forment des lignes à cellule G-D vide.
+    Chaque instruction est émise dans l'ordre, suivie de ses arrêts : une ligne
+    d'instruction (`gd` seul), puis une ligne par arrêt (`gd` vide). Instruction
+    et arrêt ne sont **jamais** fusionnés ici : un arrêt vient après sa
+    manœuvre, il ne la partage pas. Les détours et arrêts ajoutés s'insèrent
+    entre les deux sans ambiguïté ; `chauffeur.gd.rows_de_rendu` refait la mise
+    en page à deux colonnes (instruction + 1er arrêt sur une ligne) en dernier.
     """
     par_etape: dict[int, list] = {}
     for a in appariement["arrets"]:
         par_etape.setdefault(a["etape"], []).append(a)
     rows = []
     for k, instr in enumerate(instructions):
-        arrets = par_etape.get(k, [])
-        if not arrets:
-            rows.append({"gd": instr, "seq": None, "stop_id": None})
-            continue
-        for i, a in enumerate(arrets):
-            rows.append({"gd": instr if i == 0 else "", "seq": a["seq"], "stop_id": a["stop_id"]})
+        rows.append({"gd": instr, "seq": None, "stop_id": None})
+        for a in par_etape.get(k, []):
+            rows.append({"gd": "", "seq": a["seq"], "stop_id": a["stop_id"]})
     for r in rows:
         s = stop_names.get(r["stop_id"], {}) if r["stop_id"] else {}
         r["stop_code"] = s.get("code", "")

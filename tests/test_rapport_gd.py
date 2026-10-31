@@ -49,6 +49,7 @@ def domaine_snapshot(dossier: Path) -> dict:
     if params.get("arret_debut") or params.get("arret_fin"):
         rows = rg.filter_rows_by_stop_range(
             rows, params.get("arret_debut"), params.get("arret_fin"))
+    rows = rg.rows_de_rendu(rows)
 
     return {
         "parcours": {"name": parcours.get("name", ""),

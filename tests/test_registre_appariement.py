@@ -94,7 +94,8 @@ def scenario(rep: Path) -> list:
     # Rapport : appariement validé et à jour → utilisé tel quel.
     rows, info = reg.appariement_pour_rapport(L, D, PARCOURS, STOPS, NOMS, app_dir)
     verifier(e, info == {"statut": "valide", "blocs": 0, "a_jour": True}, f"rapport : {info}")
-    verifier(e, rows[1]["stop_id"] == "62138", "rapport : ancre validée non reprise dans rows")
+    verifier(e, rows[1]["gd"] == PARCOURS["direction"][1] and rows[2]["stop_id"] == "62138",
+             "rapport : ancre validée non reprise dans rows (arrêt après l'instruction 1)")
 
     # GTFS modifié (arrêt 53039 retiré) : le rapport recalcule sans écrire.
     stops_moins = [s for s in STOPS if s[1] != "53039"]

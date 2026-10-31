@@ -46,6 +46,7 @@ from chauffeur.depots import (
 from chauffeur.journal import ecrire_bloc
 from chauffeur.journee import groupes_de_service, lignes_de_service
 from chauffeur.registre_appariement import parcours_a_reviser
+from chauffeur.registre_detours import detours_a_reviser
 from chauffeur.periodes import identite_ca
 from chauffeur.portail import etat_session
 from chauffeur.preparation import (
@@ -152,6 +153,11 @@ if _prep_app:
     with st.container(horizontal=True, vertical_alignment="center"):
         st.markdown("⚠️ **Appariements à réviser** — " + ", ".join(_prep_app))
         st.page_link("pages/7_appariement.py", label="Réviser", icon="🧭")
+_prep_det = detours_a_reviser(groupes_de_service(_prep_data), _prep_date) if _prep_data else []
+if _prep_det:
+    with st.container(horizontal=True, vertical_alignment="center"):
+        st.markdown("⚠️ **Détours à réviser** — " + ", ".join(_prep_det))
+        st.page_link("pages/8_detours.py", label="Réviser", icon="🧭")
 if _prep_error:
     st.error(f"Erreur de préparation : {_prep_error}")
 st.divider()

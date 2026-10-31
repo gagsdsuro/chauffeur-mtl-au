@@ -327,6 +327,7 @@
     {
       "name": "Terminus Centre-Ville",
       "id": "62750",
+      "rang": 0,
       "label": "Détour sans annulation (Travaux) — G-D: VIA GAUCHETIERE D/MANSFIELD D/RENE-LEVESQUE D/ROBERT-BOURASSA VIA R.R",
       "short_label": "Détour sans annulation (Travaux)",
       "commentaire": "",

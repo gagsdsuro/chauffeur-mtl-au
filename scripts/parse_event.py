@@ -19,6 +19,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 from chauffeur.journal import ecrire_bloc  # noqa: E402
 from chauffeur.modeles import FichierEvenements, Evenement  # noqa: E402
 from chauffeur.evenements import comparer_evenements  # noqa: E402
+from chauffeur.registre_detours import synchroniser_evenements_ligne  # noqa: E402
 from chauffeur.presentation_evenements import (  # noqa: E402
     formater_evenement_modifie, formater_evenement_retire,
 )
@@ -134,6 +135,7 @@ class STMEventParser:
         self.errors = []
         self.warnings = []
         self.no_changes = False
+        self.detours: list = []
 
     def extract_ligne_direction(self) -> Tuple[Optional[str], Optional[str]]:
         pattern = r'(?:Détour|Évènement)s?\s*/\s*(\d+)\s+(Est|Ouest|Nord|Sud)'
@@ -450,10 +452,14 @@ class STMEventParser:
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(fichier.to_dict(), f, indent=2, ensure_ascii=False)
-            return True, True
         except Exception as e:
             self.errors.append(f"❌ Erreur sauvegarde: {e}")
             return False, False
+        # Détours que le pipeline ne sait pas ancrer seul (non bloquant) : à réviser
+        # dans la page Détours. `events_dir.parent` = data/ (voisins : G-D, GTFS).
+        self.detours = synchroniser_evenements_ligne(
+            self.ligne, self.direction, base=self.events_dir.parent)
+        return True, True
 
     def append_log(self, summary: str, log_dir: Path | None = None) -> None:
         """Sauvegarde le résumé en append dans data/log/parse_event.log."""
@@ -484,6 +490,11 @@ class STMEventParser:
             lines.append("")
             for w in self.warnings:
                 lines.extend(f"  {part}" for part in w.splitlines())
+
+        if self.detours:
+            lines.append("")
+            lines.append("[APPARIEMENT DÉTOURS]")
+            lines.extend(f"  {m}" for m in self.detours)
 
         filename = f"{self.ligne}_{self.direction}.json"
         if self.no_changes:
