@@ -15,6 +15,7 @@ import streamlit as st
 JOURNEE_DATE = "journee_date"             # journée sélectionnée dans « Ma journée »
 PREP_DATE = "prep_date"                   # « Préparation d'une journée »
 PREP_FLASH = "prep_flash"                 # message éphémère affiché au rerun (page 2)
+PREP_SEMI_AUTO = "prep_semi_auto"         # bilan de la préparation semi-automatique (page 2)
 OPERATION_PORTAIL = "operation_portail"   # reprise après expiration de session (pages 1 et 2)
 OUVRIR_DIALOG_SESSION = "ouvrir_dialog_session"
 SESSION_COOKIE_DIALOG = "session_cookie_dialog"
@@ -44,3 +45,16 @@ def mettre_a_jour_operation_portail(operation: dict[str, Any]) -> None:
 def effacer_operation_portail() -> None:
     """Annule l'opération portail en cours."""
     st.session_state.pop(OPERATION_PORTAIL, None)
+
+
+def reprise_en_attente(type_operation: str, date_iso: str) -> dict[str, Any] | None:
+    """L'opération portail à reprendre (type et date correspondants), sinon None."""
+    operation = operation_portail()
+    if (
+        operation
+        and operation.get("type") == type_operation
+        and operation.get("date") == date_iso
+        and operation.get("reprendre")
+    ):
+        return operation
+    return None

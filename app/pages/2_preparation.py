@@ -8,7 +8,6 @@ import bootstrap  # noqa: F401  (configure sys.path avant tout import)
 bootstrap.initialiser_page()
 
 import io
-import json
 import subprocess
 import sys
 import zipfile
@@ -17,8 +16,10 @@ from datetime import date
 import streamlit as st
 
 from app.components.result_display import (
+    _afficher_bilan_semi_auto,
     _afficher_resultat_gd,
     _afficher_resultat_rafraichissement,
+    progression_semi_auto,
 )
 from app.components.session_dialog import (
     declencher_dialog_si_requis,
@@ -27,8 +28,10 @@ from app.components.session_dialog import (
 from app.state import (
     PREP_DATE,
     PREP_FLASH,
+    PREP_SEMI_AUTO,
     effacer_operation_portail,
     operation_portail,
+    reprise_en_attente,
 )
 from bootstrap import DATA_DIR, SCRIPTS_DIR, journees_dir
 
@@ -36,7 +39,7 @@ from parse_event import STMEventParser, split_sections as split_ev
 from parse_gd import GDParser, libelle_retraits, split_sections
 from parse_journee import JourneeParser
 
-from chauffeur.ca import ranger_ca, resoudre_ca
+from chauffeur.ca import annoter_et_ranger_ca, resoudre_ca
 from chauffeur.calendrier import dossier_calendrier, evenements_ics, rendre_ics
 from chauffeur.depots import (
     FRAICHEUR_GTFS_JOURS,
@@ -50,8 +53,8 @@ from chauffeur.journal import ecrire_bloc
 from chauffeur.journee import groupes_de_service, lignes_de_service
 from chauffeur.registre_appariement import parcours_a_reviser
 from chauffeur.registre_detours import detours_a_reviser
-from chauffeur.periodes import identite_ca
 from chauffeur.portail import etat_session
+from chauffeur.preparation_auto import LIBELLES, ResultatSemiAuto, executer_semi_auto
 from chauffeur.preparation import (
     ResultatRafraichissement,
     ResultatRafraichissementGD,
@@ -64,7 +67,6 @@ from chauffeur.preparation import (
     rafraichir_gd_journee,
 )
 
-CA_DIR = bootstrap.ca_dir()
 RAPPORTS_DIR = bootstrap.rapports_dir()
 
 st.header("Préparation d'une journée")
@@ -113,6 +115,87 @@ if _prep_data and not _prep_error:
         )
     except Exception as _e:
         _prep_error = str(_e)
+
+# ── Préparation semi-automatique ─────────────────────────────────────────
+_semi = st.session_state.get(PREP_SEMI_AUTO)
+if _semi and _semi.get("date") != _prep_date_str:
+    _semi = None   # bilan d'une autre date : conservé, mais pas affiché ici
+_semi_res = ResultatSemiAuto.from_dict(_semi["resultat"]) if _semi else None
+_semi_a_executer = None   # (résultat précédent ou None, sans_portail)
+
+_semi_reprise = reprise_en_attente("semi_auto", _prep_date_str)
+if _semi_reprise:
+    _semi_reprise["reprendre"] = False
+    _semi_a_executer = (ResultatSemiAuto.from_dict(_semi_reprise["resultat"]), False)
+
+if _semi_res is None and not _prep_data and not _prep_error:
+    with st.container(border=True):
+        st.markdown(
+            f"**Journée du {_prep_date_str} non importée** — la préparation "
+            "semi-automatique enchaîne toutes les étapes tant qu'aucune erreur "
+            "bloquante n'est rencontrée."
+        )
+        st.caption(
+            " → ".join(LIBELLES.values())
+        )
+        if _prep_session.statut in ("absente", "expiree"):
+            st.info(
+                "La session portail n'est pas active : un dialogue demandera "
+                "le cookie, puis la préparation reprendra automatiquement."
+            )
+        if st.button(
+            "Lancer la préparation semi-automatique", type="primary",
+            icon=":material/play_arrow:", key="semi_auto_btn",
+        ):
+            _semi_a_executer = (None, False)
+elif _semi_res is not None:
+    with st.expander(
+        "Bilan de la préparation semi-automatique",
+        expanded=bool(_semi_res.reprise_a or _semi_res.avertissements),
+    ):
+        _afficher_bilan_semi_auto(_semi_res)
+        with st.container(horizontal=True):
+            if _semi_res.reprise_a and st.button(
+                "Reprendre", type="primary", icon=":material/replay:",
+                key="semi_auto_reprendre",
+            ):
+                _semi_a_executer = (_semi_res, False)
+            if _semi_res.reprise_a == "evenements" and st.button(
+                "Continuer sans les évènements du portail",
+                icon=":material/skip_next:", key="semi_auto_sans_portail",
+            ):
+                _semi_a_executer = (_semi_res, True)
+            if st.button("Fermer le bilan", key="semi_auto_fermer"):
+                st.session_state.pop(PREP_SEMI_AUTO, None)
+                st.rerun()
+
+if _semi_a_executer:
+    _semi_precedent, _semi_sans_portail = _semi_a_executer
+    with st.status("Préparation semi-automatique…", expanded=True) as _semi_status:
+        _semi_nouveau = executer_semi_auto(
+            _prep_date_str, precedent=_semi_precedent, sans_portail=_semi_sans_portail,
+            rapports_dir=RAPPORTS_DIR, progression=progression_semi_auto(_semi_status),
+        )
+        st.session_state[PREP_SEMI_AUTO] = {
+            "date": _prep_date_str, "resultat": _semi_nouveau.to_dict(),
+        }
+        if _semi_nouveau.session_expiree:
+            demander_renouvellement({
+                "type": "semi_auto", "date": _prep_date_str,
+                "resultat": _semi_nouveau.to_dict(), "reprendre": False,
+            })
+            _semi_status.update(label="Session à renouveler", state="error")
+        else:
+            effacer_operation_portail()
+            if _semi_nouveau.reprise_a:
+                _semi_status.update(label="Préparation interrompue", state="error")
+            else:
+                _n = len(_semi_nouveau.avertissements)
+                st.session_state[PREP_FLASH] = "Préparation semi-automatique terminée" + (
+                    f" — {_n} avertissement(s), voir le bilan." if _n else "."
+                )
+                _semi_status.update(label="Préparation terminée", state="complete")
+            st.rerun()
 
 st.subheader("État de la préparation")
 _s1, _s2, _s3, _s4 = st.columns(4)
@@ -316,113 +399,29 @@ with st.expander("2 — Importer ou vérifier la carte agent", expanded=bool(_pr
 
     btn_label = "Enregistrer la version annotée" if ca_deja_annotee else "Annoter la carte"
     if uploaded and st.button(btn_label, type="primary", key="ca_btn"):
-        def _traiter_upload():
-            CA_DIR.mkdir(parents=True, exist_ok=True)
-            tmp_src = CA_DIR / f"_tmp_{uploaded.name}"
-            tmp_out = None if ca_deja_annotee else CA_DIR / f"_tmp_annotee_{uploaded.name}"
-            tmp_src.write_bytes(uploaded.read())
-
-            def _nettoyer_tmp():
-                tmp_src.unlink(missing_ok=True)
-                if tmp_out:
-                    tmp_out.unlink(missing_ok=True)
-
-            if ca_deja_annotee:
-                cmd = [sys.executable, str(SCRIPTS_DIR / "carte_agent_stm.py"),
-                       "--pdf", str(tmp_src), "--meta-only"]
-                spinner_msg = "Lecture des métadonnées…"
-            else:
-                gtfs_path = DATA_DIR / "gtfs" / "gtfs_stm"
-                cmd = [sys.executable, str(SCRIPTS_DIR / "carte_agent_stm.py"),
-                       "--pdf", str(tmp_src), "--out", str(tmp_out),
-                       "--date", str(ca_date), "--json"]
-                if not no_gtfs and gtfs_path.exists():
-                    cmd += ["--gtfs", str(gtfs_path)]
-                elif no_gtfs:
-                    cmd.append("--no-gtfs")
-                spinner_msg = "Annotation en cours…"
-
-            with st.spinner(spinner_msg):
-                result = subprocess.run(cmd, capture_output=True, text=True)
-
-            if result.returncode != 0:
-                sortie = result.stderr or result.stdout
-                st.error("Erreur lors du traitement.")
-                st.code(sortie)
-                ecrire_bloc("carte_agent",
-                            f"❌ Échec du traitement de {uploaded.name}\n{sortie}")
-                _nettoyer_tmp()
-                return
-
-            try:
-                meta = json.loads(result.stdout.strip().splitlines()[-1])
-                numero, groupe_id, jour_type = identite_ca(ca_date, meta["carte"])
-            except (json.JSONDecodeError, IndexError, KeyError) as e:
-                st.error(f"Sortie inattendue du traitement : {e}")
-                st.code(result.stdout)
-                _nettoyer_tmp()
-                return
-            except (FileNotFoundError, ValueError) as e:
-                st.error(f"Impossible de calculer l'identité de la carte : {e}")
-                _nettoyer_tmp()
-                return
-
-            # Validation croisée (pas une source d'identité) : certaines cartes
-            # impriment elles-mêmes leur jour-type ; on signale un écart sans bloquer.
-            jt_imprime = meta.get("jour_type_imprime")
-            if jt_imprime and jt_imprime != jour_type:
-                variante_txt = f" ({meta['variante']})" if meta.get("variante") else ""
-                st.warning(
-                    f"⚠️ Écart calendrier/carte : identite_ca calcule jour_type="
-                    f"« {jour_type} » pour cette date, mais la carte imprime "
-                    f"« {jt_imprime} »{variante_txt} (En vigueur : "
-                    f"{meta.get('en_vigueur') or '?'}). Vérifie le calendrier de "
-                    "référence — l'identité retenue reste celle du calendrier."
-                )
-
-            try:
-                ranges = ranger_ca(
-                    numero, groupe_id, jour_type,
-                    annotee_tmp=tmp_src if ca_deja_annotee else tmp_out,
-                    brute_tmp=None if ca_deja_annotee else tmp_src,
-                    remplacer=ca_remplacer,
-                )
-            except FileExistsError as e:
-                st.error(f"{e} Cochez « Remplacer » ci-dessus pour l'écraser.")
-                _nettoyer_tmp()
-                return
-
-            dest_out = ranges["annotee"]
-            if ca_deja_annotee:
-                st.success(
-                    f"Version annotée remplacée directement (sans traitement GTFS) "
-                    f"— identité : n° {numero} · {groupe_id} · {jour_type}."
-                )
-            else:
-                st.success(
-                    f"Carte annotée et rangée — identité : n° {numero} · "
-                    f"{groupe_id} · {jour_type}."
-                )
-
-            trace = [
-                f"✅ Carte agent n° {numero} · {groupe_id} · {jour_type}",
-                f"  • Source : {uploaded.name}",
-                f"  • Rangée : {dest_out}",
-                f"  • Mode : {'remplacement direct (sans GTFS)' if ca_deja_annotee else 'annotation GTFS'}",
-            ]
-            if jt_imprime and jt_imprime != jour_type:
-                trace.append(f"  ⚠️ Écart calendrier/carte : la carte imprime « {jt_imprime} »")
-            ecrire_bloc("carte_agent", "\n".join(trace))
-
+        with st.spinner("Lecture des métadonnées…" if ca_deja_annotee else "Annotation en cours…"):
+            _ca_res = annoter_et_ranger_ca(
+                uploaded.read(), ca_date,
+                nom_source=uploaded.name, avec_gtfs=not no_gtfs,
+                deja_annotee=ca_deja_annotee, remplacer=ca_remplacer,
+            )
+        for _avert in _ca_res.avertissements:
+            st.warning(_avert)
+        if _ca_res.succes:
+            st.success(_ca_res.message)
             st.download_button(
                 "⬇️ Télécharger la carte annotée",
-                data=dest_out.read_bytes(),
-                file_name=dest_out.name,
+                data=_ca_res.chemin_annotee.read_bytes(),
+                file_name=_ca_res.chemin_annotee.name,
                 mime="application/pdf",
                 key="ca_dl",
             )
-
-        _traiter_upload()
+        elif _ca_res.statut == "existe":
+            st.error(f"{_ca_res.message} Cochez « Remplacer » ci-dessus pour l'écraser.")
+        else:
+            st.error(_ca_res.message)
+            if _ca_res.detail:
+                st.code(_ca_res.detail)
 
 
 # ── 2c — Gauche-Droite ───────────────────────────────────────────────────

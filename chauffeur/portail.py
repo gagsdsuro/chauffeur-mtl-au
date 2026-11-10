@@ -81,6 +81,36 @@ def texte_visible_html(source: str, *, ids_ignores: set[str] | None = None) -> s
     return extracteur.texte()
 
 
+class _ExtracteurLienCarteAgent(HTMLParser):
+    """Relève le `href` de l'ancre `#btnCarteAgent` (ordre d'attributs libre)."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.href: str | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag != "a" or self.href is not None:
+            return
+        attributs = dict(attrs)
+        if attributs.get("id") == "btnCarteAgent":
+            self.href = attributs.get("href")
+
+
+def lien_carte_agent(journee_html: str, date_str: str) -> str | None:
+    """Lien « Carte Agent » de la journée, ou None s'il est absent ou suspect.
+
+    Le jeton du lien est propre à la journée : on le lit dans la page. Le lien
+    n'est retenu que s'il pointe vers le portail et vers la date demandée, pour
+    que les cookies de session ne partent jamais vers un autre hôte.
+    """
+    extracteur = _ExtracteurLienCarteAgent()
+    extracteur.feed(journee_html or "")
+    href = (extracteur.href or "").strip()
+    if href.startswith(f"{BASE_URL}/carte-agent/{date_str}/recuperer/"):
+        return href
+    return None
+
+
 class SessionExpiredError(Exception):
     """Session portail expirée ou absente."""
 
@@ -308,6 +338,32 @@ class PortailClient:
         return self._fetch_json(
             url, f"le G-D {ligne} {sens}", f"{BASE_URL}/resume-journee/"
         )
+
+    def fetch_carte_agent(self, date_cible: date | str) -> bytes:
+        """Télécharge le PDF brut de la carte agent de la journée (bouton « Carte Agent »)."""
+        date_str = date_cible.isoformat() if isinstance(date_cible, date) else str(date_cible)
+        payload = self.fetch_journee(date_str)
+        html = payload.get("journeeHtml")
+        lien = lien_carte_agent(html if isinstance(html, str) else "", date_str)
+        if not lien:
+            raise PortailError(f"Aucune carte agent publiée pour le {date_str}")
+        prefixe = f"{BASE_URL}/carte-agent/"
+        try:
+            response = self.http.get(lien, timeout=30, allow_redirects=True)
+        except requests.RequestException as exc:
+            raise PortailError(f"Erreur réseau pour la carte agent du {date_str} : {exc}") from exc
+        if response.status_code in (401, 403) or not response.url.startswith(prefixe):
+            self._persist("expiree")
+            raise SessionExpiredError("Session expirée pendant la récupération")
+        if response.status_code != 200:
+            raise PortailError(
+                f"Erreur HTTP {response.status_code} pour la carte agent du {date_str}"
+            )
+        contenu = response.content
+        if not contenu.startswith(b"%PDF"):
+            raise PortailError(f"La carte agent du {date_str} n'est pas un PDF")
+        self._persist()
+        return contenu
 
 
 def valider_et_sauvegarder_session(

@@ -526,19 +526,27 @@ def finaliser_rapports(
     rapports_dir: Path | None = None,
     generateur_journalier: Callable[[Path, Path], tuple[bool, str]] | None = None,
     generateur_v2: Callable[[Path, Path, str], tuple[bool, str]] | None = None,
+    variantes: Iterable[str] = ("journalier", "v2"),
 ) -> list[ResultatRapport]:
-    """Génère uniquement les variantes absentes ou obsolètes."""
+    """Génère uniquement les variantes absentes ou obsolètes.
+
+    `variantes` restreint les rapports traités (« journalier », « v2 »).
+    """
+    variantes = set(variantes)
     rapports_dir = Path(rapports_dir or _rapports_dir())
     rapports_dir.mkdir(parents=True, exist_ok=True)
     resultats: list[ResultatRapport] = []
-    etat_j = etat_rapport(journee_path, "journalier", rapports_dir=rapports_dir)
-    if etat_j.statut == "a_jour":
-        resultats.append(ResultatRapport("journalier", "ignore", "Rapport déjà à jour", etat_j.chemin))
-    else:
-        ok, message = (generateur_journalier or _generer_journalier)(journee_path, etat_j.chemin)
-        if ok:
-            marquer_rapport_a_jour(journee_path, etat_j, rapports_dir)
-        resultats.append(ResultatRapport("journalier", "genere" if ok else "erreur", message, etat_j.chemin))
+    if "journalier" in variantes:
+        etat_j = etat_rapport(journee_path, "journalier", rapports_dir=rapports_dir)
+        if etat_j.statut == "a_jour":
+            resultats.append(ResultatRapport("journalier", "ignore", "Rapport déjà à jour", etat_j.chemin))
+        else:
+            ok, message = (generateur_journalier or _generer_journalier)(journee_path, etat_j.chemin)
+            if ok:
+                marquer_rapport_a_jour(journee_path, etat_j, rapports_dir)
+            resultats.append(ResultatRapport("journalier", "genere" if ok else "erreur", message, etat_j.chemin))
+    if "v2" not in variantes:
+        return resultats
 
     etat_v2 = etat_rapport(
         journee_path, "v2", niveau=niveau_v2, rapports_dir=rapports_dir
