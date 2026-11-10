@@ -284,6 +284,27 @@ else:
         if note_j.get("maj"):
             st.caption(f"Mise à jour : {note_j['maj']}")
 
+    # ── Aperçu de la carte agent annotée ─────────────────────────────────
+    _ca_annotee = _ca_info.get("annotee")
+    if _ca_annotee:
+        _ca_exp = st.expander(
+            f"🗺️ Carte agent — Aperçu  ({_ca_annotee.name})",
+            on_change="rerun",  # contenu rendu seulement si la section est ouverte
+            key=f"db_ca_apercu_{db_date_str}",
+        )
+        if _ca_exp.open:
+            with _ca_exp:
+                st.pdf(
+                    _ca_annotee.read_bytes(),
+                    height=700,
+                    key=f"db_ca_pdf_{db_date_str}_{_ca_annotee.stat().st_mtime_ns}",
+                )
+    else:
+        st.caption(
+            "Aucune carte agent annotée pour cette journée "
+            "(à importer dans Préparation d'une journée, étape 2)."
+        )
+
     # ── Aperçu du dernier rapport v2 complet ─────────────────────────────
     _v2_html = sorted(
         RAPPORTS_DIR.glob(f"rapport-v2-{db_date_str}-*.html"),
