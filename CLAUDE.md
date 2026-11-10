@@ -88,6 +88,10 @@ Niveaux : `détaillé` (défaut) | `standard` | `compact`. Sortie par défaut : 
 ```bash
 python3 scripts/carte_agent_stm.py --pdf data/ca/carte-agent-2026-06-04.pdf --out data/ca/annotée.pdf --gtfs data/gtfs/gtfs_stm/ --date 2026-06-04
 ```
+**Niveau par parcours** : `--parcours LIGNE:DIR:ID=NIVEAU` (répétable ; `aucun` exclut le parcours, les autres prennent `--niveau`), ex. `--parcours 24:ouest:2=compact --parcours 445:ouest:19=aucun` ; page Rapports : un sélecteur par parcours (« (défaut) » suit le niveau par défaut). Une sélection qui s'écarte du niveau par défaut s'écrit dans `rapport-v2-DATE-personnalise.{fmt}` et ne marque jamais le rapport du niveau « à jour ». **Évènements évalués par départ** : chaque trajet est testé sur sa propre plage (départ → arrivée) ; si les évènements applicables diffèrent d'un départ à l'autre, le parcours est **dupliqué** (une section par ensemble d'évènements, note « Parcours dupliqué (k/n) »), sinon le format reste inchangé. Les jours/heures du `commentaire` servent de repli quand l'`effectif` ne restreint rien (« LUNDI AU VENDREDI 12H00 À 19H00 » avec effectif « En tout temps », `chauffeur.effectif`). Au sommaire des évènements, ceux qui génèrent un avertissement du pipeline détaillent leurs arrêts annulés/ajoutés, commentaire et description G-D.
+```bash
+python3 tests/test_rapport_v2_parcours.py   # sélection, duplication par départ, détails du sommaire
+```
 
 **Tests de régression carte agent** — rejoue des cas figés (PDF + horaires GTFS gelés dans `tests/cas/<nom>/`) et compare le plan d'annotations à `attendu.json` (requiert `PyMuPDF`) :
 ```bash

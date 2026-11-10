@@ -273,6 +273,37 @@ class TestInterface(unittest.TestCase):
             self.assertNotIn(cle, at.session_state)
         self.assertTrue(any(c.key == "login_pin" for c in at.text_input))
 
+    def test_rapport_v2_selection_par_parcours(self):
+        jour = "2026-09-10"
+        j = journee_475()
+        for piece in j["pieces"]:
+            for trajet in piece["trajets"]:
+                if trajet["type"] == "service":
+                    trajet["id_parcours"] = 1
+        self.ecrire(j)
+        at = self.ouvrir()
+        self.changer_page(at, "3_rapports")
+        at.date_input(key="rpt_v2_date").set_value(date.fromisoformat(jour)).run()
+        self.sans_exception(at)
+        cle_nord = f"rpt_v2_sel_{jour}_136_nord_1"
+        cle_sud = f"rpt_v2_sel_{jour}_136_sud_1"
+        self.assertEqual(at.selectbox(key=cle_nord).value, "(défaut)")
+        at.selectbox(key=cle_sud).set_value("ne pas générer").run()
+        at.selectbox(key=cle_nord).set_value("compact").run()
+        at.button(key="rpt_v2_btn").click().run()
+        self.sans_exception(at)
+        self.assertFalse(at.error)
+        # Sélection personnalisée : fichier à part, rapport standard jamais écrasé.
+        perso = self.rapports / f"rapport-v2-{jour}-personnalise.html"
+        self.assertTrue(perso.exists())
+        self.assertFalse((self.rapports / f"rapport-v2-{jour}-détaillé.html").exists())
+        html = perso.read_text(encoding="utf-8")
+        self.assertIn("136 Nord", html)
+        self.assertNotIn("136 Sud", html)
+        # Tout exclure : erreur lisible, pas d'exception.
+        at.selectbox(key=cle_nord).set_value("ne pas générer").run()
+        self.assertTrue(any("Aucun parcours" in w.value for w in at.warning))
+
     def test_trois_apercus_et_telechargements(self):
         jour = "2026-09-10"
         j = journee_475()

@@ -12,6 +12,7 @@ Usage :
 """
 
 import argparse
+import copy
 import sys
 from datetime import date, datetime
 from pathlib import Path
@@ -26,7 +27,7 @@ from chauffeur.gd import (
 )
 from chauffeur.gtfs import stops_for_parcours, stop_names as gtfs_stop_names
 from chauffeur.depots import charger_journee, charger_gd, evenements_pour_date
-from chauffeur.effectif import bornes_quart
+from chauffeur.effectif import parse_shift_time
 from chauffeur.evenements import (
     applicable_a_la_plage, arret_reellement_annule,
     trier_evenements_par_arrets,
@@ -37,23 +38,6 @@ from chauffeur.registre_detours import fournisseurs as fournisseurs_detours
 
 GTFS_DIR   = ROOT / "data" / "gtfs" / "gtfs_stm"
 OUTPUT_DIR = ROOT / "data" / "rapports"
-
-
-# ── Chargement événements ─────────────────────────────────────────────────────
-
-def load_events_for_groupe(groupe: dict, date_str: str) -> list:
-    """Événements applicables à la plage horaire du groupe (filtre quart)."""
-    jour   = date.fromisoformat(date_str)
-    all_ev = evenements_pour_date(groupe["ligne"], groupe["direction"], jour)
-    trips  = groupe.get("trips", [])
-    if not trips or not all_ev:
-        return []
-    heures_deb = [t["depart_heure"]  for t in trips if t.get("depart_heure")]
-    heures_fin = [t["arrivee_heure"] for t in trips if t.get("arrivee_heure")]
-    bornes_deb = bornes_quart(heures_deb, jour)
-    bornes_fin = bornes_quart(heures_fin, jour)
-    plage = (bornes_deb[0], bornes_fin[1]) if bornes_deb and bornes_fin else None
-    return [e for e in all_ev if applicable_a_la_plage(e, jour, plage)]
 
 
 # ── GTFS ──────────────────────────────────────────────────────────────────────
@@ -92,57 +76,124 @@ def filter_rows_by_niveau(rows: list, niveau: str) -> list:
 
 # ── Pipeline par groupe ───────────────────────────────────────────────────────
 
-def process_groupe(groupe: dict, date_str: str, ev_all_cache: dict) -> dict:
+NIVEAUX = ("détaillé", "standard", "compact")
+
+
+def evenements_par_trajet(trips: list, jour: date, events_jour: list,
+                          applicable_parcours=None) -> list:
+    """Pour chaque trajet, tuple des indices (dans `events_jour`) des évènements
+    applicables à sa plage (départ → arrivée), puis au parcours.
+
+    Les indices, plutôt que les `evenement_id`, distinguent les variantes d'un
+    même ID. `applicable_parcours` (évènement → bool) est indépendant du trajet :
+    appliqué ici pour ne pas scinder un parcours sur un évènement qui ne le
+    concerne de toute façon pas.
+    """
+    resultat = []
+    for t in trips:
+        plage = ((t["depart_heure"], t["arrivee_heure"])
+                 if t.get("depart_heure") and t.get("arrivee_heure") else None)
+        resultat.append(tuple(
+            i for i, e in enumerate(events_jour)
+            if applicable_a_la_plage(e, jour, plage)
+            and (applicable_parcours is None or applicable_parcours(e))
+        ))
+    return resultat
+
+
+def scinder_trajets(trips: list, signatures: list, jour: date) -> list:
+    """Regroupe les trajets de même signature d'évènements.
+
+    Retourne [(signature, [trajets])] dans l'ordre du premier départ. Sans
+    trajet, un seul groupe vide (aucun évènement applicable).
+    """
+    if not trips:
+        return [((), [])]
+    groupes: dict[tuple, list] = {}
+    for t, sig in zip(trips, signatures):
+        groupes.setdefault(sig, []).append(t)
+
+    def premier_depart(item):
+        heures = []
+        for t in item[1]:
+            try:
+                heures.append(parse_shift_time(t["depart_heure"], jour))
+            except (KeyError, ValueError, TypeError, AttributeError):
+                pass
+        return min(heures) if heures else datetime.max
+
+    return sorted(groupes.items(), key=premier_depart)
+
+
+def process_groupe(groupe: dict, date_str: str, ev_all_cache: dict) -> list:
+    """Traite un groupe (ligne · direction · id parcours).
+
+    Retourne une liste de résultats : un seul quand les évènements applicables
+    sont les mêmes à tous les départs, un par ensemble distinct d'évènements
+    sinon (le parcours est alors dupliqué, `groupe["variante"] = (k, n)`).
+    """
     ligne, direction, id_p = groupe["ligne"], groupe["direction"], groupe.get("id_parcours")
+    jour = date.fromisoformat(date_str)
+    trips = groupe.get("trips", [])
     instructions, parcours = charger_gd(ligne, direction, id_p)
     stops_ordered, snames  = _load_gtfs_stops(ligne, direction, id_p)
-    events                 = load_events_for_groupe(groupe, date_str)
 
     cache_key = (ligne, direction)
     if cache_key not in ev_all_cache:
-        ev_all_cache[cache_key] = evenements_pour_date(
-            ligne, direction, date.fromisoformat(date_str))
-    events_all = trier_evenements_par_arrets(
-        ev_all_cache[cache_key], stops_ordered
-    )
-    events = trier_evenements_par_arrets(events, stops_ordered)
+        ev_all_cache[cache_key] = evenements_pour_date(ligne, direction, jour)
+    events_all = trier_evenements_par_arrets(ev_all_cache[cache_key], stops_ordered)
 
     if not instructions:
-        return dict(groupe=groupe, rows=[], added=[], events=events,
-                    events_all=events_all, parcours=parcours, appariement=None)
+        sigs = evenements_par_trajet(trips, jour, events_all)
+        idx = sorted({i for sig in sigs for i in sig})
+        return [dict(groupe=groupe, rows=[], added=[],
+                     events=[events_all[i] for i in idx],
+                     events_all=events_all, parcours=parcours, appariement=None,
+                     alertes=[], diagnostics=[])]
 
     # Appariement persisté (validé par un chauffeur) s'il est à jour, sinon
     # calcul automatique — jamais bloquant, l'avertissement suit le groupe.
     appariement = None
     if stops_ordered:
-        rows, appariement = appariement_pour_rapport(
+        rows_base, appariement = appariement_pour_rapport(
             ligne, direction, parcours, stops_ordered, snames)
     else:
-        rows = build_rows(instructions, stops_ordered, snames)
+        rows_base = build_rows(instructions, stops_ordered, snames)
 
-    # Filtrer les évènements non-applicables à ce parcours spécifique.
-    # Un évènement dont les arrêts annulés ou les rues de détour ne concernent
-    # pas ce parcours est exclu ici — il reste visible dans le tableau des
-    # évènements (events_all) comme « non-applicable ».
-    # GTFS indisponible (stops_ordered vide) → stop_ids=None : les arrêts du
-    # parcours sont inconnus et les évènements à arrêts annulés sont présumés
-    # applicables (fail-safe, même règle que l'onglet Ma journée).
-    stop_ids = ({r.get("stop_code") or r["stop_id"] for r in rows if r.get("stop_id")}
+    # Évènements non-applicables à ce parcours spécifique : exclus ici, ils
+    # restent visibles dans le tableau des évènements (events_all) comme
+    # « non-applicable ». GTFS indisponible (stops_ordered vide) → stop_ids=None :
+    # les arrêts du parcours sont inconnus et les évènements à arrêts annulés
+    # sont présumés applicables (fail-safe, même règle que l'onglet Ma journée).
+    stop_ids = ({r.get("stop_code") or r["stop_id"] for r in rows_base if r.get("stop_id")}
                 if stops_ordered else None)
-    events = [e for e in events
-              if event_applicable_to_parcours(e, stop_ids, instructions)]
+    sigs = evenements_par_trajet(
+        trips, jour, events_all,
+        lambda e: event_applicable_to_parcours(e, stop_ids, instructions))
+    variantes = scinder_trajets(trips, sigs, jour)
 
-    rows, added, orphelins = annotate_events(rows, events)
-    diagnostics = [_diag(e, "hors_trajet") for e in orphelins] if stops_ordered else []
     # Choix humains validés (page Détours, communs) : imposés au pipeline.
     choix, choix_arrets = fournisseurs_detours(ligne, direction)
-    rows = apply_gd_detours(rows, events, diagnostics, choix)
-    rows, added = insert_added_stops_inline(rows, added, diagnostics, choix_arrets)
-    rows = rows_de_rendu(rows)
-    alertes = list(dict.fromkeys(message_diagnostic(d) for d in diagnostics))
-    return dict(groupe=groupe, rows=rows, added=added, events=events,
-                events_all=events_all, parcours=parcours, appariement=appariement,
-                alertes=alertes)
+
+    resultats = []
+    for k, (sig, trips_v) in enumerate(variantes, start=1):
+        events = [events_all[i] for i in sig]
+        # annotate_events & co. modifient les lignes en place : une copie par variante.
+        rows = copy.deepcopy(rows_base)
+        rows, added, orphelins = annotate_events(rows, events)
+        diagnostics = [_diag(e, "hors_trajet") for e in orphelins] if stops_ordered else []
+        rows = apply_gd_detours(rows, events, diagnostics, choix)
+        rows, added = insert_added_stops_inline(rows, added, diagnostics, choix_arrets)
+        rows = rows_de_rendu(rows)
+        alertes = list(dict.fromkeys(message_diagnostic(d) for d in diagnostics))
+        g = dict(groupe, trips=trips_v) if len(variantes) > 1 else groupe
+        if len(variantes) > 1:
+            g["variante"] = (k, len(variantes))
+        resultats.append(dict(groupe=g, rows=rows, added=added, events=events,
+                              events_all=events_all, parcours=parcours,
+                              appariement=appariement, alertes=alertes,
+                              diagnostics=diagnostics))
+    return resultats
 
 
 def avertissement_appariement(info: dict | None) -> str:
@@ -205,6 +256,8 @@ td{padding:4px 8px;border-bottom:1px solid #ddd;vertical-align:top}
 .event-precision{font-size:11px;color:#b45309;font-weight:bold;display:block}
 .ev-table th{background:#f0f0f0;color:#333}
 .ev-na{color:#bbb}
+.ev-detail{display:block;font-size:10px;color:#7a3e00;margin-top:1px}
+.variante{color:#555;font-size:11px;font-style:italic;margin:2px 0 4px}
 @media print{body{margin:8px;font-size:11px}tr:hover{background:none}}
 """
 
@@ -382,7 +435,42 @@ def _render_rows_html(rows: list, show_code: bool, niveau: str = "détaillé",
     return "".join(out)
 
 
-def _render_events_table_html(events_all: list, events_app: list) -> str:
+def _libelle_arret(a) -> str:
+    """Arrêt annulé/ajouté : objet {id, nom} ou ancienne chaîne libre."""
+    if isinstance(a, dict):
+        code, nom = str(a.get("id") or "").strip(), (a.get("nom") or "").strip()
+        return f"{code} — {nom}" if code and nom else (code or nom)
+    return str(a or "").strip()
+
+
+def _details_evenement(e: dict, diagnostics: list) -> list:
+    """Informations disponibles d'un évènement que le pipeline n'a pas su traiter
+    seul (texte brut, une chaîne par ligne) ; [] si aucun avertissement ne le
+    concerne — l'évènement reste alors compact dans le sommaire.
+    """
+    eid = str(e.get("evenement_id", ""))
+    diags = [d for d in diagnostics or [] if str(d.get("evenement_id", "")) == eid]
+    if not diags:
+        return []
+    lignes = []
+    annules = [_libelle_arret(a) for a in e.get("arrets_annules") or []]
+    if any(annules):
+        lignes.append("Arrêts annulés : " + " ; ".join(a for a in annules if a))
+    ajoutes = [_libelle_arret(a) for a in e.get("arrets_ajoutes") or []]
+    if any(ajoutes):
+        lignes.append("Arrêts ajoutés : " + " ; ".join(a for a in ajoutes if a))
+    if e.get("commentaire"):
+        lignes.append("Commentaire : " + " / ".join(
+            l.strip() for l in str(e["commentaire"]).splitlines() if l.strip()))
+    desc = [l.strip() for l in str(e.get("description_gd") or "").splitlines() if l.strip()]
+    if desc:
+        lignes.append("Description G-D : " + " › ".join(desc))
+    lignes += [f"⚠ {message_diagnostic(d)}" for d in diags]
+    return lignes
+
+
+def _render_events_table_html(events_all: list, events_app: list,
+                              diagnostics: list = ()) -> str:
     if not events_all:
         return ""
     app_ids = {e.get("evenement_id") for e in events_app}
@@ -399,12 +487,38 @@ def _render_events_table_html(events_all: list, events_app: list) -> str:
         mark   = "✅" if appl else "⬜"
         cls    = "" if appl else ' class="ev-na"'
         titre  = _h(e.get("titre", ""))
+        titre += "".join(f'<span class="ev-detail">{_h(l)}</span>'
+                         for l in _details_evenement(e, diagnostics))
         eff    = _h(e.get("effectif", ""))
         per    = _h(_format_periode(e))
         out.append(f'<tr{cls}><td>{mark}</td><td>{eid}</td><td>{titre}</td>'
                    f'<td>{eff}</td><td>{per}</td></tr>')
     out.append("</tbody></table>")
     return "".join(out)
+
+
+def _niveau_entete(groupes_data: list, niveau: str) -> tuple:
+    """(libellé du niveau pour l'en-tête, niveaux différents selon les parcours ?)"""
+    niveaux = {gd.get("niveau", niveau) for gd in groupes_data}
+    if len(niveaux) > 1:
+        return "par parcours", True
+    return (niveaux.pop() if niveaux else niveau), False
+
+
+def _entete_groupe(gd: dict, niveau: str, mixte: bool) -> str:
+    groupe = gd["groupe"]
+    txt = f'{groupe["ligne"]} {groupe["direction"].capitalize()} — ID {groupe.get("id_parcours")}'
+    if mixte:
+        txt += f' — {gd.get("niveau", niveau)}'
+    return txt
+
+
+def _note_variante(groupe: dict) -> str:
+    if not groupe.get("variante"):
+        return ""
+    k, n = groupe["variante"]
+    return ("Parcours dupliqué : les évènements applicables diffèrent selon "
+            f"l'heure de départ ({k}/{n}).")
 
 
 def render_html(groupes_data: list, journee: dict, niveau: str,
@@ -415,13 +529,14 @@ def render_html(groupes_data: list, journee: dict, niveau: str,
     jnum      = journee.get("journee_numero", "")
     duree     = journee.get("temps_travaille", "")
 
+    niveau_txt, mixte = _niveau_entete(groupes_data, niveau)
     body = [
         f'<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">'
         f'<title>Rapport {date_str}</title><style>{_CSS}</style></head><body>',
         f'<h1>Rapport journalier — {date_str}</h1>',
         f'<div class="meta">Garage {garage_id} — {garage}'
         f' &nbsp;·&nbsp; Journée #{jnum} &nbsp;·&nbsp; Durée {duree}'
-        f' &nbsp;·&nbsp; Niveau : {niveau}</div>',
+        f' &nbsp;·&nbsp; Niveau : {niveau_txt}</div>',
     ]
 
     for gd in groupes_data:
@@ -435,8 +550,12 @@ def render_html(groupes_data: list, journee: dict, niveau: str,
         ligne      = groupe["ligne"]
         direction  = groupe["direction"]
 
+        niv = gd.get("niveau", niveau)
+
         # En-tête de section : "24 Ouest — ID 2"
-        body.append(f'<h2>{ligne} {direction.capitalize()} — ID {id_p}</h2>')
+        body.append(f'<h2>{_h(_entete_groupe(gd, niveau, mixte))}</h2>')
+        if _note_variante(groupe):
+            body.append(f'<p class="variante">{_h(_note_variante(groupe))}</p>')
 
         pname  = (parcours.get("name") or f"Parcours {id_p}") if parcours else f"Parcours {id_p}"
         pstart = (parcours.get("start") or "") if parcours else ""
@@ -449,16 +568,17 @@ def render_html(groupes_data: list, journee: dict, niveau: str,
         for avert in avertissements_groupe(gd):
             body.append(f'<p class="avert-app">{_h(avert)}</p>')
 
-        filtered = filter_rows_by_niveau(rows, niveau)
+        filtered = filter_rows_by_niveau(rows, niv)
 
         if not parcours:
             body.append('<p class="no-gd">G-D non disponible pour cette direction.</p>')
-        elif not filtered and niveau != "détaillé":
+        elif not filtered and niv != "détaillé":
             body.append('<p class="no-gd">Aucune modification pour ce parcours.</p>')
         else:
-            body.append(_render_rows_html(filtered, show_code, niveau, events_app))
+            body.append(_render_rows_html(filtered, show_code, niv, events_app))
 
-        body.append(_render_events_table_html(events_all, events_app))
+        body.append(_render_events_table_html(
+            events_all, events_app, gd.get("diagnostics", [])))
 
     body.append("</body></html>")
     return "\n".join(body)
@@ -533,12 +653,13 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
     garage    = journee.get("garage", "")
     jnum      = journee.get("journee_numero", "")
     duree     = journee.get("temps_travaille", "")
+    niveau_txt, mixte = _niveau_entete(groupes_data, niveau)
 
     story = [
         Paragraph(f"Rapport journalier — {date_str}", S["h1"]),
         Paragraph(
             f"Garage {garage_id} — {garage}  ·  "
-            f"Journée #{jnum}  ·  Durée {duree}  ·  Niveau : {niveau}",
+            f"Journée #{jnum}  ·  Durée {duree}  ·  Niveau : {niveau_txt}",
             S["meta"],
         ),
         HRFlowable(width="100%", thickness=0.5),
@@ -566,8 +687,12 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
         ligne      = groupe["ligne"]
         direction  = groupe["direction"]
 
+        niveau_g = gd.get("niveau", niveau)
+
         # En-tête de section : "24 Ouest — ID 2"
-        story.append(Paragraph(f"{ligne} {direction.capitalize()} — ID {id_p}", S["h2"]))
+        story.append(Paragraph(_h(_entete_groupe(gd, niveau, mixte)), S["h2"]))
+        if _note_variante(groupe):
+            story.append(Paragraph(_h(_note_variante(groupe)), S["trips"]))
 
         pname  = (parcours.get("name") or f"Parcours {id_p}") if parcours else f"Parcours {id_p}"
         pstart = (parcours.get("start") or "") if parcours else ""
@@ -581,11 +706,11 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
         for avert in avertissements_groupe(gd):
             story.append(Paragraph(_h(avert.replace("⚠ ", "")), S["avert_app"]))
 
-        filtered = filter_rows_by_niveau(rows, niveau)
+        filtered = filter_rows_by_niveau(rows, niveau_g)
 
         if not parcours:
             story.append(Paragraph("G-D non disponible pour cette direction.", S["no_gd"]))
-        elif not filtered and niveau != "détaillé":
+        elif not filtered and niveau_g != "détaillé":
             story.append(Paragraph("Aucune modification pour ce parcours.", S["no_gd"]))
         else:
             tdata  = [HDR]
@@ -665,7 +790,7 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
 
                 # Arrêt / Détour cell — toujours construire eff_lines (même pour ditto)
                 plain_gd = gd_txt and not d_added and not d_removed and not cancelled
-                show_stop = stop_nm and not (niveau == "standard" and plain_gd)
+                show_stop = stop_nm and not (niveau_g == "standard" and plain_gd)
                 if not cancelled:
                     arr_style = CS["arr"]
                 elif arret_reellement_annule(cancelled):
@@ -753,9 +878,12 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
                 appl  = eid in app_ids
                 mark  = "OK" if appl else "--"
                 cs    = EV_S if appl else EV_GRY_S
+                titre_pdf = _h(e.get("titre", "")) + "".join(
+                    f"<br/>{_h(l.replace('⚠ ', ''))}"
+                    for l in _details_evenement(e, gd.get("diagnostics", [])))
                 ev_data.append([
                     mark, eid,
-                    Paragraph(e.get("titre", ""), cs),
+                    Paragraph(titre_pdf, cs),
                     Paragraph(e.get("effectif", ""), cs),
                     Paragraph(_format_periode(e), cs),
                 ])
@@ -775,12 +903,76 @@ def render_pdf(groupes_data: list, journee: dict, niveau: str, output: Path,
     doc.build(story)
 
 
+# ── Sélection des parcours ───────────────────────────────────────────────────
+
+def cle_groupe(groupe: dict) -> tuple:
+    """Clé de sélection d'un groupe : (ligne, direction, id_parcours), casse neutre."""
+    return (str(groupe["ligne"]).lower(), str(groupe["direction"]).lower(),
+            groupe.get("id_parcours"))
+
+
+def _normaliser_selection(selection: dict | None) -> dict:
+    return {(str(l).lower(), str(d).lower(), i): niv
+            for (l, d, i), niv in (selection or {}).items()}
+
+
+def resoudre_selection(groupes: list, niveau: str, selection: dict | None) -> list:
+    """[(groupe, niveau)] des groupes à générer.
+
+    `selection` : {(ligne, direction, id_parcours): niveau ou None}. None (ou
+    « aucun ») exclut le parcours ; une clé absente prend le niveau par défaut.
+    Lève ValueError pour un niveau inconnu, un parcours absent de la journée ou
+    une sélection qui n'en laisse aucun.
+    """
+    sel = _normaliser_selection(selection)
+    inconnus = set(sel) - {cle_groupe(g) for g in groupes}
+    if inconnus:
+        l, d, i = sorted(inconnus, key=str)[0]
+        raise ValueError(f"Parcours absent de la journée : {l} {d} ID {i}")
+    retenus = []
+    for g in groupes:
+        niv = sel.get(cle_groupe(g), niveau)
+        if niv in (None, "aucun"):
+            continue
+        if niv not in NIVEAUX:
+            raise ValueError(f"Niveau inconnu : {niv!r} (attendu : "
+                             f"{', '.join(NIVEAUX)}, aucun)")
+        retenus.append((g, niv))
+    if not retenus:
+        raise ValueError("Aucun parcours sélectionné.")
+    return retenus
+
+
+def selection_est_personnalisee(groupes: list, niveau: str, selection: dict | None) -> bool:
+    """Vrai si la sélection exclut un parcours ou s'écarte du niveau par défaut :
+    le rapport n'est alors pas le rapport standard du niveau (autre fichier, pas
+    de marquage « à jour »)."""
+    sel = _normaliser_selection(selection)
+    return any(sel.get(cle_groupe(g), niveau) != niveau for g in groupes)
+
+
+def _parser_parcours(texte: str) -> tuple:
+    """'24:ouest:2=compact' → (('24', 'ouest', 2), 'compact') ; niveau 'aucun' → None."""
+    try:
+        cle, niv = texte.rsplit("=", 1)
+        ligne, direction, id_p = cle.split(":")
+        id_parcours = int(id_p)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"{texte!r} : format attendu LIGNE:DIRECTION:ID=NIVEAU (ex. 24:ouest:2=compact)")
+    niv = niv.strip()
+    if niv not in NIVEAUX + ("aucun",):
+        raise argparse.ArgumentTypeError(
+            f"{texte!r} : niveau « {niv} » inconnu ({', '.join(NIVEAUX)}, aucun)")
+    return (ligne, direction, id_parcours), (None if niv == "aucun" else niv)
+
+
 # ── Worker parallèle ─────────────────────────────────────────────────────────
 
 def _process_groupe_worker(args):
     """Wrapper sans cache partagé — chaque processus gère son propre cache."""
     groupe, date_str = args
-    return process_groupe(groupe, date_str, {})
+    return process_groupe(groupe, date_str, {})  # liste de résultats (variantes)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -813,6 +1005,13 @@ def main():
     ap.add_argument("--filtre-id-parcours",  type=int, default=None,
                     help="Restreindre le rapport à cet ID parcours (ex: 3)")
 
+    ap.add_argument("--parcours", action="append", default=[], type=_parser_parcours,
+                    metavar="LIGNE:DIR:ID=NIVEAU",
+                    help="Niveau d'un parcours de la journée, répétable "
+                         "(détaillé|standard|compact|aucun pour l'exclure ; "
+                         "les autres prennent --niveau). Ex. : --parcours 24:ouest:2=compact "
+                         "--parcours 445:ouest:19=aucun")
+
     args = ap.parse_args()
 
     try:
@@ -825,6 +1024,7 @@ def main():
             filtre_ligne=args.filtre_ligne,
             filtre_direction=args.filtre_direction,
             filtre_id_parcours=args.filtre_id_parcours,
+            selection=dict(args.parcours) or None,
         )
         print(f"Rapport généré : {out}")
     except (FileNotFoundError, ValueError) as e:
@@ -841,11 +1041,17 @@ def generer_rapport(
     filtre_ligne: str | None = None,
     filtre_direction: str | None = None,
     filtre_id_parcours: int | None = None,
+    selection: dict | None = None,
 ) -> Path:
     """Génère le rapport v2 et retourne le chemin du fichier créé.
 
     Lève FileNotFoundError si journee_path n'existe pas,
-    ValueError si la journée est vide ou si les filtres excluent tout.
+    ValueError si la journée est vide ou si les filtres/la sélection excluent tout.
+
+    `selection` : {(ligne, direction, id_parcours): niveau ou None} — niveau propre
+    à chaque parcours, None pour ne pas le générer ; un parcours absent prend
+    `niveau`. Un parcours dont les évènements diffèrent selon l'heure de départ
+    est dupliqué en autant de sections.
     """
     if not journee_path.exists():
         raise FileNotFoundError(f"Fichier introuvable : {journee_path}")
@@ -857,6 +1063,7 @@ def generer_rapport(
     if not groupes:
         raise ValueError("Aucun trajet de service dans le fichier journée.")
 
+    groupes_tous = groupes
     if filtre_ligne or filtre_direction or filtre_id_parcours is not None:
         groupes = [
             g for g in groupes
@@ -867,16 +1074,29 @@ def generer_rapport(
         if not groupes:
             raise ValueError("Aucun groupe ne correspond aux filtres spécifiés.")
 
+    niveaux = {}
+    if selection:
+        retenus = resoudre_selection(groupes_tous, niveau, selection)
+        retenus = [(g, n) for g, n in retenus if g in groupes]
+        if not retenus:
+            raise ValueError("Aucun parcours sélectionné.")
+        groupes = [g for g, _ in retenus]
+        niveaux = {cle_groupe(g): n for g, n in retenus}
+
     if len(groupes) > 1:
         import os
         from concurrent.futures import ThreadPoolExecutor
         workers = min(len(groupes), os.cpu_count() or 4)
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            groupes_data = list(pool.map(
+            resultats = list(pool.map(
                 _process_groupe_worker, [(g, date_str) for g in groupes]
             ))
     else:
-        groupes_data = [process_groupe(groupes[0], date_str, {})]
+        resultats = [process_groupe(groupes[0], date_str, {})]
+
+    groupes_data = [gd for variantes in resultats for gd in variantes]
+    for gd in groupes_data:
+        gd["niveau"] = niveaux.get(cle_groupe(gd["groupe"]), niveau)
 
     out = output or (OUTPUT_DIR / f"rapport-v2-{date_str}.{fmt}")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

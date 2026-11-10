@@ -71,6 +71,34 @@ def _day_range(start: datetime, end: datetime):
         d += timedelta(days=1)
 
 
+# « fin(s) de semaine » n'est pas « semaine » (jours ouvrables) : lookbehind.
+_RE_JOURS_OUVRABLES = r'lundi.*vendredi|jour.*semaine|(?<!fin de )(?<!fins de )semaine(?!\s*de)'
+_RE_FIN_SEMAINE = r'fin.*semaine|samedi.*dimanche|week.?end'
+
+
+def _restreint(texte: str) -> bool:
+    """Le texte contient-il une restriction de jours ou d'heures reconnue ?"""
+    return bool(
+        re.search(_RE_JOURS_OUVRABLES, texte, re.IGNORECASE)
+        or re.search(_RE_FIN_SEMAINE, texte, re.IGNORECASE)
+        or parse_effectif_times(texte)
+    )
+
+
+def _texte_restriction(event: dict) -> str:
+    """Texte portant les jours/heures d'un évènement.
+
+    L'effectif prime ; s'il ne restreint rien (« En tout temps »), le portail
+    consigne parfois la restriction dans le commentaire (« LUNDI AU VENDREDI
+    12H00 À 19H00 ») : on s'y replie.
+    """
+    effectif = (event.get("effectif") or "").strip()
+    if _restreint(effectif):
+        return effectif
+    commentaire = (event.get("commentaire") or "").strip()
+    return commentaire if _restreint(commentaire) else effectif
+
+
 def event_applies_to_shift(event: dict, shift_start: datetime, shift_end: datetime) -> bool:
     """
     Détermine si un événement est actif pendant la plage de quart donnée.
@@ -92,14 +120,14 @@ def event_applies_to_shift(event: dict, shift_start: datetime, shift_end: dateti
     if event_end < shift_start or event_start > shift_end:
         return False
 
-    effectif = (event.get("effectif") or "").strip()
+    effectif = _texte_restriction(event)
 
     # 2. Filtre jour de la semaine
     weekdays_in_shift = {d.weekday() for d in _day_range(shift_start, shift_end)}
-    if re.search(r'lundi.*vendredi|jour.*semaine|semaine(?!\s*de)', effectif, re.IGNORECASE):
+    if re.search(_RE_JOURS_OUVRABLES, effectif, re.IGNORECASE):
         if not any(w < 5 for w in weekdays_in_shift):
             return False
-    elif re.search(r'fin.*semaine|samedi.*dimanche|week.?end', effectif, re.IGNORECASE):
+    elif re.search(_RE_FIN_SEMAINE, effectif, re.IGNORECASE):
         if not any(w >= 5 for w in weekdays_in_shift):
             return False
 
