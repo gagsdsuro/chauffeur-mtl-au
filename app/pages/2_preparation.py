@@ -33,7 +33,7 @@ from app.state import (
 from bootstrap import DATA_DIR, SCRIPTS_DIR, journees_dir
 
 from parse_event import STMEventParser, split_sections as split_ev
-from parse_gd import GDParser, split_sections
+from parse_gd import GDParser, libelle_retraits, split_sections
 from parse_journee import JourneeParser
 
 from chauffeur.ca import ranger_ca, resoudre_ca
@@ -497,31 +497,69 @@ with st.expander("3 — Importer les Gauche-Droite", expanded=bool(_prep_data an
         key="gd_text",
     )
 
+    # Un collage qui ne contient pas tous les parcours déjà importés d'une
+    # ligne/direction en retirerait : le chauffeur choisit fusionner ou remplacer.
+    gd_mode = None
     if st.button("Importer", type="primary", key="gd_btn"):
+        st.session_state.pop("gd_attente", None)
         if not gd_text.strip():
             st.warning("Le champ est vide.")
         else:
-            sections = split_sections(gd_text) or [gd_text]
-            all_ok = True
-            for section in sections:
-                parser      = GDParser(section)
-                result_data = parser.parse()
-                rapport     = parser.report
+            retraits = []
+            for section in split_sections(gd_text) or [gd_text]:
+                analyse = GDParser(section)
+                if analyse.parcours_retires():
+                    retraits.append(libelle_retraits(analyse))
+            if retraits:
+                st.session_state["gd_attente"] = {"texte": gd_text, "retraits": retraits}
+            else:
+                gd_mode = "remplacer"   # rien à retirer : fusion et remplacement coïncident
 
-                if result_data:
-                    st.success(f"Ligne {parser.ligne} {parser.direction} — importé.")
-                    st.code(rapport)
-                    ecrire_bloc("parse_gd", rapport)
-                else:
-                    erreurs = "\n".join(parser.errors)
-                    st.error("Échec pour une section.")
-                    st.code(erreurs)
-                    ecrire_bloc("parse_gd", erreurs)
-                    all_ok = False
-
-            if all_ok:
-                st.session_state[PREP_FLASH] = "Gauche-Droite importés."
+    gd_attente = st.session_state.get("gd_attente")
+    if gd_attente and gd_attente["texte"] != gd_text:
+        st.session_state.pop("gd_attente")   # texte modifié depuis la demande
+        gd_attente = None
+    gd_zone = st.empty()
+    if gd_attente:
+        with gd_zone.container():
+            st.warning(
+                "Ce collage ne contient pas tous les parcours déjà importés. "
+                "Parcours absents du collage :\n\n"
+                + "\n".join(f"- {r}" for r in gd_attente["retraits"])
+            )
+            gd_c1, gd_c2, gd_c3 = st.columns(3)
+            if gd_c1.button("Fusionner (conserver ces parcours)", type="primary",
+                            key="gd_fusionner"):
+                gd_mode = "fusionner"
+            if gd_c2.button("Remplacer (retirer ces parcours)", key="gd_remplacer"):
+                gd_mode = "remplacer"
+            if gd_c3.button("Annuler", key="gd_annuler"):
+                st.session_state.pop("gd_attente", None)
                 st.rerun()
+
+    if gd_mode:
+        st.session_state.pop("gd_attente", None)
+        gd_zone.empty()
+        all_ok = True
+        for section in split_sections(gd_text) or [gd_text]:
+            parser      = GDParser(section)
+            result_data = parser.parse(gd_mode)
+            rapport     = parser.report
+
+            if result_data:
+                st.success(f"Ligne {parser.ligne} {parser.direction} — importé.")
+                st.code(rapport)
+                ecrire_bloc("parse_gd", rapport)
+            else:
+                erreurs = "\n".join(parser.errors)
+                st.error("Échec pour une section.")
+                st.code(erreurs)
+                ecrire_bloc("parse_gd", erreurs)
+                all_ok = False
+
+        if all_ok:
+            st.session_state[PREP_FLASH] = "Gauche-Droite importés."
+            st.rerun()
 
 # ── 2d — Évènements ──────────────────────────────────────────────────────
 with st.expander("4 — Importer manuellement des événements (facultatif)", expanded=False):

@@ -30,6 +30,14 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from parse_gd import GDParser, split_sections  # noqa: E402
 
 
+def _gd(tmp) -> Path:
+    """Sous-dossier G-D du répertoire temporaire : appariements et détours sont
+    écrits à côté du dossier G-D, donc dans `tmp` et non dans son parent (/tmp)."""
+    dossier = Path(tmp) / "Gauche-Droite"
+    dossier.mkdir(exist_ok=True)
+    return dossier
+
+
 def main() -> int:
     echecs = []
     txt = (ROOT / "tests" / "cas_gd" / "24_est_multi_parcours.txt").read_text(encoding="utf-8")
@@ -66,7 +74,7 @@ def main() -> int:
         # doit contenir le rapport formaté (plus de _print_report interne).
         with tempfile.TemporaryDirectory() as tmp:
             original_gd_dir = GDParser.GD_DIR
-            GDParser.GD_DIR = Path(tmp)
+            GDParser.GD_DIR = _gd(tmp)
             try:
                 parser2 = GDParser(sections[0])
                 result2 = parser2.parse()
@@ -105,7 +113,7 @@ def main() -> int:
         if len(parser4.avertissements) != 1 or "different" not in parser4.avertissements[0]:
             echecs.append(f"même id différent: avertissements {parser4.avertissements}")
     with tempfile.TemporaryDirectory() as tmp:
-        parser5 = GDParser(double, gd_dir=Path(tmp))
+        parser5 = GDParser(double, gd_dir=_gd(tmp))
         if parser5.parse() is None or "[AVERTISSEMENTS]" not in parser5.report:
             echecs.append("doublon exact: [AVERTISSEMENTS] absent du rapport d'import")
 
@@ -135,7 +143,7 @@ def main() -> int:
     """
     with tempfile.TemporaryDirectory() as tmp:
         portail = GDParser.from_portal_json(
-            {"html": portail_html}, "24", "est", gd_dir=Path(tmp)
+            {"html": portail_html}, "24", "est", gd_dir=_gd(tmp)
         )
         resultat_portail = portail.parse()
         if resultat_portail is None:
@@ -151,12 +159,12 @@ def main() -> int:
                 echecs.append("portail G-D: contenu PDFMake/script importé par erreur")
 
         mauvais = GDParser.from_portal_json(
-            {"html": portail_html}, "24", "ouest", gd_dir=Path(tmp)
+            {"html": portail_html}, "24", "ouest", gd_dir=_gd(tmp)
         )
         if mauvais.parse() is not None:
             echecs.append("portail G-D: direction discordante acceptée")
 
-        chemin_existant = Path(tmp) / "gd24_est.json"
+        chemin_existant = _gd(tmp) / "gd24_est.json"
         avant_indisponible = chemin_existant.read_bytes()
         indisponible = GDParser.from_portal_json(
             {
@@ -167,7 +175,7 @@ def main() -> int:
             },
             "24",
             "est",
-            gd_dir=Path(tmp),
+            gd_dir=_gd(tmp),
         )
         if indisponible.parse() is not None:
             echecs.append("portail G-D: réponse indisponible acceptée")

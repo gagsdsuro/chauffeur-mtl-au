@@ -28,7 +28,10 @@ L'app expose 7 pages (navigation latérale, `st.navigation` dans `main.py`) : Ma
 python3 scripts/parse_gd.py < data/raw/new-gd.txt          # importe et écrit les fichiers
 python3 scripts/parse_gd.py --json < data/raw/new-gd.txt   # idem + imprime le JSON complet sur stdout
 python3 scripts/parse_gd.py --log < data/raw/new-gd.txt    # idem + trace dans data/log/parse_gd.log (flotte, commun)
+python3 scripts/parse_gd.py --fusionner < data/raw/un-parcours.txt   # les parcours collés remplacent ceux de même ID, les autres sont conservés
+python3 scripts/parse_gd.py --remplacer < data/raw/new-gd.txt        # le fichier devient exactement le collage
 ```
+**Fusion ou remplacement** (clé = **id de parcours**, partout y compris dans le résumé des changements) : un collage qui ne contient pas tous les parcours déjà présents du fichier `gd<ligne>_<direction>.json` en retirerait. Sans choix, l'import est refusé (CLI : code 1, aucun fichier modifié, relancer avec `--fusionner` ou `--remplacer`) ou demandé à l'écran (page Préparation : Fusionner / Remplacer / Annuler). Fusion : les parcours collés remplacent ceux de même id à leur place, les autres sont conservés, les ids nouveaux sont ajoutés à la fin. Un collage qui ne retire rien (fichier nouveau, ajout seul, ou tous les ids déjà présents) s'importe directement ; l'import du portail (`refresh_gd.py`, liste complète d'une ligne/direction) remplace toujours le fichier. Tests : `python3 tests/test_parse_gd_fusion.py`.
 Depuis une session portail valide, `refresh_gd.py` récupère le HTML sémantique
 de `/listeBus` (le bloc PDFMake caché est ignoré) :
 ```bash
