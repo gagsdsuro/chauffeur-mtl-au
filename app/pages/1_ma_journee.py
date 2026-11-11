@@ -346,7 +346,8 @@ else:
 
                 def _lieu_md(label, code):
                     code = code or "–"
-                    lieu = lieu_point_releve(code, _garage) if code != "–" else None
+                    lieu = (lieu_point_releve(code, _garage, jour=db_j_data.get("date") or db_date_str)
+                            if code != "–" else None)
                     suffix = f" — {lieu}" if lieu else ""
                     return f"**{label} :** `{code}`{suffix}"
 

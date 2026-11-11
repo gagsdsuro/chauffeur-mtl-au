@@ -34,6 +34,14 @@ def charger_periodes(annee: int) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _calendrier(annee: int) -> dict | None:
+    """Calendrier de l'année, ou None s'il n'existe pas."""
+    try:
+        return charger_periodes(annee)
+    except FileNotFoundError:
+        return None
+
+
 def jour_type_semaine(d: date) -> str:
     """« semaine » / « samedi » / « dimanche » selon le jour de la semaine seul
     (ne tient pas compte des fériés ni des variations — cf. identite_ca)."""
@@ -64,12 +72,19 @@ def identite_ca(d: date, numero: str) -> tuple[str, str, str]:
         return numero, iso, "variation"
 
     lundi = _lundi(d).isoformat()
+    # Une semaine (lundi → dimanche) relève du calendrier de l'année de son
+    # lundi : le dimanche 2027-01-03 fait partie de la semaine « Jour de l'an »
+    # déclarée dans le calendrier 2026. Absent, ce calendrier est ignoré.
+    cals = [cal] if _lundi(d).year == d.year else [cal, _calendrier(_lundi(d).year)]
+    cals = [c for c in cals if c]
 
-    for bloc in cal.get("variations", []):
-        if bloc["debut"] == lundi:
-            return numero, f"V{lundi}", "variation"
+    for c in cals:
+        for bloc in c.get("variations", []):
+            if bloc["debut"] == lundi:
+                return numero, f"V{lundi}", "variation"
 
-    listes = sorted(cal.get("listes", []), key=lambda l: l["debut"], reverse=True)
+    listes = sorted((l for c in cals for l in c.get("listes", [])),
+                    key=lambda l: l["debut"], reverse=True)
     for liste in listes:
         if lundi >= liste["debut"]:
             return numero, f"L{liste['debut']}", jour_type_semaine(d)
@@ -151,6 +166,11 @@ def regime_pour_date(jour: date, reference_dir: Path | None = None) -> str:
         return "indetermine"
     if jour.isoformat() in cal.get("feries", []):
         return "ferie"
-    if any(v["debut"] == _lundi(jour).isoformat() for v in cal.get("variations", [])):
+    lundi = _lundi(jour)
+    # La semaine relève du calendrier de l'année de son lundi (cf. identite_ca).
+    cal_semaine = cal if lundi.year == jour.year else next(
+        (c for c in calendriers_fichiers(reference_dir) if int(c["annee"]) == lundi.year), None)
+    if cal_semaine and any(v["debut"] == lundi.isoformat()
+                           for v in cal_semaine.get("variations", [])):
         return "variation"
     return "normal"

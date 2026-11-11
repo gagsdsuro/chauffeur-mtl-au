@@ -57,6 +57,12 @@ class TestFichiers(unittest.TestCase):
         self.cal(2026, ["2026-08-25"])
         self.assertIsNone(periodes.periode_pour_date(date(2026, 8, 24)))
 
+    def test_regime_semaine_a_cheval_sur_deux_annees(self):
+        self.cal(2026, ["2026-10-26"], variations=[{"debut": "2026-12-28"}])
+        self.cal(2027, ["2027-01-04"])
+        self.assertEqual(periodes.regime_pour_date(date(2027, 1, 3)), "variation")
+        self.assertEqual(periodes.regime_pour_date(date(2027, 1, 4)), "normal")
+
     def test_noms_et_regimes(self):
         for nom, regime in [("123_L2026-10-26_semaine.pdf", "normal"),
                             ("123_V2026-12-21_variation-annotee.pdf", "variation"),
