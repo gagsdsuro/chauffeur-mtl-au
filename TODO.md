@@ -31,7 +31,7 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 * [ ] **P2** — Vérifier la compatibilité Python 3.14 de toutes les dépendances.
 
-  * Vérifier la possibilité de passer à la version 3.14 dans le Dokerfile
+  * Vérifier la possibilité de passer à la version 3.14 dans le Dockerfile
 
 * [ ] **P3** — Réévaluer les contraintes des dépendances directes dans `requirements.in` ; `requirements.txt` est généré avec des versions exactes et des empreintes, sans édition manuelle. Suivre la [procédure de maintenance](docs/dependances.md).
 
