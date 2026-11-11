@@ -20,6 +20,12 @@ class GDParser:
     """Parser pour donnees brutes Gauche-Droite"""
 
     VALID_DIRECTIONS = {"est", "ouest", "nord", "sud"}
+    # Que faire des parcours du fichier existant absents du texte importé :
+    #   "remplacer" : le fichier devient exactement le texte importé (import
+    #                 complet d'une ligne/direction, ex. portail) ;
+    #   "fusionner" : les parcours importés remplacent ceux de même id, les
+    #                 autres sont conservés (collage d'un ou de quelques parcours).
+    MODES = ("remplacer", "fusionner")
     # scripts/ -> racine du projet (~/chauffeur-stm)
     PROJECT_ROOT = Path(__file__).resolve().parent.parent
     DATA_DIR = PROJECT_ROOT / "data"
@@ -41,6 +47,9 @@ class GDParser:
         self.detours: list[str] = []
         self._expected_ligne: str | None = None
         self._expected_direction: str | None = None
+        self._analyse: bool | None = None
+        self.mode = "remplacer"
+        self.parcours_conserves: list[Dict] = []
 
     @classmethod
     def from_portal_json(
@@ -77,16 +86,35 @@ class GDParser:
         parser._expected_direction = (direction or "").lower()
         return parser
 
-    def parse(self):
+    def analyser(self) -> bool:
+        """Lit l'en-tête et les parcours du texte, sans rien écrire. Idempotent."""
+        if self._analyse is None:
+            self._analyse = (not self.errors and self._extract_header()
+                             and self._parse_parcours())
+        return self._analyse
+
+    def parcours_retires(self) -> list[Dict]:
+        """Parcours du fichier existant (par id) absents du texte importé : ils
+        disparaîtraient d'un import en mode « remplacer ». [] si le fichier est
+        nouveau ou si l'analyse échoue."""
+        if not self.analyser():
+            return []
+        ids = {p["id"] for p in self.parcours}
+        return [p for p in self._parcours_existants() if p["id"] not in ids]
+
+    def parse(self, mode: str = "remplacer"):
+        """Importe le texte dans gd<ligne>_<direction>.json (voir `MODES`)."""
+        if mode not in self.MODES:
+            raise ValueError(f"Mode d'import inconnu : {mode!r} (attendu : {', '.join(self.MODES)})")
+        self.mode = mode
         if self.errors:
             return None
-        if not self._extract_header():
-            return None
-        if not self._parse_parcours():
+        if not self.analyser():
             return None
         existing_data = self._load_existing_file()
+        a_ecrire = self._parcours_a_ecrire()
         summary = self._generate_summary(existing_data)
-        json_data = self._generate_json()
+        json_data = self._generate_json(a_ecrire)
         if not self._save_file(json_data):
             return None
         self.report = self._format_report(summary)
@@ -233,51 +261,91 @@ class GDParser:
                 return None
         return None
 
+    def _parcours_existants(self) -> list[Dict]:
+        existant = self._load_existing_file()
+        return list((existant or {}).get("routes", [{}])[0].get("parcours", []))
+
+    @staticmethod
+    def _par_id(parcours: list[Dict]) -> Dict:
+        """{id: [versions]} dans l'ordre : un même id peut avoir plusieurs versions."""
+        par_id: Dict = {}
+        for p in parcours:
+            par_id.setdefault(p["id"], []).append(p)
+        return par_id
+
+    def _parcours_a_ecrire(self) -> list[Dict]:
+        """Contenu du fichier après import. En mode « fusionner », les parcours
+        importés remplacent ceux de même id à leur place ; les autres parcours
+        existants sont conservés ; les ids nouveaux sont ajoutés à la fin."""
+        self.parcours_conserves = []
+        if self.mode != "fusionner":
+            return list(self.parcours)
+        nouveaux = self._par_id(self.parcours)
+        fusion: list[Dict] = []
+        places: set = set()
+        for ancien in self._parcours_existants():
+            if ancien["id"] not in nouveaux:
+                fusion.append(ancien)
+                self.parcours_conserves.append(ancien)
+            elif ancien["id"] not in places:
+                fusion.extend(nouveaux[ancien["id"]])
+                places.add(ancien["id"])
+        for id_, versions in nouveaux.items():
+            if id_ not in places:
+                fusion.extend(versions)
+        return fusion
+
     def _generate_summary(self, existing_data: Optional[Dict]) -> Dict:
+        """Changements par id de parcours (la clé partout dans le projet)."""
         summary = {
             "status": "created" if not existing_data else "updated",
             "changes": []
         }
         if not existing_data:
             return summary
-        existing_parcours_list = existing_data.get("routes", [{}])[0].get("parcours", [])
-        existing_by_endpoints = {
-            (p["start_code"], p["end_code"]): p for p in existing_parcours_list
-        }
-        new_by_endpoints = {
-            (p["start_code"], p["end_code"]): p for p in self.parcours
-        }
-        for endpoints, old_p in existing_by_endpoints.items():
-            if endpoints in new_by_endpoints:
-                new_p = new_by_endpoints[endpoints]
-                changes = []
-                if old_p["name"] != new_p["name"]:
-                    changes.append(f"nom: '{old_p['name']}' -> '{new_p['name']}'")
-                if len(old_p["direction"]) != len(new_p["direction"]):
-                    changes.append(f"directions: {len(old_p['direction'])} -> {len(new_p['direction'])}")
-                if old_p["direction"] != new_p["direction"]:
-                    if not any("directions" in c for c in changes):
-                        changes.append("directions modifiees")
-                if changes:
-                    summary["changes"].append(
-                        f"Parcours {old_p['id']} ({old_p['start']} -> {old_p['end']}): "
-                        f"{', '.join(changes)}"
-                    )
-        for endpoints, new_p in new_by_endpoints.items():
-            if endpoints not in existing_by_endpoints:
+        anciens = self._par_id(existing_data.get("routes", [{}])[0].get("parcours", []))
+        nouveaux = self._par_id(self.parcours)
+        for id_, old_versions in anciens.items():
+            if id_ not in nouveaux:
+                if self.mode == "fusionner":
+                    continue   # conservé tel quel : rien à signaler comme changement
+                old_p = old_versions[0]
                 summary["changes"].append(
-                    f"Parcours {new_p['id']} ({new_p['name']}): "
-                    f"+NOUVEAU ({new_p['start']} -> {new_p['end']}, {len(new_p['direction'])} directions)"
-                )
-        for endpoints, old_p in existing_by_endpoints.items():
-            if endpoints not in new_by_endpoints:
-                summary["changes"].append(
-                    f"Parcours {old_p['id']} ({old_p['name']}): "
+                    f"Parcours {id_} ({old_p['name']}): "
                     f"-SUPPRIME ({old_p['start']} -> {old_p['end']})"
+                )
+                continue
+            new_versions = nouveaux[id_]
+            if old_versions == new_versions:
+                continue
+            old_p, new_p = old_versions[0], new_versions[0]
+            changes = []
+            if len(old_versions) != len(new_versions):
+                changes.append(f"versions: {len(old_versions)} -> {len(new_versions)}")
+            if old_p["name"] != new_p["name"]:
+                changes.append(f"nom: '{old_p['name']}' -> '{new_p['name']}'")
+            if (old_p["start_code"], old_p["end_code"]) != (new_p["start_code"], new_p["end_code"]):
+                changes.append(f"trajet: {old_p['start']} -> {old_p['end']} devient "
+                               f"{new_p['start']} -> {new_p['end']}")
+            if len(old_p["direction"]) != len(new_p["direction"]):
+                changes.append(f"directions: {len(old_p['direction'])} -> {len(new_p['direction'])}")
+            elif old_p["direction"] != new_p["direction"]:
+                changes.append("directions modifiees")
+            if not changes:
+                changes.append("contenu modifie")
+            summary["changes"].append(
+                f"Parcours {id_} ({new_p['start']} -> {new_p['end']}): {', '.join(changes)}"
+            )
+        for id_, new_versions in nouveaux.items():
+            if id_ not in anciens:
+                new_p = new_versions[0]
+                summary["changes"].append(
+                    f"Parcours {id_} ({new_p['name']}): "
+                    f"+NOUVEAU ({new_p['start']} -> {new_p['end']}, {len(new_p['direction'])} directions)"
                 )
         return summary
 
-    def _generate_json(self) -> Dict:
+    def _generate_json(self, parcours: Optional[list[Dict]] = None) -> Dict:
         return {
             "ligne": self.ligne,
             "direction": self.direction,
@@ -285,7 +353,7 @@ class GDParser:
                 {
                     "line_number": self.ligne,
                     "direction": self.direction.capitalize(),
-                    "parcours": self.parcours
+                    "parcours": self.parcours if parcours is None else parcours
                 }
             ]
         }
@@ -320,7 +388,10 @@ class GDParser:
             lines.append(f"\n[OK] Fichier mis a jour: {filename}")
             lines.append(f"   Ligne: {self.ligne}")
             lines.append(f"   Direction: {self.direction}")
-            lines.append(f"   Total parcours: {len(self.parcours)}")
+            lines.append(f"   Total parcours: {len(self.parcours) + len(self.parcours_conserves)}")
+            if self.parcours_conserves:
+                lines.append("   Parcours conserves (absents du collage, mode fusion): "
+                             + ", ".join(f"ID {p['id']}" for p in self.parcours_conserves))
         if summary["changes"]:
             lines.append(f"\n[CHANGEMENTS] ({len(summary['changes'])}):")
             for change in summary["changes"]:
@@ -368,6 +439,13 @@ def split_sections(raw_data: str) -> List[str]:
             groups[key].append(text[pm.start():] if pm else text)
     return ["\n".join(groups[key]) for key in order]
 
+def libelle_retraits(parser: "GDParser") -> str:
+    """« Ligne 24 est : ID 21 (Parcours principal), ID 22 » — parcours qu'un
+    import en mode « remplacer » ferait disparaître."""
+    return f"Ligne {parser.ligne} {parser.direction} : " + ", ".join(
+        f"ID {p['id']} ({p['name']})" for p in parser.parcours_retires())
+
+
 def main():
     arg_parser = argparse.ArgumentParser(
         description="Importe des donnees brutes Gauche-Droite (STM) depuis stdin "
@@ -377,6 +455,13 @@ def main():
                                  "(par defaut: rapport seulement).")
     arg_parser.add_argument("--log", action="store_true",
                             help="Sauvegarde la sortie dans data/log/parse_gd.log (append).")
+    mode_grp = arg_parser.add_mutually_exclusive_group()
+    mode_grp.add_argument("--fusionner", dest="mode", action="store_const", const="fusionner",
+                          help="Les parcours collés remplacent ceux de meme ID ; les autres "
+                               "parcours du fichier sont conserves.")
+    mode_grp.add_argument("--remplacer", dest="mode", action="store_const", const="remplacer",
+                          help="Le fichier devient exactement le texte colle (les parcours "
+                               "absents du collage sont retires).")
     args = arg_parser.parse_args()
 
     raw_data = sys.stdin.read()
@@ -385,7 +470,20 @@ def main():
     failed = False
     for section in sections:
         parser = GDParser(section)
-        json_data = parser.parse()
+        # Confirmation (non interactive) : sans --fusionner/--remplacer, un import
+        # qui retirerait des parcours du fichier existant est refuse.
+        if args.mode is None and parser.parcours_retires():
+            failed = True
+            erreurs = json.dumps({"errors": [
+                "Import refuse, aucun fichier modifie. Parcours absents du collage : "
+                + libelle_retraits(parser)
+                + ". Relancer avec --fusionner (les conserver) ou --remplacer (les retirer)."
+            ]}, indent=2, ensure_ascii=False)
+            print(erreurs, file=sys.stderr)
+            if args.log:
+                ecrire_bloc("parse_gd", erreurs)
+            continue
+        json_data = parser.parse(args.mode or "remplacer")
         if json_data:
             print(parser.report)
             if args.log:

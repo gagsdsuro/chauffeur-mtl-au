@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from chauffeur.periodes import identite_ca  # noqa: E402
+from chauffeur.periodes import identite_ca, regime_pour_date  # noqa: E402
 
 
 def main() -> int:
@@ -61,6 +61,22 @@ def main() -> int:
         echecs.append("2026-01-03: devait lever ValueError (hors couverture calendrier)")
     except ValueError:
         pass
+
+    # ── Transition 2026 → 2027 (calendriers réels) ─────────────────────────────
+    # Le dimanche 2027-01-03 clôt la semaine « Jour de l'an » (lundi 2026-12-28),
+    # déclarée dans le calendrier 2026 : il ne doit ni échouer ni passer en liste.
+    verifie("2026-12-31", "458", ("458", "V2026-12-28", "variation"), "fin 2026 (jeudi)")
+    verifie("2027-01-01", "458", ("458", "2027-01-01", "variation"), "férié 1er janv. 2027")
+    verifie("2027-01-02", "458", ("458", "2027-01-02", "variation"), "férié 2 janv. 2027")
+    verifie("2027-01-03", "458", ("458", "V2026-12-28", "variation"), "dimanche à cheval sur 2027")
+    verifie("2027-01-04", "458", ("458", "L2027-01-04", "semaine"), "1re liste 2027")
+    verifie("2027-01-10", "458", ("458", "L2027-01-04", "dimanche"), "dimanche liste 2027")
+    verifie("2027-12-31", "458", ("458", "V2027-12-27", "variation"), "fin 2027 (calendrier 2027)")
+    for d, attendu in (("2026-12-27", "variation"), ("2027-01-01", "ferie"),
+                       ("2027-01-03", "variation"), ("2027-01-04", "normal")):
+        r = regime_pour_date(date.fromisoformat(d))
+        if r != attendu:
+            echecs.append(f"regime_pour_date({d}) = {r!r}, attendu {attendu!r}")
 
     # ── Résultat ────────────────────────────────────────────────────────────
     if echecs:

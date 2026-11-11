@@ -47,7 +47,7 @@ adapter se trouvent dans [`docs/gabarits/`](docs/gabarits/).
 
 ## Installation
 
-La référence de déploiement est **Python 3.12.14 et Streamlit 1.64.0**.
+La référence de déploiement est **Python 3.12.16 et Streamlit 1.66.1**.
 Le Dockerfile fixe l'image Python par son empreinte. Les dépendances directes
 sont déclarées dans `requirements.in` ; `requirements.txt` est généré sous
 Python 3.12 et verrouille toutes les dépendances avec leurs empreintes.

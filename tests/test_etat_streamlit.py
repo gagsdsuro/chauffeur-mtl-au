@@ -26,6 +26,7 @@ from streamlit.testing.v1 import AppTest
 import bootstrap
 from chauffeur import auth, ca, depots, gtfs_rt, notes, portail, preparation
 import gen_rapport_v2
+import parse_gd
 from cas_durees import journee_443, journee_475
 
 
@@ -272,6 +273,81 @@ class TestInterface(unittest.TestCase):
         for cle in ("auth_matricule", "prep_date", "operation_portail", "db_geo_r_test", "db_note_mat_edit_test"):
             self.assertNotIn(cle, at.session_state)
         self.assertTrue(any(c.key == "login_pin" for c in at.text_input))
+
+    def test_import_gd_confirme_avant_de_retirer_des_parcours(self):
+        def collage(id_, nom):
+            return ("Gauche-Droite / 24 Est\n"
+                    f"Parcours {nom}ID {id_}\nDépart {id_} 51{id_:03d}\n"
+                    f"Via - Sherbrooke\nDroite - Peel\nArrivée {id_} 52{id_:03d}\n")
+
+        gd_dir = self.data / "Gauche-Droite"
+
+        def ids():
+            d = json.loads((gd_dir / "gd24_est.json").read_text(encoding="utf-8"))
+            return [p["id"] for p in d["routes"][0]["parcours"]]
+
+        def importer(at, texte):
+            at.text_area(key="gd_text").set_value(texte).run()
+            at.button(key="gd_btn").click().run()
+            self.sans_exception(at)
+
+        with patch.object(parse_gd.GDParser, "GD_DIR", gd_dir):
+            at = self.ouvrir()
+            self.changer_page(at, "2_preparation")
+            importer(at, collage(21, "Normal"))           # fichier nouveau : direct
+            self.assertEqual(ids(), [21])
+            self.assertFalse(any(b.key == "gd_fusionner" for b in at.button))
+
+            importer(at, collage(24, "Court"))            # retirerait l'ID 21 : confirmation
+            self.assertEqual(ids(), [21])
+            self.assertTrue(any("ID 21" in w.value for w in at.warning))
+            at.button(key="gd_fusionner").click().run()
+            self.sans_exception(at)
+            self.assertEqual(ids(), [21, 24])             # les deux co-existent
+
+            importer(at, collage(22, "Ecole"))
+            at.button(key="gd_annuler").click().run()
+            self.assertEqual(ids(), [21, 24])             # annulé : rien d'écrit
+            self.assertFalse(any(b.key == "gd_fusionner" for b in at.button))
+
+            importer(at, collage(22, "Ecole"))
+            at.text_area(key="gd_text").set_value(collage(24, "Court")).run()
+            self.assertFalse(any(b.key == "gd_fusionner" for b in at.button))  # texte changé
+            importer(at, collage(22, "Ecole"))
+            at.button(key="gd_remplacer").click().run()
+            self.sans_exception(at)
+            self.assertEqual(ids(), [22])
+
+    def test_rapport_v2_selection_par_parcours(self):
+        jour = "2026-09-10"
+        j = journee_475()
+        for piece in j["pieces"]:
+            for trajet in piece["trajets"]:
+                if trajet["type"] == "service":
+                    trajet["id_parcours"] = 1
+        self.ecrire(j)
+        at = self.ouvrir()
+        self.changer_page(at, "3_rapports")
+        at.date_input(key="rpt_v2_date").set_value(date.fromisoformat(jour)).run()
+        self.sans_exception(at)
+        cle_nord = f"rpt_v2_sel_{jour}_136_nord_1"
+        cle_sud = f"rpt_v2_sel_{jour}_136_sud_1"
+        self.assertEqual(at.selectbox(key=cle_nord).value, "(défaut)")
+        at.selectbox(key=cle_sud).set_value("ne pas générer").run()
+        at.selectbox(key=cle_nord).set_value("compact").run()
+        at.button(key="rpt_v2_btn").click().run()
+        self.sans_exception(at)
+        self.assertFalse(at.error)
+        # Sélection personnalisée : fichier à part, rapport standard jamais écrasé.
+        perso = self.rapports / f"rapport-v2-{jour}-personnalise.html"
+        self.assertTrue(perso.exists())
+        self.assertFalse((self.rapports / f"rapport-v2-{jour}-détaillé.html").exists())
+        html = perso.read_text(encoding="utf-8")
+        self.assertIn("136 Nord", html)
+        self.assertNotIn("136 Sud", html)
+        # Tout exclure : erreur lisible, pas d'exception.
+        at.selectbox(key=cle_nord).set_value("ne pas générer").run()
+        self.assertTrue(any("Aucun parcours" in w.value for w in at.warning))
 
     def test_trois_apercus_et_telechargements(self):
         jour = "2026-09-10"

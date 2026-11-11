@@ -15,7 +15,9 @@ import streamlit as st
 
 from app.components.apercu_html import afficher_rapport_html
 
-from gen_rapport_v2 import generer_rapport
+from gen_rapport_v2 import (
+    cle_groupe, generer_rapport, selection_est_personnalisee,
+)
 
 from app.components.session_dialog import declencher_dialog_si_requis
 from bootstrap import SCRIPTS_DIR
@@ -125,7 +127,7 @@ with rpt_tabs[1]:
             )
 
         # ── Groupes détectés ──────────────────────────────────────────────
-        v2_groupes = groupes_de_service(v2_j_data)
+        v2_groupes = groupes_de_service(v2_j_data, avec_trips=True)
 
         if v2_groupes:
             grp_txt = "  ·  ".join(
@@ -141,7 +143,7 @@ with rpt_tabs[1]:
         v2_col_n, v2_col_f, v2_col_c = st.columns(3)
         with v2_col_n:
             v2_niveau = st.selectbox(
-                "Niveau",
+                "Niveau par défaut",
                 ["détaillé", "standard", "compact"],
                 key="rpt_v2_niveau",
             )
@@ -150,10 +152,44 @@ with rpt_tabs[1]:
         with v2_col_c:
             v2_code = st.checkbox("Codes arrêts", value=False, key="rpt_v2_code")
 
+        # ── Parcours à inclure et niveau de chacun ────────────────────────
+        _V2_DEFAUT, _V2_AUCUN = "(défaut)", "ne pas générer"
+        v2_selection = {}
+        if v2_groupes:
+            st.markdown("**Parcours de la journée**")
+            for g in v2_groupes:
+                col_lbl, col_niv = st.columns([3, 1])
+                departs = ", ".join(
+                    t["depart_heure"] for t in g.get("trips", []) if t.get("depart_heure")
+                )
+                col_lbl.markdown(
+                    f"{g['ligne']} {g['direction'].capitalize()} ID {g['id_parcours']}"
+                    + (" 🔀" if g.get("detour") else "")
+                    + (f"  \n:gray[Départs : {departs}]" if departs else "")
+                )
+                _c = cle_groupe(g)
+                choix = col_niv.selectbox(
+                    "Niveau du parcours",
+                    [_V2_DEFAUT, "détaillé", "standard", "compact", _V2_AUCUN],
+                    key=f"rpt_v2_sel_{v2_date}_{_c[0]}_{_c[1]}_{_c[2]}",
+                    label_visibility="collapsed",
+                )
+                if choix == _V2_AUCUN:
+                    v2_selection[_c] = None
+                elif choix != _V2_DEFAUT:
+                    v2_selection[_c] = choix
+            if len(v2_selection) == len(v2_groupes) and all(
+                    v is None for v in v2_selection.values()):
+                st.warning("Aucun parcours sélectionné.")
+
         if st.button("Générer", type="primary", key="rpt_v2_btn"):
             RAPPORTS_DIR.mkdir(parents=True, exist_ok=True)
             v2_date_str = v2_j_data.get("date", v2_date)
-            v2_out = RAPPORTS_DIR / f"rapport-v2-{v2_date_str}-{v2_niveau}.{v2_fmt}"
+            # Une sélection qui s'écarte du niveau par défaut n'est pas le rapport
+            # standard de ce niveau : autre fichier, jamais marqué « à jour ».
+            v2_perso = selection_est_personnalisee(v2_groupes, v2_niveau, v2_selection)
+            v2_suffixe = "personnalise" if v2_perso else v2_niveau
+            v2_out = RAPPORTS_DIR / f"rapport-v2-{v2_date_str}-{v2_suffixe}.{v2_fmt}"
 
             with st.spinner("Génération en cours…"):
                 try:
@@ -163,8 +199,9 @@ with rpt_tabs[1]:
                         output=v2_out,
                         niveau=v2_niveau,
                         show_code=v2_code,
+                        selection=v2_selection or None,
                     )
-                    if v2_fmt == "html" and not v2_code:
+                    if v2_fmt == "html" and not v2_code and not v2_perso:
                         _v2_etat = etat_rapport(
                             v2_j_path, "v2", niveau=v2_niveau,
                             rapports_dir=RAPPORTS_DIR,

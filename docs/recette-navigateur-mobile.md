@@ -10,8 +10,8 @@ pas exécution : les résultats de chaque image sont consignés séparément dan
 
 - Utiliser l'image candidate ayant passé les vérifications de
   [la procédure de maintenance](dependances.md), puis relever son identifiant.
-  Pour la mise à jour actuelle : Python 3.12.14 / Streamlit 1.64.0, image locale
-  `chauffeur-stm:validation-1.64.0` si elle est encore disponible.
+  Pour la mise à jour actuelle : Python 3.12.16 / Streamlit 1.66.1, image locale
+  `chauffeur-stm:validation-1.66.1` si elle est encore disponible.
 - Lancer une instance distincte avec un volume de données d'essai, sans monter
   le `data/` de production ni le `.env` personnel. Utiliser un port distinct si
   l'application habituelle fonctionne déjà.

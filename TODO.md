@@ -31,7 +31,7 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 
 * [ ] **P2** — Vérifier la compatibilité Python 3.14 de toutes les dépendances.
 
-  * Vérifier la possibilité de passer à la version 3.14 dans le Dokerfile
+  * Vérifier la possibilité de passer à la version 3.14 dans le Dockerfile
 
 * [ ] **P3** — Réévaluer les contraintes des dépendances directes dans `requirements.in` ; `requirements.txt` est généré avec des versions exactes et des empreintes, sans édition manuelle. Suivre la [procédure de maintenance](docs/dependances.md).
 
@@ -261,10 +261,11 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
   * Un événement par pièce de travail, y compris sans ligne et en temps supplémentaire, hors absences ; bornes de prise début et prise fin, titre avec les lignes distinctes et les heures, passage à minuit dans le fuseau `America/Toronto`.
   * À chaque nouvelle publication, synchroniser uniquement les événements de cette journée gérés par l’application : ajouts, modifications et retraits sans doublons. Signaler les bornes invalides et les échecs sans bloquer la préparation ; permettre une nouvelle tentative.
   * Cas d’utilisation formalisé ; implémentation et choix techniques de connexion Google à réaliser.
-* [ ] **P2** - Automatiser le téléchargement de la carte agent PDF au moment de la préparation de la journée.
+* [x] **P2** - Automatiser le téléchargement de la carte agent PDF au moment de la préparation de la journée.
+  * `PortailClient.fetch_carte_agent` (lien `#btnCarteAgent` de la page journée) ; utilisé par la préparation semi-automatique.
 * [ ] **P3** - Prévoir un mode manuel, semi-automatique et automatique pour la préparation de la journée
   * en mode manuel les étapes sont exécutées à la demande et permet l'utilisation des import manuel de secours.
-  * en mode semi automatique, les étapes de préparation sont déclanché en bloc à la demande.
+  * en mode semi automatique, les étapes de préparation sont déclanché en bloc à la demande. **Réalisé** (page Préparation, `chauffeur/preparation_auto.py`) ; manuel et automatique restent à faire.
   * en mode automatique, la préparation se fait de façon autonome à une heure spécifiée dans la mesure où la session est valide.
 * [ ] **P3** - Fonction permettant de garder vivante une session active.
 * Revoir la présentation de la page ma journée afin de combiner le tableau des durées avec la section Pièces de travail.
