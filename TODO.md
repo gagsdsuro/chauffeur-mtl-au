@@ -258,6 +258,26 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 * [ ] **P3** — Évaluer l'ajout de hooks Git pour les vérifications automatiques.
 * [ ] **P2** — Vérifier régulièrement `git status` avant commit.
 * [ ] **P1** — Documenter la procédure de sauvegarde/restauration du dépôt.
+
+## Publication open source — suites
+
+* [?] **P1** — Confirmer que la publication est compatible avec les règles de l'employeur et avec les conditions de la STM, et lire les conditions d'inscription du portail des développeurs (clés API, indemnisation). Décision hors dépôt, à consigner ici une fois prise.
+* [?] **P2** — Décider du sort des jeux d'essai et des références dérivés du portail employé.
+  * Concernés : `tests/cas_rapport_gd/` (8 cas), `tests/cas_appariement/`, `tests/cas_event/`, `tests/cas_gd/`, `tests/cas_portail/`, `tests/cas_rapport/journee-*/` (G-D et évènements gelés), et `data/reference/periodes_<AAAA>.json`.
+  * Options : les garder tels quels avec l'avis de `NOTICE.md` (situation actuelle), les remplacer progressivement par des données synthétiques, ou obtenir une autorisation écrite.
+  * Critère de conservation d'un cas : il verrouille une régression précise (voir `CLAUDE.md`).
+* [ ] **P2** — Ajouter des garde-fous automatiques contre les données personnelles et les secrets.
+  * Exécuter `gitleaks` dans la CI (`.github/workflows/tests.yml`).
+  * Ajouter un test qui cherche, dans les jeux d'essai bruts (`tests/cas_*`), des motifs de données réelles : « Nom Prénom - 12345 » après « Je relève: » / « Je suis relevé par: », champs `nom`/`matricule` hors valeurs fictives (matricules `4xxxx` et `1000x`), courriels, hôtes.
+  * Envisager un hook `pre-commit` équivalent (voir l'item sur les hooks Git plus haut).
+* [ ] **P2** — Mettre à jour les actions GitHub de la CI (`actions/checkout@v4`, `actions/setup-python@v5` : avertissement de dépréciation de Node.js 20) et préciser la version de l'image `ubuntu-latest`.
+* [?] **P3** — Évaluer les mises à jour automatiques Dependabot.
+  * Actuellement seules les alertes de sécurité sont activées : `requirements.txt` est généré par `pip-compile` avec empreintes (`docs/dependances.md`), procédure que des demandes de fusion automatiques ne doivent pas contourner.
+  * Piste : activer Dependabot pour `github-actions` seulement ; vérifier si l'écosystème `pip` gère `requirements.in` + empreintes, sinon garder la procédure manuelle.
+* [ ] **P3** — Ajouter des en-têtes de licence courts (`SPDX-License-Identifier: AGPL-3.0-only`) aux fichiers source Python.
+* [?] **P3** — Remplacer l'UID historique des évènements `.ics` (`chauffeur-stm-<date>-<rang>-<pièce>@chauffeur-stm`, `chauffeur/calendrier.py`) par un identifiant sans l'ancien nom.
+  * Conservé volontairement : le changer ferait dupliquer, dans les calendriers déjà alimentés, les évènements réimportés.
+  * Piste : transition en deux temps (ancien UID retiré par un évènement d'annulation, ou simple documentation du changement) ; à ne faire que si la présence du nom dans l'UID pose un problème.
 ---
 
 # 13. Améliorations fonctionnelles
