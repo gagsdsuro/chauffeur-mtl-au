@@ -123,6 +123,23 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 * [ ] **P1** — Vérifier la gestion des réponses invalides ou incomplètes.
 * [ ] **P3** — Vérifier la conservation des données historiques.
 * [ ] **P3** — Définir une politique de nettoyage et d'archivage des anciennes données.
+* [ ] **P2** — Aligner le rafraîchissement du GTFS statique sur le calendrier de publication plutôt que sur une règle fixe de 7 jours.
+  * Aujourd'hui : `FRAICHEUR_GTFS_JOURS = 7` (`chauffeur/depots.py`, `info_gtfs`) et téléchargement hebdomadaire de ~66 Mo.
+  * La STM publie le GTFS « généralement 10 jours avant chaque changement d'horaire » ; dates 2026 : 5 janvier, 23 mars, 15 juin, 24 août, 26 octobre (source : page des données ouvertes, voir `NOTICE.md`).
+  * Saisir ces dates dans un fichier de référence annuel `data/reference/mises_a_jour_gtfs_<AAAA>.json`, selon la convention de `periodes_<AAAA>.json` : nouvelle année = déposer le fichier, aucun code à modifier.
+  * Règle proposée : le GTFS local est « à jour » si son téléchargement est postérieur à la plus récente date de publication échue (changement − 10 jours) ; repli sur 7 jours si le fichier de l'année est absent.
+  * Bénéfices : moins de téléchargements, signal de fraîcheur exact dans Préparation et Ma journée.
+  * Point d'attention : deux archives existent (« planifiés » et « période précédente ») ; une journée à cheval sur un changement d'horaire peut avoir besoin des deux.
+  * Branche suggérée : `feat/calendrier-gtfs`.
+* [ ] **P2** — Clé API GTFS-RT **par utilisateur** plutôt que globale à la flotte.
+  * Aujourd'hui : clé partagée dans `Installation/config/secrets.json` (clé `stm_api_key_rt`) ou variable `STM_API_KEY_RT`, lue par `scripts/fetch_gtfs_rt.py`, lancé en sous-processus depuis les pages Préparation et Ma journée.
+  * Cible : clé stockée par matricule (`data/<matricule>/config/`, permissions `0600`, comme la session du portail), champ de saisie dans l'app, ordre de résolution utilisateur → globale → variable d'environnement. Le fichier `.pb` téléchargé reste commun (donnée publique).
+  * Justification : le compte du portail des développeurs est personnel (conditions d'inscription, clause d'indemnisation) ; une clé partagée entre plusieurs chauffeurs n'est pas souhaitable dans un projet public. Voir `NOTICE.md`.
+  * Les noms `STM_API_KEY_RT` / `stm_api_key_rt` restent inchangés : ils désignent la source de données ouvertes.
+  * Branche suggérée : `feat/cle-api-par-utilisateur`.
+* [?] **P3** — Évaluer le flux public GTFS-RT `TripModifications` (détours bus) comme source d'évènements, en complément ou en remplacement partiel des évènements du portail employé.
+  * Données ouvertes sous licence CC BY 4.0 (attribution à conserver), donc sans dépendance à une session du portail employé.
+  * À investiguer : couverture par rapport aux évènements du portail (arrêts annulés/ajoutés, description G-D, effectif horaire), format, fréquence de mise à jour, correspondance avec la signature de détour de `chauffeur.registre_detours`.
 
 ## Données métier
 
