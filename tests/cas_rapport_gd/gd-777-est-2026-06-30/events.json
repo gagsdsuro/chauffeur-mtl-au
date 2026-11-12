@@ -1,0 +1,48 @@
+[
+  {
+    "evenement_id": "10291048",
+    "titre": "Arrêt déplacé",
+    "motif": "Situation Incontrôlable",
+    "date_heure_debut": "2024-03-01T06:05:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "62148",
+        "nom": "Station Bonaventure (Gauchetière / Mansfield) (20 mètres avant)"
+      }
+    ],
+    "commentaire": "ARRÊT RECULÉ POUR FACILITÉ L'INTÉGRATION À LA CIRCULATION, NE PAS MODIFIER SANS PARLER À CO MASSE",
+    "arrets_ajoutes": [],
+    "description_gd": null
+  },
+  {
+    "evenement_id": "11185389",
+    "titre": "Détour sans annulation",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-06-22T06:01:00",
+    "date_heure_fin": "2026-07-02T19:59:00",
+    "effectif": "Seulement entre 06:01 et 19:59 chaque jour",
+    "arrets_annules": [],
+    "commentaire": null,
+    "arrets_ajoutes": [
+      {
+        "id": "62750",
+        "nom": "Terminus Centre-Ville"
+      }
+    ],
+    "description_gd": "VIA GAUCHETIERE D/MANSFIELD D/RENE-LEVESQUE D/ROBERT-BOURASSA VIA R.R"
+  },
+  {
+    "evenement_id": "11271192",
+    "titre": "Détour sans annulation",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-06-22T20:00:00",
+    "date_heure_fin": "2026-07-03T06:00:00",
+    "effectif": "Seulement entre 20:00 et 06:00 chaque jour",
+    "arrets_annules": [],
+    "commentaire": null,
+    "arrets_ajoutes": [],
+    "description_gd": "VIA GAUCHETIERE D/MANSFIELD D/RENE-LEVESQUE D BEAVER-HALL D VIGER G/ROBERT-BOURASSA VIA R.R"
+  }
+]

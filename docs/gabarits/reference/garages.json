@@ -1,0 +1,7 @@
+{
+  "description": "GABARIT FICTIF — copier vers data/reference/garages.json (fichier non versionné). Correspondance entre garage_id (numéro à 5 chiffres de l'en-tête des journées) et le nom du centre de transport (garage).",
+  "garages": {
+    "10001": "Garage A",
+    "10002": "Garage B"
+  }
+}

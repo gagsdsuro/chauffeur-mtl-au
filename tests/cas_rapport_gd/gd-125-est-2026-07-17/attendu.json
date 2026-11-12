@@ -1,0 +1,608 @@
+{
+  "parcours": {
+    "name": "Parcours principal",
+    "start": "Station McGill (De Maisonneuve / Robert-Bourassa)",
+    "end": "Station Viau"
+  },
+  "rows": [
+    {
+      "gd": "Via - De Maisonneuve",
+      "seq": 1,
+      "stop_id": "52433",
+      "stop_code": "52433",
+      "stop_name": "Station McGill (De Maisonneuve / Robert-Bourassa)",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - Robert-Bourassa",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - du Président-Kennedy",
+      "seq": 2,
+      "stop_id": "52439",
+      "stop_code": "52439",
+      "stop_name": "du Président-Kennedy / Aylmer",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 3,
+      "stop_id": "52517",
+      "stop_code": "52517",
+      "stop_name": "Station Place-des-Arts (Pr.-Kennedy/Bleury)",
+      "cancelled": [
+        {
+          "label": "Annulation d'arrêts (Situation Incontrôlable) — ***ARRÊT # 52517 PRÉSIDENT-KENNEDY/DE BLEUR ANNULÉ A/C OBILAGATION DE TOURNER À DROITE***",
+          "short_label": "Annulation d'arrêts (Situation Incontrôlable)",
+          "effectif": "En tout temps",
+          "nom_evt": "Station Place-des-Arts (Pr.-Kennedy/Bleury)",
+          "evenement_id": "10700602",
+          "commentaire": "***ARRÊT # 52517 PRÉSIDENT-KENNEDY/DE BLEUR ANNULÉ A/C OBILAGATION DE TOURNER À DROITE***",
+          "type_evenement": "annulation d'arrêts"
+        }
+      ]
+    },
+    {
+      "gd": "Gauche - Jeanne-Mance",
+      "seq": 4,
+      "stop_id": "61049",
+      "stop_code": "61049",
+      "stop_name": "Jeanne-Mance / du Président-Kennedy",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - Sherbrooke",
+      "seq": 5,
+      "stop_id": "52488",
+      "stop_code": "52488",
+      "stop_name": "Sherbrooke / Saint-Urbain",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - Saint-Urbain",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - Ontario",
+      "seq": 6,
+      "stop_id": "52630",
+      "stop_code": "52630",
+      "stop_name": "Ontario / de l'Hôtel-de-ville",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 7,
+      "stop_id": "52646",
+      "stop_code": "52646",
+      "stop_name": "Ontario / Saint-Denis",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 8,
+      "stop_id": "52664",
+      "stop_code": "52664",
+      "stop_name": "Ontario / Berri",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 9,
+      "stop_id": "52681",
+      "stop_code": "52681",
+      "stop_name": "Ontario / Saint-Hubert",
+      "cancelled": [
+        {
+          "label": "Arrêt déplacé (Travaux)",
+          "short_label": "Arrêt déplacé (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "Ontario / Saint-Hubert (10 mètres avant)",
+          "evenement_id": "11154688",
+          "commentaire": "",
+          "type_evenement": "arrêt déplacé"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 10,
+      "stop_id": "52731",
+      "stop_code": "52731",
+      "stop_name": "Ontario / Atateken",
+      "cancelled": [
+        {
+          "label": "Arrêt déplacé (Travaux)",
+          "short_label": "Arrêt déplacé (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "Ontario / Atateken (50 mètres après)",
+          "evenement_id": "11191753",
+          "commentaire": "",
+          "type_evenement": "arrêt déplacé"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 11,
+      "stop_id": "52763",
+      "stop_code": "52763",
+      "stop_name": "Ontario / de la Visitation",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 12,
+      "stop_id": "52809",
+      "stop_code": "52809",
+      "stop_name": "Ontario / Alexandre-DeSève",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 13,
+      "stop_id": "52821",
+      "stop_code": "52821",
+      "stop_name": "Ontario / De Champlain",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 14,
+      "stop_id": "52843",
+      "stop_code": "52843",
+      "stop_name": "Ontario / Papineau",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 15,
+      "stop_id": "52869",
+      "stop_code": "52869",
+      "stop_name": "Parc des Faubourgs (Ontario/Dorion)",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 16,
+      "stop_id": "52897",
+      "stop_code": "52897",
+      "stop_name": "Ontario / De Lorimier",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 17,
+      "stop_id": "52937",
+      "stop_code": "52937",
+      "stop_name": "Ontario / Parthenais",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 18,
+      "stop_id": "52965",
+      "stop_code": "52965",
+      "stop_name": "Ontario / Fullum",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 19,
+      "stop_id": "52994",
+      "stop_code": "52994",
+      "stop_name": "Ontario / Dufresne",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 20,
+      "stop_id": "53015",
+      "stop_code": "53015",
+      "stop_name": "Station Frontenac (Ontario / du Havre)",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 21,
+      "stop_id": "53028",
+      "stop_code": "53028",
+      "stop_name": "Ontario / Bercy",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 22,
+      "stop_id": "53059",
+      "stop_code": "53059",
+      "stop_name": "Ontario / Wurtele",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 23,
+      "stop_id": "61359",
+      "stop_code": "61359",
+      "stop_name": "Ontario / Lespérance",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 24,
+      "stop_id": "54091",
+      "stop_code": "54091",
+      "stop_name": "Ontario / Préfontaine",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 25,
+      "stop_id": "53109",
+      "stop_code": "53109",
+      "stop_name": "Place des Tisserandes (Ontario / Saint-Germain)",
+      "cancelled": [
+        {
+          "label": "Arrêt déplacé (Situation Incontrôlable)",
+          "short_label": "Arrêt déplacé (Situation Incontrôlable)",
+          "effectif": "En tout temps",
+          "nom_evt": "Place des Tisserandes (Ontario / Saint-Germain) (5 mètres avant)",
+          "evenement_id": "11190151",
+          "commentaire": "",
+          "type_evenement": "arrêt déplacé"
+        }
+      ]
+    },
+    {
+      "gd": "Via - ONTARIO",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "Détour avec annulation d'arrêt",
+      "evenement_id": "11190151",
+      "effectif": "En tout temps"
+    },
+    {
+      "gd": "Gauche - ST-GERMAIN",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11190151",
+      "effectif": ""
+    },
+    {
+      "gd": "Droite - DE ROUEN",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11190151",
+      "effectif": ""
+    },
+    {
+      "gd": "",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "Temp. - de Rouen / Cuvillier",
+      "cancelled": [],
+      "added_inline": true,
+      "added_label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA ONTARIO G/ ST-GERMAIN D/ DE ROUEN D/ LETOURNEUX G/ ONTARIO *** VIA ROUTE RÉGULIÈRE",
+      "added_short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+      "commentaire": "",
+      "effectif": "En tout temps",
+      "evenement_id": "11190151"
+    },
+    {
+      "gd": "",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "Joliette / de Rouen",
+      "cancelled": [],
+      "added_inline": true,
+      "added_label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA ONTARIO G/ ST-GERMAIN D/ DE ROUEN D/ LETOURNEUX G/ ONTARIO *** VIA ROUTE RÉGULIÈRE",
+      "added_short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+      "commentaire": "",
+      "effectif": "En tout temps",
+      "evenement_id": "11190151"
+    },
+    {
+      "gd": "",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "Temp. - De Rouen /Bourbonnière (S/O)",
+      "cancelled": [],
+      "added_inline": true,
+      "added_label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA ONTARIO G/ ST-GERMAIN D/ DE ROUEN D/ LETOURNEUX G/ ONTARIO *** VIA ROUTE RÉGULIÈRE",
+      "added_short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+      "commentaire": "",
+      "effectif": "En tout temps",
+      "evenement_id": "11190151"
+    },
+    {
+      "gd": "",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "Temp. - DE ROUEN / PIE IX",
+      "cancelled": [],
+      "added_inline": true,
+      "added_label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA ONTARIO G/ ST-GERMAIN D/ DE ROUEN D/ LETOURNEUX G/ ONTARIO *** VIA ROUTE RÉGULIÈRE",
+      "added_short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+      "commentaire": "",
+      "effectif": "En tout temps",
+      "evenement_id": "11190151"
+    },
+    {
+      "gd": "Droite - LETOURNEUX",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11190151",
+      "effectif": ""
+    },
+    {
+      "gd": "Gauche - ONTARIO ***",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11190151",
+      "effectif": ""
+    },
+    {
+      "gd": "",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "Temp. - Ontario /Morgan (S/O)",
+      "cancelled": [],
+      "added_inline": true,
+      "added_label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA ONTARIO G/ ST-GERMAIN D/ DE ROUEN D/ LETOURNEUX G/ ONTARIO *** VIA ROUTE RÉGULIÈRE",
+      "added_short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+      "commentaire": "",
+      "effectif": "En tout temps",
+      "evenement_id": "11190151"
+    },
+    {
+      "gd": "Via - R.R.",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11190151",
+      "effectif": ""
+    },
+    {
+      "gd": "",
+      "seq": 26,
+      "stop_id": "53115",
+      "stop_code": "53115",
+      "stop_name": "Ontario / Davidson",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA ONTARIO G/ ST-GERMAIN D/ DE ROUEN D/ LETOURNEUX G/ ONTARIO *** VIA ROUTE RÉGULIÈRE",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "Ontario / Davidson",
+          "evenement_id": "11190151",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 27,
+      "stop_id": "53123",
+      "stop_code": "53123",
+      "stop_name": "Ontario / Aylwin",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA ONTARIO G/ ST-GERMAIN D/ DE ROUEN D/ LETOURNEUX G/ ONTARIO *** VIA ROUTE RÉGULIÈRE",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "Ontario / Aylwin",
+          "evenement_id": "11190151",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 28,
+      "stop_id": "53141",
+      "stop_code": "53141",
+      "stop_name": "Ontario / De Chambly",
+      "cancelled": [
+        {
+          "label": "Annulation d'arrêts (Situation Incontrôlable)",
+          "short_label": "Annulation d'arrêts (Situation Incontrôlable)",
+          "effectif": "En tout temps",
+          "nom_evt": "Ontario / De Chambly",
+          "evenement_id": "11188805",
+          "commentaire": "",
+          "type_evenement": "annulation d'arrêts"
+        },
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA ONTARIO G/ ST-GERMAIN D/ DE ROUEN D/ LETOURNEUX G/ ONTARIO *** VIA ROUTE RÉGULIÈRE",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "Ontario / De Chambly",
+          "evenement_id": "11190151",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 29,
+      "stop_id": "53155",
+      "stop_code": "53155",
+      "stop_name": "Ontario / Valois",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA ONTARIO G/ ST-GERMAIN D/ DE ROUEN D/ LETOURNEUX G/ ONTARIO *** VIA ROUTE RÉGULIÈRE",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "Ontario / Valois",
+          "evenement_id": "11190151",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 30,
+      "stop_id": "53170",
+      "stop_code": "53170",
+      "stop_name": "Ontario / d'Orléans",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA ONTARIO G/ ST-GERMAIN D/ DE ROUEN D/ LETOURNEUX G/ ONTARIO *** VIA ROUTE RÉGULIÈRE",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "Ontario / d'Orléans",
+          "evenement_id": "11190151",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 31,
+      "stop_id": "53191",
+      "stop_code": "53191",
+      "stop_name": "Ontario / Pie-IX",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA ONTARIO G/ ST-GERMAIN D/ DE ROUEN D/ LETOURNEUX G/ ONTARIO *** VIA ROUTE RÉGULIÈRE",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "Ontario / Pie-IX",
+          "evenement_id": "11190151",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 32,
+      "stop_id": "53217",
+      "stop_code": "53217",
+      "stop_name": "Ontario / Letourneux",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA ONTARIO G/ ST-GERMAIN D/ DE ROUEN D/ LETOURNEUX G/ ONTARIO *** VIA ROUTE RÉGULIÈRE",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "Ontario / Letourneux",
+          "evenement_id": "11190151",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 33,
+      "stop_id": "54214",
+      "stop_code": "54214",
+      "stop_name": "Ontario / William-David",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 34,
+      "stop_id": "54309",
+      "stop_code": "54309",
+      "stop_name": "Ontario / Aird",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 35,
+      "stop_id": "53246",
+      "stop_code": "53246",
+      "stop_name": "Ontario / Leclaire",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 36,
+      "stop_id": "53262",
+      "stop_code": "53262",
+      "stop_name": "Ontario / Saint-Clément",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - Viau",
+      "seq": 37,
+      "stop_id": "53274",
+      "stop_code": "53274",
+      "stop_name": "Viau / Ontario",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 38,
+      "stop_id": "53223",
+      "stop_code": "53223",
+      "stop_name": "Viau / de Rouen",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 39,
+      "stop_id": "53166",
+      "stop_code": "53166",
+      "stop_name": "Viau / Hochelaga",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - Pierre-De Coubertin",
+      "seq": 40,
+      "stop_id": "54200",
+      "stop_code": "54200",
+      "stop_name": "Station Viau",
+      "cancelled": []
+    }
+  ],
+  "added": [],
+  "orphan_events": []
+}

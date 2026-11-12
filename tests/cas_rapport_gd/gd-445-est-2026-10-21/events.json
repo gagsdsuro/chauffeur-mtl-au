@@ -1,0 +1,36 @@
+[
+  {
+    "evenement_id": "11246494",
+    "titre": "Annulation d'arrêts",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-06-02T04:58:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "53032",
+        "nom": "René-Lévesque / Panet"
+      }
+    ],
+    "commentaire": null,
+    "arrets_ajoutes": [],
+    "description_gd": null
+  },
+  {
+    "evenement_id": "11380915",
+    "titre": "Détour avec annulation d'arrêt",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-10-05T05:00:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "51741",
+        "nom": "Beaubien / De Lorimier"
+      }
+    ],
+    "commentaire": null,
+    "arrets_ajoutes": [],
+    "description_gd": "VIA BEAUBIEN\nG/ BORDEAUX\nD/ ST-ZOTIQUE\nD/ DE LORIMIER\nG/ BEAUBIEN\nVIA R/R"
+  }
+]

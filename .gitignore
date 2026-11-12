@@ -1,0 +1,77 @@
+.claude
+.agents
+
+# 🏗️ DÉPLOIEMENT (spécifique à l'environnement hôte)
+compose.yml
+
+# 🔐 SECRETS & CONFIGURATION
+Installation/config/secrets.json
+Installation/config/secrets.*.json
+.env
+.env.local
+*.pem
+*.key
+
+# 🗂️ DONNÉES SENSIBLES / VOLUMINEUSES (sauf data/reference/, versionné)
+data/*
+!data/reference/
+# Références propres à l'organisation : conservées localement, non versionnées (gabarits : docs/gabarits/reference/)
+data/reference/points_de_releve_*.json
+data/reference/garages.json
+data/reference/stations_metro.json
+
+# 🐍 PYTHON
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.venv
+venv/
+ENV/
+env/
+.vscode/
+.idea/
+
+# 📊 LOGS & TEMP
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+.DS_Store
+
+# 📄 IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# 🔒 OS
+Thumbs.db
+.Thumbs.db
+
+# Notes personnelles locales (non versionnées)
+CLAUDE.local.md

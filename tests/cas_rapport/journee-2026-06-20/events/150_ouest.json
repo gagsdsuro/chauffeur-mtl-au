@@ -1,0 +1,53 @@
+{
+  "ligne": "150",
+  "direction": "ouest",
+  "detours": [
+    {
+      "evenement_id": "11203572",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-04-24T18:40:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "53065",
+          "nom": "Sainte-Catherine / De Lorimier"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11205733",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-04-28T05:45:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "53065",
+          "nom": "Sainte-Catherine / De Lorimier"
+        },
+        {
+          "id": "53105",
+          "nom": "De Lorimier / René-Lévesque"
+        },
+        {
+          "id": "54117",
+          "nom": "Station Papineau (Dorion / Sainte-Catherine)"
+        }
+      ],
+      "description_gd": "VTT CARTIER AU NORD DE STE-CATHERINE VIA CARTIER G/ MAISONNEUVE G/ PAPINEAU D/ RENÉ-LÉVESQUE VRR",
+      "commentaire": null,
+      "arrets_ajoutes": [
+        {
+          "id": "",
+          "nom": "Temp. - Station Papineau (Caetier / Sainte-Catherine 53047)"
+        }
+      ]
+    }
+  ]
+}

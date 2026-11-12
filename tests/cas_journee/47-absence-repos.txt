@@ -1,0 +1,63 @@
+
+Accueil  Ma journée
+Détail de ma journée
+Veuillez valider votre journée de travail avec le rapport Appel des Rapports quotidiens.
+Septembre 2026
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Aujourd'hui59200 - Frontenac
+Journée47
+Temps travaillé7:48
+Temps supplémentaire0:00
+Mis à jour le 21 septembre 2026 16:46
+carte agent Gauche-Droite
+SommaireAbsenceEn vigueur5:05Horaire
+05:18 - 10:23 P441 - REPO-Repos minimum 9 hrs manuel
+Sommaire85 - 0731209--2:43Horaire
+Prise
+12:41
+Lieu
+E137
+Début
+12:41
+Fin
+15:24
+Lieu
+E137
+Détails Absence
+Détails 85 - 07
+Haut-le-pied 
+Départ et arrivé :
+Du Havre / La Fontaine12:41
+Station Frontenac12:44
+85 Est
+ID 13
+Départ et arrivé :
+Station Frontenac12:50
+Du Golf / Métropolitain13:49
+Informations supplémentaires :
+Détour Information
+85 Ouest
+ID 15
+Départ et arrivé :
+Du Golf / Métropolitain14:21
+Du Havre / La Fontaine15:24
+Informations supplémentaires :
+Détour Information
+Je relève:
+Chauffeur Exemple - 10001
+Je suis relevé par:
+Chauffeur Test - 10002

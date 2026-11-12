@@ -1,0 +1,302 @@
+{
+  "stops": [
+    [
+      1,
+      "61626"
+    ],
+    [
+      2,
+      "62022"
+    ],
+    [
+      3,
+      "57524"
+    ],
+    [
+      4,
+      "57313"
+    ],
+    [
+      5,
+      "57314"
+    ],
+    [
+      6,
+      "57312"
+    ],
+    [
+      7,
+      "57311"
+    ],
+    [
+      8,
+      "57343"
+    ],
+    [
+      9,
+      "55468"
+    ],
+    [
+      10,
+      "55907"
+    ],
+    [
+      11,
+      "55480"
+    ],
+    [
+      12,
+      "55851"
+    ],
+    [
+      13,
+      "55520"
+    ],
+    [
+      14,
+      "55842"
+    ],
+    [
+      15,
+      "55601"
+    ],
+    [
+      16,
+      "56110"
+    ],
+    [
+      17,
+      "56139"
+    ],
+    [
+      18,
+      "56120"
+    ],
+    [
+      19,
+      "50398"
+    ],
+    [
+      20,
+      "50377"
+    ],
+    [
+      21,
+      "56141"
+    ],
+    [
+      22,
+      "56145"
+    ],
+    [
+      23,
+      "50561"
+    ],
+    [
+      24,
+      "50671"
+    ],
+    [
+      25,
+      "50770"
+    ],
+    [
+      26,
+      "50977"
+    ],
+    [
+      27,
+      "51178"
+    ],
+    [
+      28,
+      "51343"
+    ],
+    [
+      29,
+      "51472"
+    ],
+    [
+      30,
+      "51541"
+    ],
+    [
+      31,
+      "51548"
+    ],
+    [
+      32,
+      "55015"
+    ],
+    [
+      33,
+      "55011"
+    ],
+    [
+      34,
+      "54921"
+    ],
+    [
+      35,
+      "55026"
+    ],
+    [
+      36,
+      "54981"
+    ],
+    [
+      37,
+      "54589"
+    ]
+  ],
+  "stop_names": {
+    "61626": {
+      "code": "61626",
+      "name": "YUL Aéroport Montréal-Trudeau"
+    },
+    "62022": {
+      "code": "62022",
+      "name": "Gare Dorval Nord"
+    },
+    "57524": {
+      "code": "57524",
+      "name": "Michel-Jasmin / Orly"
+    },
+    "57313": {
+      "code": "57313",
+      "name": "Côte-de-Liesse / 55e Avenue"
+    },
+    "57314": {
+      "code": "57314",
+      "name": "Côte-de-Liesse / 46e Avenue"
+    },
+    "57312": {
+      "code": "57312",
+      "name": "Côte-de-Liesse / 43e Avenue"
+    },
+    "57311": {
+      "code": "57311",
+      "name": "Côte-de-Liesse / 32e Avenue"
+    },
+    "57343": {
+      "code": "57343",
+      "name": "Côte-de-Liesse / No 9500"
+    },
+    "55468": {
+      "code": "55468",
+      "name": "Côte-de-Liesse / Graveline"
+    },
+    "55907": {
+      "code": "55907",
+      "name": "Côte-de-Liesse / No 8180"
+    },
+    "55480": {
+      "code": "55480",
+      "name": "Côte-de-Liesse / Montée de Liesse"
+    },
+    "55851": {
+      "code": "55851",
+      "name": "Côte-de-Liesse / No 7520"
+    },
+    "55520": {
+      "code": "55520",
+      "name": "Côte-de-Liesse / Hickmore"
+    },
+    "55842": {
+      "code": "55842",
+      "name": "Passerelle Barr (Côte-de-Liesse / No 6600)"
+    },
+    "55601": {
+      "code": "55601",
+      "name": "Côte-de-Liesse / Cavendish"
+    },
+    "56110": {
+      "code": "56110",
+      "name": "Passerelle Isabey-Darnley (Côte-de-Liesse/Isabey)"
+    },
+    "56139": {
+      "code": "56139",
+      "name": "Côte-de-Liesse / No 5750"
+    },
+    "56120": {
+      "code": "56120",
+      "name": "de la Côte-de-Liesse / No 5430"
+    },
+    "50398": {
+      "code": "50398",
+      "name": "Décarie / Royalmount"
+    },
+    "50377": {
+      "code": "50377",
+      "name": "Station De la Savane (Décarie / de Sorel)"
+    },
+    "56141": {
+      "code": "56141",
+      "name": "Côte-de-Liesse / Lucerne"
+    },
+    "56145": {
+      "code": "56145",
+      "name": "Côte-de-Liesse / Sunset"
+    },
+    "50561": {
+      "code": "50561",
+      "name": "Crémazie / de l'Acadie"
+    },
+    "50671": {
+      "code": "50671",
+      "name": "Crémazie / Saint-Laurent"
+    },
+    "50770": {
+      "code": "50770",
+      "name": "Station Crémazie Sud (Crémazie / Berri)"
+    },
+    "50977": {
+      "code": "50977",
+      "name": "Crémazie / Christophe-Colomb"
+    },
+    "51178": {
+      "code": "51178",
+      "name": "Crémazie / Papineau"
+    },
+    "51343": {
+      "code": "51343",
+      "name": "Crémazie / Molson"
+    },
+    "51472": {
+      "code": "51472",
+      "name": "Crémazie / Saint-Michel"
+    },
+    "51541": {
+      "code": "51541",
+      "name": "17e Avenue / Crémazie"
+    },
+    "51548": {
+      "code": "51548",
+      "name": "Jarry / 23e Avenue"
+    },
+    "55015": {
+      "code": "55015",
+      "name": "Provencher / Métropolitain"
+    },
+    "55011": {
+      "code": "55011",
+      "name": "Métropolitain / Viau"
+    },
+    "54921": {
+      "code": "54921",
+      "name": "Métropolitain / Lacordaire"
+    },
+    "55026": {
+      "code": "55026",
+      "name": "Métropolitain / No 6170"
+    },
+    "54981": {
+      "code": "54981",
+      "name": "Métropolitain / Langelier"
+    },
+    "54589": {
+      "code": "54589",
+      "name": "des Galeries-d'Anjou / No 7450"
+    }
+  }
+}

@@ -1,0 +1,598 @@
+{
+  "parcours": {
+    "name": "Parcours principal",
+    "start": "De Lorimier / Crémazie",
+    "end": "Station Papineau (Dorion / Sainte-Catherine)"
+  },
+  "rows": [
+    {
+      "gd": "Via - De Lorimier",
+      "seq": 1,
+      "stop_id": "51233",
+      "stop_code": "51233",
+      "stop_name": "De Lorimier / Crémazie",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - Crémazie",
+      "seq": 2,
+      "stop_id": "51200",
+      "stop_code": "51200",
+      "stop_name": "Crémazie / Chabot",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 3,
+      "stop_id": "51105",
+      "stop_code": "51105",
+      "stop_name": "Crémazie / Fabre",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 4,
+      "stop_id": "51178",
+      "stop_code": "51178",
+      "stop_name": "Crémazie / Papineau",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 5,
+      "stop_id": "51223",
+      "stop_code": "51223",
+      "stop_name": "Crémazie / de Bordeaux",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - vers aut. 40 Ouest",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - Crémazie",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - vers Crémazie dir. Est",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - Crémazie",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - vers Crémazie dir. E",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - Crémazie",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - De Lorimier",
+      "seq": 6,
+      "stop_id": "51262",
+      "stop_code": "51262",
+      "stop_name": "De Lorimier / Jarry",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 7,
+      "stop_id": "51309",
+      "stop_code": "51309",
+      "stop_name": "De Lorimier / Tillemont",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 8,
+      "stop_id": "51353",
+      "stop_code": "51353",
+      "stop_name": "De Lorimier / Villeray",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 9,
+      "stop_id": "54321",
+      "stop_code": "54321",
+      "stop_name": "De Lorimier / Everett",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 10,
+      "stop_id": "51499",
+      "stop_code": "51499",
+      "stop_name": "De Lorimier / Jean-Talon",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 11,
+      "stop_id": "51581",
+      "stop_code": "51581",
+      "stop_name": "De Lorimier / Bélanger",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 12,
+      "stop_id": "51652",
+      "stop_code": "51652",
+      "stop_name": "De Lorimier / Saint-Zotique",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 13,
+      "stop_id": "51740",
+      "stop_code": "51740",
+      "stop_name": "De Lorimier / Beaubien",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 14,
+      "stop_id": "51825",
+      "stop_code": "51825",
+      "stop_name": "De Lorimier / de Bellechasse",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 15,
+      "stop_id": "51860",
+      "stop_code": "51860",
+      "stop_name": "De Lorimier / Rosemont",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 16,
+      "stop_id": "51954",
+      "stop_code": "51954",
+      "stop_name": "De Lorimier / Holt",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 17,
+      "stop_id": "52089",
+      "stop_code": "52089",
+      "stop_name": "De Lorimier / Masson",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 18,
+      "stop_id": "52182",
+      "stop_code": "52182",
+      "stop_name": "De Lorimier / Laurier",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 19,
+      "stop_id": "52222",
+      "stop_code": "52222",
+      "stop_name": "De Lorimier / Saint-Joseph",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 20,
+      "stop_id": "52268",
+      "stop_code": "52268",
+      "stop_name": "De Lorimier / Gilford",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 21,
+      "stop_id": "52382",
+      "stop_code": "52382",
+      "stop_name": "De Lorimier / du Mont-Royal",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 22,
+      "stop_id": "52457",
+      "stop_code": "52457",
+      "stop_name": "De Lorimier / Marie-Anne",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 23,
+      "stop_id": "52563",
+      "stop_code": "52563",
+      "stop_name": "De Lorimier / Rachel",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - DE LORIMIER",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "Détour avec annulation d'arrêt",
+      "evenement_id": "11270489",
+      "effectif": "En tout temps"
+    },
+    {
+      "gd": "Droite - RACHEL",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11270489",
+      "effectif": ""
+    },
+    {
+      "gd": "Gauche - BORDEAUX",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11270489",
+      "effectif": ""
+    },
+    {
+      "gd": "Droite - SHERBROOKE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11270489",
+      "effectif": ""
+    },
+    {
+      "gd": "Droite - BERRI TERMINUS TEMPORAIRE STATION SHERBROOKE (52506)",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11270489",
+      "effectif": ""
+    },
+    {
+      "gd": "",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "Station Sherbrooke (Édicule Est)",
+      "cancelled": [],
+      "added_inline": true,
+      "added_label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA DE LORIMIER D/ RACHEL G/ BORDEAUX D/ SHERBROOKE D/ BERRI TERMINUS TEMPORAIRE STATION SHERBROOKE (52506) — POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+      "added_short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+      "commentaire": "POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+      "effectif": "En tout temps",
+      "evenement_id": "11270489"
+    },
+    {
+      "gd": "Gauche - Rachel",
+      "seq": 24,
+      "stop_id": "52614",
+      "stop_code": "52614",
+      "stop_name": "Rachel / Parthenais",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA DE LORIMIER D/ RACHEL G/ BORDEAUX D/ SHERBROOKE D/ BERRI TERMINUS TEMPORAIRE STATION SHERBROOKE (52506) — POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "Rachel / Parthenais",
+          "evenement_id": "11270489",
+          "commentaire": "POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ],
+      "detour_removed": true
+    },
+    {
+      "gd": "Via - RACHEL",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "Détour avec annulation d'arrêt",
+      "evenement_id": "11290098",
+      "effectif": "En tout temps"
+    },
+    {
+      "gd": "Droite - IBERVILLE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11290098",
+      "effectif": ""
+    },
+    {
+      "gd": "Via - R.R.",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11290098",
+      "effectif": ""
+    },
+    {
+      "gd": "Droite - Parthenais",
+      "seq": 25,
+      "stop_id": "52685",
+      "stop_code": "52685",
+      "stop_name": "Parthenais / Gauthier",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA DE LORIMIER D/ RACHEL G/ BORDEAUX D/ SHERBROOKE D/ BERRI TERMINUS TEMPORAIRE STATION SHERBROOKE (52506) — POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "Parthenais / Gauthier",
+          "evenement_id": "11270489",
+          "commentaire": "POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "type_evenement": "détour avec annulation d'arrêt"
+        },
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA RACHEL D/ IBERVILLE VIA R/R",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "Parthenais / Gauthier",
+          "evenement_id": "11290098",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ],
+      "detour_removed": true
+    },
+    {
+      "gd": "Gauche - Sherbrooke",
+      "seq": 26,
+      "stop_id": "52742",
+      "stop_code": "52742",
+      "stop_name": "Sherbrooke / Fullum",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA DE LORIMIER D/ RACHEL G/ BORDEAUX D/ SHERBROOKE D/ BERRI TERMINUS TEMPORAIRE STATION SHERBROOKE (52506) — POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "Sherbrooke / Fullum",
+          "evenement_id": "11270489",
+          "commentaire": "POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "type_evenement": "détour avec annulation d'arrêt"
+        },
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA RACHEL D/ IBERVILLE VIA R/R",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "Sherbrooke / Fullum",
+          "evenement_id": "11290098",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ],
+      "detour_removed": true
+    },
+    {
+      "gd": "Droite - D'Iberville",
+      "seq": 27,
+      "stop_id": "61889",
+      "stop_code": "61889",
+      "stop_name": "D'Iberville / de Rouen",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA DE LORIMIER D/ RACHEL G/ BORDEAUX D/ SHERBROOKE D/ BERRI TERMINUS TEMPORAIRE STATION SHERBROOKE (52506) — POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "D'Iberville / de Rouen",
+          "evenement_id": "11270489",
+          "commentaire": "POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ],
+      "detour_removed": true
+    },
+    {
+      "gd": "Droite - Ontario",
+      "seq": 28,
+      "stop_id": "52964",
+      "stop_code": "52964",
+      "stop_name": "Ontario / Fullum",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA DE LORIMIER D/ RACHEL G/ BORDEAUX D/ SHERBROOKE D/ BERRI TERMINUS TEMPORAIRE STATION SHERBROOKE (52506) — POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "Ontario / Fullum",
+          "evenement_id": "11270489",
+          "commentaire": "POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ],
+      "detour_removed": true
+    },
+    {
+      "gd": "Gauche - Parthenais",
+      "seq": 29,
+      "stop_id": "53033",
+      "stop_code": "53033",
+      "stop_name": "Parthenais / Logan",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA DE LORIMIER D/ RACHEL G/ BORDEAUX D/ SHERBROOKE D/ BERRI TERMINUS TEMPORAIRE STATION SHERBROOKE (52506) — POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "Parthenais / Logan",
+          "evenement_id": "11270489",
+          "commentaire": "POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ],
+      "detour_removed": true
+    },
+    {
+      "gd": "",
+      "seq": 30,
+      "stop_id": "53063",
+      "stop_code": "53063",
+      "stop_name": "Parthenais / De Maisonneuve",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA DE LORIMIER D/ RACHEL G/ BORDEAUX D/ SHERBROOKE D/ BERRI TERMINUS TEMPORAIRE STATION SHERBROOKE (52506) — POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "Parthenais / De Maisonneuve",
+          "evenement_id": "11270489",
+          "commentaire": "POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "Droite - De Maisonneuve",
+      "seq": 31,
+      "stop_id": "53046",
+      "stop_code": "53046",
+      "stop_name": "De Maisonneuve / De Lorimier",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA DE LORIMIER D/ RACHEL G/ BORDEAUX D/ SHERBROOKE D/ BERRI TERMINUS TEMPORAIRE STATION SHERBROOKE (52506) — POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "De Maisonneuve / De Lorimier",
+          "evenement_id": "11270489",
+          "commentaire": "POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ],
+      "detour_removed": true
+    },
+    {
+      "gd": "Via - DE MAISONNEUVE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "Détour avec annulation d'arrêt",
+      "evenement_id": "11205733",
+      "effectif": "En tout temps"
+    },
+    {
+      "gd": "Gauche - PAPINEAU",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11205733",
+      "effectif": ""
+    },
+    {
+      "gd": "Gauche - STE-CATHERINE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11205733",
+      "effectif": ""
+    },
+    {
+      "gd": "Gauche - CARTIER TERMINUS TEMPORAIRE CARTIER/STE CATHERINE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11205733",
+      "effectif": ""
+    },
+    {
+      "gd": "Gauche - Dorion",
+      "seq": 32,
+      "stop_id": "53051",
+      "stop_code": "53051",
+      "stop_name": "Station Papineau (Dorion / Sainte-Catherine)",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA DE MAISONNEUVE G/ PAPINEAU G/ STE-CATHERINE G/ CARTIER TERMINUS TEMPORAIRE CARTIER/STE CATHERINE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "Station Papineau (Dorion / Sainte-Catherine)",
+          "evenement_id": "11205733",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        },
+        {
+          "label": "Détour avec annulation d'arrêt (Événement spécial) — G-D: VIA DE LORIMIER D/ RACHEL G/ BORDEAUX D/ SHERBROOKE D/ BERRI TERMINUS TEMPORAIRE STATION SHERBROOKE (52506) — POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "short_label": "Détour avec annulation d'arrêt (Événement spécial)",
+          "effectif": "En tout temps",
+          "nom_evt": "Station Papineau (Dorion / Sainte-Catherine)",
+          "evenement_id": "11270489",
+          "commentaire": "POINT DE RELÈVE MODIFIÉ - STATION SHERBROOKE (52506)",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ],
+      "detour_removed": true
+    }
+  ],
+  "added": [],
+  "orphan_events": []
+}

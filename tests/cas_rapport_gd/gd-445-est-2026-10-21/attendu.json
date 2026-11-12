@@ -1,0 +1,423 @@
+{
+  "parcours": {
+    "name": "Parcours principal",
+    "start": "de la Cathédrale / René-Lévesque",
+    "end": "20e Avenue / de Bellechasse"
+  },
+  "rows": [
+    {
+      "gd": "Via - de la Cathédrale",
+      "seq": 1,
+      "stop_id": "61809",
+      "stop_code": "61809",
+      "stop_name": "de la Cathédrale / René-Lévesque",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - De La Gauchetière",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - Mansfield",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - René-Lévesque",
+      "seq": 2,
+      "stop_id": "53918",
+      "stop_code": "53918",
+      "stop_name": "René-Lévesque / Union",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 3,
+      "stop_id": "52627",
+      "stop_code": "52627",
+      "stop_name": "Basilique St-Patrick (R.-Lévesque / St-Alexandre)",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 4,
+      "stop_id": "60683",
+      "stop_code": "60683",
+      "stop_name": "René-Lévesque / Jeanne-Mance",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 5,
+      "stop_id": "52782",
+      "stop_code": "52782",
+      "stop_name": "René-Lévesque / Saint-Laurent",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 6,
+      "stop_id": "52835",
+      "stop_code": "52835",
+      "stop_name": "René-Lévesque / de l'Hôtel-de-Ville",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 7,
+      "stop_id": "52882",
+      "stop_code": "52882",
+      "stop_name": "René-Lévesque / Saint-Denis (CHUM)",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 8,
+      "stop_id": "54041",
+      "stop_code": "54041",
+      "stop_name": "René-Lévesque / Berri",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 9,
+      "stop_id": "52931",
+      "stop_code": "52931",
+      "stop_name": "René-Lévesque / Saint-Hubert",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 10,
+      "stop_id": "52982",
+      "stop_code": "52982",
+      "stop_name": "René-Lévesque / Atateken",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 11,
+      "stop_id": "53032",
+      "stop_code": "53032",
+      "stop_name": "René-Lévesque / Panet",
+      "cancelled": [
+        {
+          "label": "Annulation d'arrêts (Travaux)",
+          "short_label": "Annulation d'arrêts (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "René-Lévesque / Panet",
+          "evenement_id": "11246494",
+          "commentaire": "",
+          "type_evenement": "annulation d'arrêts"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 12,
+      "stop_id": "53073",
+      "stop_code": "53073",
+      "stop_name": "René-Lévesque / Papineau (Maison Radio-Canada)",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - De Lorimier",
+      "seq": 13,
+      "stop_id": "53064",
+      "stop_code": "53064",
+      "stop_name": "De Lorimier / Sainte-Catherine",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 14,
+      "stop_id": "53045",
+      "stop_code": "53045",
+      "stop_name": "De Lorimier / De Maisonneuve",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 15,
+      "stop_id": "53010",
+      "stop_code": "53010",
+      "stop_name": "De Lorimier / Logan",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 16,
+      "stop_id": "52895",
+      "stop_code": "52895",
+      "stop_name": "De Lorimier / Ontario",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 17,
+      "stop_id": "52813",
+      "stop_code": "52813",
+      "stop_name": "De Lorimier / de Rouen",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 18,
+      "stop_id": "52637",
+      "stop_code": "52637",
+      "stop_name": "De Lorimier / Gauthier",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 19,
+      "stop_id": "52561",
+      "stop_code": "52561",
+      "stop_name": "De Lorimier / Rachel",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 20,
+      "stop_id": "52456",
+      "stop_code": "52456",
+      "stop_name": "De Lorimier / Marie-Anne",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 21,
+      "stop_id": "52380",
+      "stop_code": "52380",
+      "stop_name": "De Lorimier / du Mont-Royal",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 22,
+      "stop_id": "52267",
+      "stop_code": "52267",
+      "stop_name": "De Lorimier / Gilford",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - Saint-Joseph",
+      "seq": 23,
+      "stop_id": "52179",
+      "stop_code": "52179",
+      "stop_name": "Saint-Joseph / Chabot",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - Papineau",
+      "seq": 24,
+      "stop_id": "62131",
+      "stop_code": "62131",
+      "stop_name": "Papineau / Laurier",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 25,
+      "stop_id": "52022",
+      "stop_code": "52022",
+      "stop_name": "Papineau / Masson",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 26,
+      "stop_id": "51819",
+      "stop_code": "51819",
+      "stop_name": "Papineau / Rosemont",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 27,
+      "stop_id": "51768",
+      "stop_code": "51768",
+      "stop_name": "Papineau / de Bellechasse",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - Beaubien",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - BEAUBIEN",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "Détour avec annulation d'arrêt",
+      "evenement_id": "11380915",
+      "effectif": "En tout temps"
+    },
+    {
+      "gd": "Gauche - BORDEAUX",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11380915",
+      "effectif": ""
+    },
+    {
+      "gd": "Droite - ST-ZOTIQUE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11380915",
+      "effectif": ""
+    },
+    {
+      "gd": "Droite - DE LORIMIER",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11380915",
+      "effectif": ""
+    },
+    {
+      "gd": "Gauche - BEAUBIEN",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11380915",
+      "effectif": ""
+    },
+    {
+      "gd": "Via - R.R.",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11380915",
+      "effectif": ""
+    },
+    {
+      "gd": "",
+      "seq": 28,
+      "stop_id": "51741",
+      "stop_code": "51741",
+      "stop_name": "Beaubien / De Lorimier",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA BEAUBIEN\nG/ BORDEAUX\nD/ ST-ZOTIQUE\nD/ DE LORIMIER\nG/ BEAUBIEN\nVIA R/R",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "Beaubien / De Lorimier",
+          "evenement_id": "11380915",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 29,
+      "stop_id": "62789",
+      "stop_code": "62789",
+      "stop_name": "Beaubien / des Écores",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 30,
+      "stop_id": "51805",
+      "stop_code": "51805",
+      "stop_name": "Beaubien / D'Iberville",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 31,
+      "stop_id": "54136",
+      "stop_code": "54136",
+      "stop_name": "Beaubien / 1re Avenue",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 32,
+      "stop_id": "51869",
+      "stop_code": "51869",
+      "stop_name": "Beaubien / 6e Avenue",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 33,
+      "stop_id": "51915",
+      "stop_code": "51915",
+      "stop_name": "Beaubien / 9e Avenue",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 34,
+      "stop_id": "51946",
+      "stop_code": "51946",
+      "stop_name": "Beaubien / Saint-Michel",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 35,
+      "stop_id": "51983",
+      "stop_code": "51983",
+      "stop_name": "Beaubien / 13e Avenue",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 36,
+      "stop_id": "60634",
+      "stop_code": "60634",
+      "stop_name": "Beaubien / 20e Avenue",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - 20e Avenue",
+      "seq": 37,
+      "stop_id": "61804",
+      "stop_code": "61804",
+      "stop_name": "20e Avenue / de Bellechasse",
+      "cancelled": []
+    }
+  ],
+  "added": [],
+  "orphan_events": []
+}

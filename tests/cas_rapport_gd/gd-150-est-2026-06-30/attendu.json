@@ -1,0 +1,398 @@
+{
+  "parcours": {
+    "name": "Parcours principal",
+    "start": "Station Atwater (Ste-Catherine / Lambert-Closse)",
+    "end": "Station Papineau (Dorion / Sainte-Catherine)"
+  },
+  "rows": [
+    {
+      "gd": "Via - Sainte-Catherine",
+      "seq": 1,
+      "stop_id": "54148",
+      "stop_code": "54148",
+      "stop_name": "Station Atwater (Ste-Catherine / Lambert-Closse)",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - STE-CATHERINE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "Détour sans annulation",
+      "evenement_id": "11091358",
+      "effectif": "En tout temps"
+    },
+    {
+      "gd": "Droite - DU FORT",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11091358",
+      "effectif": ""
+    },
+    {
+      "gd": "Gauche - RENÉ LÉVESQUE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11091358",
+      "effectif": ""
+    },
+    {
+      "gd": "Via - R.R.",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11091358",
+      "effectif": ""
+    },
+    {
+      "gd": "Droite - Lambert-Closse",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_removed": true
+    },
+    {
+      "gd": "Droite - Tupper",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_removed": true
+    },
+    {
+      "gd": "Gauche - Atwater",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_removed": true
+    },
+    {
+      "gd": "Gauche - René-Lévesque",
+      "seq": 2,
+      "stop_id": "52227",
+      "stop_code": "52227",
+      "stop_name": "René-Lévesque / du Fort",
+      "cancelled": [],
+      "detour_removed": true
+    },
+    {
+      "gd": "",
+      "seq": 3,
+      "stop_id": "52286",
+      "stop_code": "52286",
+      "stop_name": "René-Lévesque / Saint-Mathieu",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 4,
+      "stop_id": "52329",
+      "stop_code": "52329",
+      "stop_name": "René-Lévesque / Guy",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 5,
+      "stop_id": "52374",
+      "stop_code": "52374",
+      "stop_name": "René-Lévesque / Bishop",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 6,
+      "stop_id": "52437",
+      "stop_code": "52437",
+      "stop_name": "René-Lévesque / Drummond",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 7,
+      "stop_id": "61807",
+      "stop_code": "61807",
+      "stop_name": "René-Lévesque / Stanley",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 8,
+      "stop_id": "52530",
+      "stop_code": "52530",
+      "stop_name": "René-Lévesque / Mansfield",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 9,
+      "stop_id": "53918",
+      "stop_code": "53918",
+      "stop_name": "René-Lévesque / Union",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 10,
+      "stop_id": "52627",
+      "stop_code": "52627",
+      "stop_name": "Basilique St-Patrick (R.-Lévesque / St-Alexandre)",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 11,
+      "stop_id": "60683",
+      "stop_code": "60683",
+      "stop_name": "René-Lévesque / Jeanne-Mance",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 12,
+      "stop_id": "52782",
+      "stop_code": "52782",
+      "stop_name": "René-Lévesque / Saint-Laurent",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 13,
+      "stop_id": "52835",
+      "stop_code": "52835",
+      "stop_name": "René-Lévesque / de l'Hôtel-de-Ville",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 14,
+      "stop_id": "60994",
+      "stop_code": "60994",
+      "stop_name": "René-Lévesque / Sanguinet (CHUM)",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 15,
+      "stop_id": "52882",
+      "stop_code": "52882",
+      "stop_name": "René-Lévesque / Saint-Denis (CHUM)",
+      "cancelled": [
+        {
+          "label": "Arrêt déplacé (Travaux) — AJOUT D'UN ARRÊT AU COIN SANGUINET POUR DESSERVIR LA CLIENTÈLE DU CHUM",
+          "short_label": "Arrêt déplacé (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "René-Lévesque / Saint-Denis (CHUM) (50 mètres avant)",
+          "evenement_id": "11177221",
+          "commentaire": "AJOUT D'UN ARRÊT AU COIN SANGUINET POUR DESSERVIR LA CLIENTÈLE DU CHUM",
+          "type_evenement": "arrêt déplacé"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 16,
+      "stop_id": "54041",
+      "stop_code": "54041",
+      "stop_name": "René-Lévesque / Berri",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 17,
+      "stop_id": "52931",
+      "stop_code": "52931",
+      "stop_name": "René-Lévesque / Saint-Hubert",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 18,
+      "stop_id": "52982",
+      "stop_code": "52982",
+      "stop_name": "René-Lévesque / Atateken",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 19,
+      "stop_id": "53032",
+      "stop_code": "53032",
+      "stop_name": "René-Lévesque / Panet",
+      "cancelled": [
+        {
+          "label": "Annulation d'arrêts (Travaux)",
+          "short_label": "Annulation d'arrêts (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "René-Lévesque / Panet",
+          "evenement_id": "11246494",
+          "commentaire": "",
+          "type_evenement": "annulation d'arrêts"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 20,
+      "stop_id": "53073",
+      "stop_code": "53073",
+      "stop_name": "René-Lévesque / Papineau (Maison Radio-Canada)",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - RENÉ-LÉVESQUE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "Détour avec annulation d'arrêt",
+      "evenement_id": "11205733",
+      "effectif": "En tout temps"
+    },
+    {
+      "gd": "Gauche - CARTIER TERMINUS TEMPORAIRE CARTIER AU NORD DE STE-CATHERINE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11205733",
+      "effectif": ""
+    },
+    {
+      "gd": "",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "Temp. - Station Papineau (Caetier / Sainte-Catherine 53047)",
+      "cancelled": [],
+      "added_inline": true,
+      "added_label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA RENÉ-LÉVESQUE G CARTIER TERMINUS TEMPORAIRE CARTIER AU NORD DE STE-CATHERINE",
+      "added_short_label": "Détour avec annulation d'arrêt (Travaux)",
+      "commentaire": "",
+      "effectif": "En tout temps",
+      "evenement_id": "11205733"
+    },
+    {
+      "gd": "Gauche - De Lorimier",
+      "seq": 21,
+      "stop_id": "53064",
+      "stop_code": "53064",
+      "stop_name": "De Lorimier / Sainte-Catherine",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA RENÉ-LÉVESQUE G CARTIER TERMINUS TEMPORAIRE CARTIER AU NORD DE STE-CATHERINE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "De Lorimier / Sainte-Catherine",
+          "evenement_id": "11205733",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ],
+      "detour_removed": true
+    },
+    {
+      "gd": "",
+      "seq": 22,
+      "stop_id": "53045",
+      "stop_code": "53045",
+      "stop_name": "De Lorimier / De Maisonneuve",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA RENÉ-LÉVESQUE G CARTIER TERMINUS TEMPORAIRE CARTIER AU NORD DE STE-CATHERINE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "De Lorimier / De Maisonneuve",
+          "evenement_id": "11205733",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "Droite - Logan",
+      "seq": 23,
+      "stop_id": "53034",
+      "stop_code": "53034",
+      "stop_name": "Logan / Parthenais",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA RENÉ-LÉVESQUE G CARTIER TERMINUS TEMPORAIRE CARTIER AU NORD DE STE-CATHERINE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "Logan / Parthenais",
+          "evenement_id": "11205733",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ],
+      "detour_removed": true
+    },
+    {
+      "gd": "Droite - Parthenais",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_removed": true
+    },
+    {
+      "gd": "Droite - De Maisonneuve",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_removed": true
+    },
+    {
+      "gd": "Gauche - Dorion",
+      "seq": 24,
+      "stop_id": "54117",
+      "stop_code": "54117",
+      "stop_name": "Station Papineau (Dorion / Sainte-Catherine)",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA RENÉ-LÉVESQUE G CARTIER TERMINUS TEMPORAIRE CARTIER AU NORD DE STE-CATHERINE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "Station Papineau (Dorion / Sainte-Catherine)",
+          "evenement_id": "11205733",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ],
+      "detour_removed": true
+    }
+  ],
+  "added": [],
+  "orphan_events": []
+}

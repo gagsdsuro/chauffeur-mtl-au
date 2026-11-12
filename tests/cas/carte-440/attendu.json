@@ -1,0 +1,73 @@
+{
+  "date": "2026-06-05",
+  "carte": "440",
+  "debut": "22:28",
+  "fin": "29:48",
+  "lignes": [
+    "12",
+    "195",
+    "354"
+  ],
+  "annotations": [
+    {
+      "type": "jaune",
+      "texte": "(12)"
+    },
+    {
+      "type": "bleu",
+      "ligne": "12",
+      "heure": "22:30"
+    },
+    {
+      "type": "rouge",
+      "texte": "p:22.03",
+      "ligne": "12",
+      "heure": "22:30",
+      "prec": "22:03"
+    },
+    {
+      "type": "bleu",
+      "ligne": "12",
+      "heure": "23:04"
+    },
+    {
+      "type": "bleu",
+      "ligne": "195",
+      "heure": "23:46"
+    },
+    {
+      "type": "rouge",
+      "texte": "p:23.17",
+      "ligne": "195",
+      "heure": "23:46",
+      "prec": "23:17"
+    },
+    {
+      "type": "bleu",
+      "ligne": "195",
+      "heure": "24:50"
+    },
+    {
+      "type": "bleu",
+      "ligne": "195",
+      "heure": "25:45"
+    },
+    {
+      "type": "bleu",
+      "ligne": "354",
+      "heure": "27:19"
+    },
+    {
+      "type": "rouge",
+      "texte": "p:26.34",
+      "ligne": "354",
+      "heure": "27:19",
+      "prec": "26:34"
+    },
+    {
+      "type": "bleu",
+      "ligne": "354",
+      "heure": "28:21"
+    }
+  ]
+}

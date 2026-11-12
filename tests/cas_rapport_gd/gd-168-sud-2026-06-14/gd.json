@@ -1,0 +1,50 @@
+{
+  "ligne": "168",
+  "direction": "sud",
+  "routes": [
+    {
+      "line_number": "168",
+      "direction": "Sud",
+      "parcours": [
+        {
+          "id": 1,
+          "name": "Parcours principal",
+          "start": "Station McGill (Union / De Maisonneuve)",
+          "start_code": 52451,
+          "end": "André-Prévost / Serge-Garant",
+          "end_code": 62163,
+          "direction": [
+            "Via - Union",
+            "Gauche - Cathcart",
+            "Droite - Phillips",
+            "Via - du Frère-André",
+            "Via - Beaver Hall",
+            "Droite - Viger",
+            "Gauche - Robert-Bourassa",
+            "Via - Bonaventure dir. O",
+            "Via - sortie 2 - Port de Montréal",
+            "Via - des Moulins",
+            "Via - vers aut. 10 Est/ aut. 15/ aut. 20/ Bonaventure",
+            "Via - Carrie-Derick",
+            "Via - vers aut. 10/ aut. 15/ aut. 20",
+            "Via - Bonaventure dir. O",
+            "Via - sortie 5 - Île-des-Soeurs",
+            "Via - de l'Île-des-Soeurs",
+            "Via - carrefour giratoire",
+            "Via - de l'Île-des-Soeurs",
+            "Via - de la Pointe-Nord",
+            "Via - carrefour giratoire Alexandre-Graham-Bell",
+            "Via - de la Pointe-Nord",
+            "Droite - Jacques-Le Ber",
+            "Via - René-Lévesque",
+            "Gauche - du Commerce",
+            "Via - Berlioz",
+            "Gauche - de l'Île-des-Soeurs",
+            "Via - de la Pointe-Sud",
+            "Droite - André-Prévost"
+          ]
+        }
+      ]
+    }
+  ]
+}

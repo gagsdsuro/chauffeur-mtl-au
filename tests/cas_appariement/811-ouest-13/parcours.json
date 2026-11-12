@@ -1,0 +1,27 @@
+{
+  "id": 13,
+  "name": "Parcours principal",
+  "start": "du Trianon / Joseph-Daoust (Terminus Radisson Sud",
+  "start_code": 62138,
+  "end": "du Trianon / Joseph-Daoust (Terminus Radisson Sud",
+  "end_code": 62138,
+  "direction": [
+    "Via - Terminus Radisson sud",
+    "Droite - du Trianon",
+    "Gauche - Sherbrooke",
+    "Gauche - Dickson",
+    "Droite - de Marseille",
+    "Droite - de l'Assomption",
+    "Gauche - Rosemont",
+    "Droite - Viau",
+    "Droite - Bélanger",
+    "Droite - Lacordaire",
+    "Droite - Rosemont",
+    "Gauche - de l'Assomption",
+    "Gauche - Chauveau",
+    "Gauche - Dickson",
+    "Droite - Sherbrooke",
+    "Droite - du Trianon",
+    "Gauche - Terminus Radisson sud"
+  ]
+}

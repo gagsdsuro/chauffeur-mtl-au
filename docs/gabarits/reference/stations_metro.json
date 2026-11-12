@@ -1,0 +1,7 @@
+{
+  "description": "GABARIT FICTIF — copier vers data/reference/stations_metro.json (fichier non versionné). Codes de station de métro correspondant au préfixe (4 premiers caractères, ex. \"M001\") des champs lieu_prise/lieu_fin des journées ; un suffixe numérique à 2 chiffres peut suivre (ex. \"M00101\").",
+  "stations": {
+    "M001": "Station Exemple 1",
+    "M002": "Station Exemple 2"
+  }
+}

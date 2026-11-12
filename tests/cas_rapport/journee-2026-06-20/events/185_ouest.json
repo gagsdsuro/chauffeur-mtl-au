@@ -1,0 +1,57 @@
+{
+  "ligne": "185",
+  "direction": "ouest",
+  "detours": [
+    {
+      "evenement_id": "11245069",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-06-22T09:00:00",
+      "date_heure_fin": "2026-06-22T17:00:00",
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "53241",
+          "nom": "Sherbrooke / Lepailleur"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": null,
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11248464",
+      "titre": "Détour avec annulation d'arrêt",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-06-09T00:01:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "52864",
+          "nom": "du Havre / Hochelaga"
+        }
+      ],
+      "description_gd": "VIA HOCHELAGA G/ DU HAVRE VIA R.R RETOUR À LA ROUTE RÉGULIÈRE DURANT LES TRAVAUX SUR IBERVILLE ARRET TEMPORAIRE HAVRE/DE ROUEN (52946)",
+      "commentaire": null,
+      "arrets_ajoutes": []
+    },
+    {
+      "evenement_id": "11268448",
+      "titre": "Annulation d'arrêts",
+      "motif": "Travaux",
+      "date_heure_debut": "2026-06-20T05:07:00",
+      "date_heure_fin": null,
+      "effectif": "En tout temps",
+      "arrets_annules": [
+        {
+          "id": "53287",
+          "nom": "Sherbrooke / Saint-Donat"
+        }
+      ],
+      "description_gd": null,
+      "commentaire": "***GARDER LA VOIE DE GAUCHE SUR SHERBROOKE / ST-DONAT ***CAR OBLIGATION DE TOURNER À DROITE.",
+      "arrets_ajoutes": []
+    }
+  ]
+}

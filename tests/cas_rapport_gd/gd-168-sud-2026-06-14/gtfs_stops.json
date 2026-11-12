@@ -1,0 +1,238 @@
+{
+  "stops": [
+    [
+      1,
+      "52451"
+    ],
+    [
+      2,
+      "52527"
+    ],
+    [
+      3,
+      "52669"
+    ],
+    [
+      4,
+      "52705"
+    ],
+    [
+      5,
+      "52732"
+    ],
+    [
+      6,
+      "52754"
+    ],
+    [
+      7,
+      "62168"
+    ],
+    [
+      8,
+      "53919"
+    ],
+    [
+      9,
+      "54372"
+    ],
+    [
+      10,
+      "52971"
+    ],
+    [
+      11,
+      "53920"
+    ],
+    [
+      12,
+      "54312"
+    ],
+    [
+      13,
+      "60747"
+    ],
+    [
+      14,
+      "62134"
+    ],
+    [
+      15,
+      "61671"
+    ],
+    [
+      16,
+      "56691"
+    ],
+    [
+      17,
+      "56665"
+    ],
+    [
+      18,
+      "56666"
+    ],
+    [
+      19,
+      "56664"
+    ],
+    [
+      20,
+      "56662"
+    ],
+    [
+      21,
+      "56700"
+    ],
+    [
+      22,
+      "56660"
+    ],
+    [
+      23,
+      "56653"
+    ],
+    [
+      24,
+      "60400"
+    ],
+    [
+      25,
+      "60696"
+    ],
+    [
+      26,
+      "60697"
+    ],
+    [
+      27,
+      "60699"
+    ],
+    [
+      28,
+      "62130"
+    ],
+    [
+      29,
+      "62163"
+    ]
+  ],
+  "stop_names": {
+    "52451": {
+      "code": "52451",
+      "name": "Station McGill (Union / De Maisonneuve)"
+    },
+    "52527": {
+      "code": "52527",
+      "name": "Union / Sainte-Catherine"
+    },
+    "52669": {
+      "code": "52669",
+      "name": "du Beaver Hall / Belmont"
+    },
+    "52705": {
+      "code": "52705",
+      "name": "Station Square-Victoria-OACI"
+    },
+    "52732": {
+      "code": "52732",
+      "name": "Robert-Bourassa / Viger"
+    },
+    "52754": {
+      "code": "52754",
+      "name": "Robert-Bourassa / Saint-Jacques"
+    },
+    "62168": {
+      "code": "62168",
+      "name": "Robert-Bourassa / Notre-Dame"
+    },
+    "53919": {
+      "code": "53919",
+      "name": "Robert-Bourassa / William"
+    },
+    "54372": {
+      "code": "54372",
+      "name": "Robert-Bourassa / Ottawa"
+    },
+    "52971": {
+      "code": "52971",
+      "name": "Robert-Bourassa / Wellington"
+    },
+    "53920": {
+      "code": "53920",
+      "name": "des Moulins / No 950"
+    },
+    "54312": {
+      "code": "54312",
+      "name": "des Moulins / Pierre-Dupuy"
+    },
+    "60747": {
+      "code": "60747",
+      "name": "Campus Bell"
+    },
+    "62134": {
+      "code": "62134",
+      "name": "Station Île-des-Soeurs"
+    },
+    "61671": {
+      "code": "61671",
+      "name": "René-Lévesque / Levert"
+    },
+    "56691": {
+      "code": "56691",
+      "name": "Berlioz / Terry-Fox"
+    },
+    "56665": {
+      "code": "56665",
+      "name": "Berlioz / Place du Soleil"
+    },
+    "56666": {
+      "code": "56666",
+      "name": "Berlioz / Place de la Fontaine"
+    },
+    "56664": {
+      "code": "56664",
+      "name": "Berlioz / Landreville"
+    },
+    "56662": {
+      "code": "56662",
+      "name": "Berlioz / de l'Île-des-Soeurs"
+    },
+    "56700": {
+      "code": "56700",
+      "name": "de l'Île-des-Soeurs / Berlioz"
+    },
+    "56660": {
+      "code": "56660",
+      "name": "de l'Île-des-Soeurs / Elgar"
+    },
+    "56653": {
+      "code": "56653",
+      "name": "de l'Île-des-Soeurs / De Gaspé"
+    },
+    "60400": {
+      "code": "60400",
+      "name": "de l'Île-des-Soeurs / Hall"
+    },
+    "60696": {
+      "code": "60696",
+      "name": "de la Pointe-Sud / de l'Orée-du-Bois"
+    },
+    "60697": {
+      "code": "60697",
+      "name": "de la Pointe-Sud / des Parulines"
+    },
+    "60699": {
+      "code": "60699",
+      "name": "de la Pointe-Sud / No 250"
+    },
+    "62130": {
+      "code": "62130",
+      "name": "de la Pointe-Sud / André-Prévost"
+    },
+    "62163": {
+      "code": "62163",
+      "name": "André-Prévost / Serge-Garant"
+    }
+  }
+}

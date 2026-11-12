@@ -1,0 +1,78 @@
+[
+  {
+    "evenement_id": "11205733",
+    "titre": "Détour avec annulation d'arrêt",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-04-30T06:00:00",
+    "date_heure_fin": "2026-06-30T02:00:00",
+    "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
+    "arrets_annules": [
+      {
+        "id": "53065",
+        "nom": "Sainte-Catherine / De Lorimier"
+      },
+      {
+        "id": "53079",
+        "nom": "Sainte-Catherine / Parthenais"
+      },
+      {
+        "id": "53094",
+        "nom": "Sainte-Catherine / Fullum"
+      },
+      {
+        "id": "53110",
+        "nom": "Sainte-Catherine / Dufresne"
+      },
+      {
+        "id": "53119",
+        "nom": "Sainte-Catherine / D'Iberville"
+      },
+      {
+        "id": "53137",
+        "nom": "Sainte-Catherine / du Havre"
+      },
+      {
+        "id": "54188",
+        "nom": "Station Papineau (Dorion / Sainte-Catherine)"
+      }
+    ],
+    "description_gd": "VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R",
+    "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+    "arrets_ajoutes": [
+      {
+        "id": "53016",
+        "nom": "Station Frontenac (du Havre / Ontario)"
+      },
+      {
+        "id": "",
+        "nom": "Temp. - Ste-Catherine / Du havre (E/S)"
+      }
+    ]
+  },
+  {
+    "evenement_id": "11218486",
+    "titre": "Détour avec annulation d'arrêt",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-05-11T00:00:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "53259",
+        "nom": "Sainte-Catherine / Jeanne-d'Arc"
+      },
+      {
+        "id": "53271",
+        "nom": "Sainte-Catherine / Pie-IX"
+      }
+    ],
+    "description_gd": "VIA SAINTE-CATHERINE G BOURBONNIÈRE D ADAM D DE LA SALLE G STE-CATHERINE VIA RR",
+    "commentaire": null,
+    "arrets_ajoutes": [
+      {
+        "id": "53238",
+        "nom": "Pie-IX / Adam"
+      }
+    ]
+  }
+]

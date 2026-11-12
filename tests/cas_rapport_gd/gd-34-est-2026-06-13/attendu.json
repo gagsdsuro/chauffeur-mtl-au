@@ -1,0 +1,501 @@
+{
+  "parcours": {
+    "name": "Parcours principal",
+    "start": "Station Papineau (Dorion / Sainte-Catherine)",
+    "end": "Station Viau"
+  },
+  "rows": [
+    {
+      "gd": "",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "Station Frontenac (du Havre / Ontario)",
+      "cancelled": [],
+      "added_inline": true,
+      "added_label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+      "added_short_label": "Détour avec annulation d'arrêt (Travaux)",
+      "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+      "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
+      "evenement_id": "11205733"
+    },
+    {
+      "gd": "Via - TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "Détour avec annulation d'arrêt",
+      "evenement_id": "11205733",
+      "effectif": "Seulement entre 06:00 et 02:00 chaque jour"
+    },
+    {
+      "gd": "Gauche - STE CATHERINE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11205733",
+      "effectif": ""
+    },
+    {
+      "gd": "",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "Temp. - Ste-Catherine / Du havre (E/S)",
+      "cancelled": [],
+      "added_inline": true,
+      "added_label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+      "added_short_label": "Détour avec annulation d'arrêt (Travaux)",
+      "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+      "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
+      "evenement_id": "11205733"
+    },
+    {
+      "gd": "Via - R.R.",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11205733",
+      "effectif": ""
+    },
+    {
+      "gd": "Via - Dorion",
+      "seq": 1,
+      "stop_id": "54188",
+      "stop_code": "54188",
+      "stop_name": "Station Papineau (Dorion / Sainte-Catherine)",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
+          "nom_evt": "Station Papineau (Dorion / Sainte-Catherine)",
+          "evenement_id": "11205733",
+          "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ],
+      "detour_removed": true
+    },
+    {
+      "gd": "Gauche - Sainte-Catherine",
+      "seq": 2,
+      "stop_id": "53065",
+      "stop_code": "53065",
+      "stop_name": "Sainte-Catherine / De Lorimier",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
+          "nom_evt": "Sainte-Catherine / De Lorimier",
+          "evenement_id": "11205733",
+          "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ],
+      "detour_removed": true
+    },
+    {
+      "gd": "",
+      "seq": 3,
+      "stop_id": "53079",
+      "stop_code": "53079",
+      "stop_name": "Sainte-Catherine / Parthenais",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
+          "nom_evt": "Sainte-Catherine / Parthenais",
+          "evenement_id": "11205733",
+          "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 4,
+      "stop_id": "53094",
+      "stop_code": "53094",
+      "stop_name": "Sainte-Catherine / Fullum",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
+          "nom_evt": "Sainte-Catherine / Fullum",
+          "evenement_id": "11205733",
+          "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 5,
+      "stop_id": "53110",
+      "stop_code": "53110",
+      "stop_name": "Sainte-Catherine / Dufresne",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
+          "nom_evt": "Sainte-Catherine / Dufresne",
+          "evenement_id": "11205733",
+          "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 6,
+      "stop_id": "53119",
+      "stop_code": "53119",
+      "stop_name": "Sainte-Catherine / D'Iberville",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
+          "nom_evt": "Sainte-Catherine / D'Iberville",
+          "evenement_id": "11205733",
+          "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 7,
+      "stop_id": "53137",
+      "stop_code": "53137",
+      "stop_name": "Sainte-Catherine / du Havre",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA TERMINUS TEMPORAIRE DU HAVRE / ONTARIO ARRÊT 53016 G/ STE CATHERINE VIA R.R — TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "Seulement entre 06:00 et 02:00 chaque jour",
+          "nom_evt": "Sainte-Catherine / du Havre",
+          "evenement_id": "11205733",
+          "commentaire": "TRAVAUX DE 6 AM A 2AM\nPOINT DE RELÈVE EN DIR EST : DU HAVRE AU SUD DE ONTARIO (ARRÊT 53016)\nVOTRE DÉPART DOIT ÊTRE FAIT 2 MINUTES AVANT VOTRE HEURE DE PASSAGE À STE-CATHERINE / DU HAVRE",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 8,
+      "stop_id": "53172",
+      "stop_code": "53172",
+      "stop_name": "Sainte-Catherine / Alphonse-D.-Roy",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 9,
+      "stop_id": "53181",
+      "stop_code": "53181",
+      "stop_name": "Sainte-Catherine / Moreau",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 10,
+      "stop_id": "53193",
+      "stop_code": "53193",
+      "stop_name": "Sainte-Catherine / Dézéry",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 11,
+      "stop_id": "53213",
+      "stop_code": "53213",
+      "stop_name": "Sainte-Catherine / Davidson",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 12,
+      "stop_id": "53227",
+      "stop_code": "53227",
+      "stop_name": "Sainte-Catherine / Aylwin",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 13,
+      "stop_id": "53236",
+      "stop_code": "53236",
+      "stop_name": "Sainte-Catherine / Nicolet",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 14,
+      "stop_id": "53244",
+      "stop_code": "53244",
+      "stop_name": "Sainte-Catherine / Bourbonnière",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - SAINTE-CATHERINE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "Détour avec annulation d'arrêt",
+      "evenement_id": "11218486",
+      "effectif": "En tout temps"
+    },
+    {
+      "gd": "Gauche - BOURBONNIÈRE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11218486",
+      "effectif": ""
+    },
+    {
+      "gd": "Droite - ADAM",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11218486",
+      "effectif": ""
+    },
+    {
+      "gd": "",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "Pie-IX / Adam",
+      "cancelled": [],
+      "added_inline": true,
+      "added_label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA SAINTE-CATHERINE G BOURBONNIÈRE D ADAM D DE LA SALLE G STE-CATHERINE VIA RR",
+      "added_short_label": "Détour avec annulation d'arrêt (Travaux)",
+      "commentaire": "",
+      "effectif": "En tout temps",
+      "evenement_id": "11218486"
+    },
+    {
+      "gd": "Droite - DE LA SALLE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11218486",
+      "effectif": ""
+    },
+    {
+      "gd": "Gauche - STE-CATHERINE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11218486",
+      "effectif": ""
+    },
+    {
+      "gd": "Via - R.R.",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11218486",
+      "effectif": ""
+    },
+    {
+      "gd": "",
+      "seq": 15,
+      "stop_id": "53259",
+      "stop_code": "53259",
+      "stop_name": "Sainte-Catherine / Jeanne-d'Arc",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA SAINTE-CATHERINE G BOURBONNIÈRE D ADAM D DE LA SALLE G STE-CATHERINE VIA RR",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "Sainte-Catherine / Jeanne-d'Arc",
+          "evenement_id": "11218486",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 16,
+      "stop_id": "53271",
+      "stop_code": "53271",
+      "stop_name": "Sainte-Catherine / Pie-IX",
+      "cancelled": [
+        {
+          "label": "Détour avec annulation d'arrêt (Travaux) — G-D: VIA SAINTE-CATHERINE G BOURBONNIÈRE D ADAM D DE LA SALLE G STE-CATHERINE VIA RR",
+          "short_label": "Détour avec annulation d'arrêt (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "Sainte-Catherine / Pie-IX",
+          "evenement_id": "11218486",
+          "commentaire": "",
+          "type_evenement": "détour avec annulation d'arrêt"
+        }
+      ]
+    },
+    {
+      "gd": "",
+      "seq": 17,
+      "stop_id": "53286",
+      "stop_code": "53286",
+      "stop_name": "Sainte-Catherine / Letourneux",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 18,
+      "stop_id": "53299",
+      "stop_code": "53299",
+      "stop_name": "Sainte-Catherine / William-David",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 19,
+      "stop_id": "53310",
+      "stop_code": "53310",
+      "stop_name": "Sainte-Catherine / Aird",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 20,
+      "stop_id": "53325",
+      "stop_code": "53325",
+      "stop_name": "Sainte-Catherine / Leclaire",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 21,
+      "stop_id": "53331",
+      "stop_code": "53331",
+      "stop_name": "Sainte-Catherine / Saint-Clément",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 22,
+      "stop_id": "53343",
+      "stop_code": "53343",
+      "stop_name": "Sainte-Catherine / Vimont",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 23,
+      "stop_id": "53354",
+      "stop_code": "53354",
+      "stop_name": "Sainte-Catherine / Notre-Dame",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - Notre-Dame",
+      "seq": 24,
+      "stop_id": "53348",
+      "stop_code": "53348",
+      "stop_name": "Notre-Dame / Viau",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - Viau",
+      "seq": 25,
+      "stop_id": "53333",
+      "stop_code": "53333",
+      "stop_name": "Viau / Sainte-Catherine",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 26,
+      "stop_id": "53317",
+      "stop_code": "53317",
+      "stop_name": "Viau / Adam",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 27,
+      "stop_id": "53295",
+      "stop_code": "53295",
+      "stop_name": "Viau / La Fontaine",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 28,
+      "stop_id": "53274",
+      "stop_code": "53274",
+      "stop_name": "Viau / Ontario",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 29,
+      "stop_id": "53223",
+      "stop_code": "53223",
+      "stop_name": "Viau / de Rouen",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 30,
+      "stop_id": "53166",
+      "stop_code": "53166",
+      "stop_name": "Viau / Hochelaga",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - Pierre-De Coubertin",
+      "seq": 31,
+      "stop_id": "53753",
+      "stop_code": "53753",
+      "stop_name": "Station Viau",
+      "cancelled": []
+    }
+  ],
+  "added": [],
+  "orphan_events": []
+}

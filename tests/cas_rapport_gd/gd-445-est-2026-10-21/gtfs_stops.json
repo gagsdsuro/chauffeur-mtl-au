@@ -1,0 +1,302 @@
+{
+  "stops": [
+    [
+      1,
+      "61809"
+    ],
+    [
+      2,
+      "53918"
+    ],
+    [
+      3,
+      "52627"
+    ],
+    [
+      4,
+      "60683"
+    ],
+    [
+      5,
+      "52782"
+    ],
+    [
+      6,
+      "52835"
+    ],
+    [
+      7,
+      "52882"
+    ],
+    [
+      8,
+      "54041"
+    ],
+    [
+      9,
+      "52931"
+    ],
+    [
+      10,
+      "52982"
+    ],
+    [
+      11,
+      "53032"
+    ],
+    [
+      12,
+      "53073"
+    ],
+    [
+      13,
+      "53064"
+    ],
+    [
+      14,
+      "53045"
+    ],
+    [
+      15,
+      "53010"
+    ],
+    [
+      16,
+      "52895"
+    ],
+    [
+      17,
+      "52813"
+    ],
+    [
+      18,
+      "52637"
+    ],
+    [
+      19,
+      "52561"
+    ],
+    [
+      20,
+      "52456"
+    ],
+    [
+      21,
+      "52380"
+    ],
+    [
+      22,
+      "52267"
+    ],
+    [
+      23,
+      "52179"
+    ],
+    [
+      24,
+      "62131"
+    ],
+    [
+      25,
+      "52022"
+    ],
+    [
+      26,
+      "51819"
+    ],
+    [
+      27,
+      "51768"
+    ],
+    [
+      28,
+      "51741"
+    ],
+    [
+      29,
+      "62789"
+    ],
+    [
+      30,
+      "51805"
+    ],
+    [
+      31,
+      "54136"
+    ],
+    [
+      32,
+      "51869"
+    ],
+    [
+      33,
+      "51915"
+    ],
+    [
+      34,
+      "51946"
+    ],
+    [
+      35,
+      "51983"
+    ],
+    [
+      36,
+      "60634"
+    ],
+    [
+      37,
+      "61804"
+    ]
+  ],
+  "stop_names": {
+    "61809": {
+      "code": "61809",
+      "name": "de la Cathédrale / René-Lévesque"
+    },
+    "53918": {
+      "code": "53918",
+      "name": "René-Lévesque / Union"
+    },
+    "52627": {
+      "code": "52627",
+      "name": "Basilique St-Patrick (R.-Lévesque / St-Alexandre)"
+    },
+    "60683": {
+      "code": "60683",
+      "name": "René-Lévesque / Jeanne-Mance"
+    },
+    "52782": {
+      "code": "52782",
+      "name": "René-Lévesque / Saint-Laurent"
+    },
+    "52835": {
+      "code": "52835",
+      "name": "René-Lévesque / de l'Hôtel-de-Ville"
+    },
+    "52882": {
+      "code": "52882",
+      "name": "René-Lévesque / Saint-Denis (CHUM)"
+    },
+    "54041": {
+      "code": "54041",
+      "name": "René-Lévesque / Berri"
+    },
+    "52931": {
+      "code": "52931",
+      "name": "René-Lévesque / Saint-Hubert"
+    },
+    "52982": {
+      "code": "52982",
+      "name": "René-Lévesque / Atateken"
+    },
+    "53032": {
+      "code": "53032",
+      "name": "René-Lévesque / Panet"
+    },
+    "53073": {
+      "code": "53073",
+      "name": "René-Lévesque / Papineau (Maison Radio-Canada)"
+    },
+    "53064": {
+      "code": "53064",
+      "name": "De Lorimier / Sainte-Catherine"
+    },
+    "53045": {
+      "code": "53045",
+      "name": "De Lorimier / De Maisonneuve"
+    },
+    "53010": {
+      "code": "53010",
+      "name": "De Lorimier / Logan"
+    },
+    "52895": {
+      "code": "52895",
+      "name": "De Lorimier / Ontario"
+    },
+    "52813": {
+      "code": "52813",
+      "name": "De Lorimier / de Rouen"
+    },
+    "52637": {
+      "code": "52637",
+      "name": "De Lorimier / Gauthier"
+    },
+    "52561": {
+      "code": "52561",
+      "name": "De Lorimier / Rachel"
+    },
+    "52456": {
+      "code": "52456",
+      "name": "De Lorimier / Marie-Anne"
+    },
+    "52380": {
+      "code": "52380",
+      "name": "De Lorimier / du Mont-Royal"
+    },
+    "52267": {
+      "code": "52267",
+      "name": "De Lorimier / Gilford"
+    },
+    "52179": {
+      "code": "52179",
+      "name": "Saint-Joseph / Chabot"
+    },
+    "62131": {
+      "code": "62131",
+      "name": "Papineau / Laurier"
+    },
+    "52022": {
+      "code": "52022",
+      "name": "Papineau / Masson"
+    },
+    "51819": {
+      "code": "51819",
+      "name": "Papineau / Rosemont"
+    },
+    "51768": {
+      "code": "51768",
+      "name": "Papineau / de Bellechasse"
+    },
+    "51741": {
+      "code": "51741",
+      "name": "Beaubien / De Lorimier"
+    },
+    "62789": {
+      "code": "62789",
+      "name": "Beaubien / des Écores"
+    },
+    "51805": {
+      "code": "51805",
+      "name": "Beaubien / D'Iberville"
+    },
+    "54136": {
+      "code": "54136",
+      "name": "Beaubien / 1re Avenue"
+    },
+    "51869": {
+      "code": "51869",
+      "name": "Beaubien / 6e Avenue"
+    },
+    "51915": {
+      "code": "51915",
+      "name": "Beaubien / 9e Avenue"
+    },
+    "51946": {
+      "code": "51946",
+      "name": "Beaubien / Saint-Michel"
+    },
+    "51983": {
+      "code": "51983",
+      "name": "Beaubien / 13e Avenue"
+    },
+    "60634": {
+      "code": "60634",
+      "name": "Beaubien / 20e Avenue"
+    },
+    "61804": {
+      "code": "61804",
+      "name": "20e Avenue / de Bellechasse"
+    }
+  }
+}

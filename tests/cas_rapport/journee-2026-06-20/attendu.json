@@ -1,0 +1,82 @@
+{
+  "garage_id": "59200",
+  "lignes": [
+    "150",
+    "185",
+    "94"
+  ],
+  "meta": {
+    "date_travail": "2026-06-20",
+    "jour_semaine": "Samedi",
+    "heure_prise": "17:16",
+    "lieu_prise": "M15001",
+    "heure_fin": "25:11",
+    "voiture": "38090",
+    "garage": "Frontenac"
+  },
+  "directions": {
+    "150": [
+      {
+        "sens": "Est",
+        "parcours": "Parcours principal"
+      },
+      {
+        "sens": "Ouest",
+        "parcours": "Parcours principal"
+      }
+    ],
+    "94": [
+      {
+        "sens": "Nord",
+        "parcours": "Parcours principal"
+      },
+      {
+        "sens": "Sud",
+        "parcours": "Parcours principal"
+      }
+    ],
+    "185": [
+      {
+        "sens": "Est",
+        "parcours": "Parcours principal"
+      },
+      {
+        "sens": "Ouest",
+        "parcours": "Parcours principal"
+      }
+    ]
+  },
+  "evenements": {
+    "150": {
+      "applicables": [
+        "11091358",
+        "11177221",
+        "11203572",
+        "11205733",
+        "11205733",
+        "11246494"
+      ],
+      "non_applicables": []
+    },
+    "94": {
+      "applicables": [
+        "11248464",
+        "11256221"
+      ],
+      "non_applicables": []
+    },
+    "185": {
+      "applicables": [
+        "11248464",
+        "11256352",
+        "11268448"
+      ],
+      "non_applicables": [
+        {
+          "id": "11245069",
+          "raison": "Pas encore actif (début 2026-06-22)"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "evenement_id": "11091358",
+    "titre": "Détour sans annulation",
+    "motif": "Situation Incontrôlable",
+    "date_heure_debut": "2026-01-08T16:48:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [],
+    "description_gd": "VIA STE-CATHERINE D DU FORT G RENÉ LÉVESQUE VIA RR",
+    "commentaire": "CONGESTION",
+    "arrets_ajoutes": []
+  },
+  {
+    "evenement_id": "11177221",
+    "titre": "Arrêt déplacé",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-05-06T17:09:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "52882",
+        "nom": "René-Lévesque / Saint-Denis (CHUM) (50 mètres avant)"
+      }
+    ],
+    "description_gd": null,
+    "commentaire": "AJOUT D'UN ARRÊT AU COIN SANGUINET POUR DESSERVIR LA CLIENTÈLE DU CHUM",
+    "arrets_ajoutes": []
+  },
+  {
+    "evenement_id": "11205733",
+    "titre": "Détour avec annulation d'arrêt",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-04-28T05:45:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "53034",
+        "nom": "Logan / Parthenais"
+      },
+      {
+        "id": "53045",
+        "nom": "De Lorimier / De Maisonneuve"
+      },
+      {
+        "id": "53064",
+        "nom": "De Lorimier / Sainte-Catherine"
+      },
+      {
+        "id": "54117",
+        "nom": "Station Papineau (Dorion / Sainte-Catherine)"
+      }
+    ],
+    "description_gd": "VIA RENÉ-LÉVESQUE G CARTIER TERMINUS TEMPORAIRE CARTIER AU NORD DE STE-CATHERINE",
+    "commentaire": null,
+    "arrets_ajoutes": [
+      {
+        "id": "",
+        "nom": "Temp. - Station Papineau (Caetier / Sainte-Catherine 53047)"
+      }
+    ]
+  },
+  {
+    "evenement_id": "11246494",
+    "titre": "Annulation d'arrêts",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-06-02T04:58:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "53032",
+        "nom": "René-Lévesque / Panet"
+      }
+    ],
+    "description_gd": null,
+    "commentaire": null,
+    "arrets_ajoutes": []
+  }
+]

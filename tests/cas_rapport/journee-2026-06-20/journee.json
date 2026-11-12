@@ -1,0 +1,276 @@
+{
+  "date": "2026-06-20",
+  "garage_id": "59200",
+  "garage": "Frontenac",
+  "journee_numero": 453,
+  "temps_travaille": "7:25",
+  "temps_supplementaire": "0:00",
+  "mis_a_jour": "2026-06-20T12:02",
+  "pieces": [
+    {
+      "id": "94-12",
+      "numero_autobus": "38090",
+      "duree": "3:20",
+      "prise": "17:16",
+      "lieu_prise": "M15001",
+      "debut": "17:16",
+      "fin": "20:36",
+      "lieu_fin": "M15203",
+      "releve": {
+        "je_releve": {
+          "nom": "Tremblay Alexandre",
+          "matricule": "40101"
+        },
+        "je_suis_releve_par": {
+          "nom": "Gagnon Camille",
+          "matricule": "40102"
+        }
+      },
+      "trajets": [
+        {
+          "type": "service",
+          "ligne": "150",
+          "direction": "ouest",
+          "id_parcours": 1,
+          "detour": true,
+          "depart": {
+            "arret": "Station Papineau",
+            "heure": "17:20"
+          },
+          "arrivee": {
+            "arret": "Station Atwater",
+            "heure": "17:53"
+          }
+        },
+        {
+          "type": "service",
+          "ligne": "150",
+          "direction": "est",
+          "id_parcours": 2,
+          "detour": true,
+          "depart": {
+            "arret": "Station Atwater",
+            "heure": "18:04"
+          },
+          "arrivee": {
+            "arret": "Station Papineau",
+            "heure": "18:38"
+          }
+        },
+        {
+          "type": "service",
+          "ligne": "150",
+          "direction": "ouest",
+          "id_parcours": 1,
+          "detour": true,
+          "depart": {
+            "arret": "Station Papineau",
+            "heure": "18:41"
+          },
+          "arrivee": {
+            "arret": "Station Atwater",
+            "heure": "19:14"
+          }
+        },
+        {
+          "type": "haut_le_pied",
+          "ligne": null,
+          "direction": null,
+          "id_parcours": null,
+          "detour": false,
+          "depart": {
+            "arret": "Station Atwater",
+            "heure": "19:14"
+          },
+          "arrivee": {
+            "arret": "Ste-Catherine / Du Havre",
+            "heure": "19:36"
+          }
+        },
+        {
+          "type": "service",
+          "ligne": "94",
+          "direction": "nord",
+          "id_parcours": 1,
+          "detour": false,
+          "depart": {
+            "arret": "Ste-Catherine / Du Havre",
+            "heure": "19:40"
+          },
+          "arrivee": {
+            "arret": "2E Avenue / Cirque Du Soleil",
+            "heure": "20:08"
+          }
+        },
+        {
+          "type": "service",
+          "ligne": "94",
+          "direction": "sud",
+          "id_parcours": 2,
+          "detour": true,
+          "depart": {
+            "arret": "2E Avenue / Cirque Du Soleil",
+            "heure": "20:12"
+          },
+          "arrivee": {
+            "arret": "Station Frontenac",
+            "heure": "20:36"
+          }
+        }
+      ]
+    },
+    {
+      "id": "185-12",
+      "numero_autobus": "38022",
+      "duree": "4:05",
+      "prise": "21:06",
+      "lieu_prise": "E137",
+      "debut": "21:06",
+      "fin": "25:11",
+      "lieu_fin": "FRT",
+      "releve": {
+        "je_releve": {
+          "nom": "Roy Sophie",
+          "matricule": "40103"
+        }
+      },
+      "trajets": [
+        {
+          "type": "haut_le_pied",
+          "ligne": null,
+          "direction": null,
+          "id_parcours": null,
+          "detour": false,
+          "depart": {
+            "arret": "Du Havre / La Fontaine",
+            "heure": "21:06"
+          },
+          "arrivee": {
+            "arret": "Station Frontenac",
+            "heure": "21:09"
+          }
+        },
+        {
+          "type": "service",
+          "ligne": "185",
+          "direction": "est",
+          "id_parcours": 2,
+          "detour": true,
+          "depart": {
+            "arret": "Station Frontenac",
+            "heure": "21:18"
+          },
+          "arrivee": {
+            "arret": "Bellerive / Mercier",
+            "heure": "21:54"
+          }
+        },
+        {
+          "type": "service",
+          "ligne": "185",
+          "direction": "ouest",
+          "id_parcours": 1,
+          "detour": true,
+          "depart": {
+            "arret": "Bellerive / Mercier",
+            "heure": "22:02"
+          },
+          "arrivee": {
+            "arret": "Du Havre / La Fontaine",
+            "heure": "22:37"
+          }
+        },
+        {
+          "type": "haut_le_pied",
+          "ligne": null,
+          "direction": null,
+          "id_parcours": null,
+          "detour": false,
+          "depart": {
+            "arret": "Du Havre / La Fontaine",
+            "heure": "22:37"
+          },
+          "arrivee": {
+            "arret": "Station Frontenac",
+            "heure": "22:39"
+          }
+        },
+        {
+          "type": "service",
+          "ligne": "185",
+          "direction": "est",
+          "id_parcours": 2,
+          "detour": true,
+          "depart": {
+            "arret": "Station Frontenac",
+            "heure": "22:49"
+          },
+          "arrivee": {
+            "arret": "Bellerive / Mercier",
+            "heure": "23:25"
+          }
+        },
+        {
+          "type": "service",
+          "ligne": "185",
+          "direction": "ouest",
+          "id_parcours": 1,
+          "detour": true,
+          "depart": {
+            "arret": "Bellerive / Mercier",
+            "heure": "23:33"
+          },
+          "arrivee": {
+            "arret": "Du Havre / La Fontaine",
+            "heure": "24:08"
+          }
+        },
+        {
+          "type": "haut_le_pied",
+          "ligne": null,
+          "direction": null,
+          "id_parcours": null,
+          "detour": false,
+          "depart": {
+            "arret": "Du Havre / La Fontaine",
+            "heure": "24:08"
+          },
+          "arrivee": {
+            "arret": "Station Frontenac",
+            "heure": "24:10"
+          }
+        },
+        {
+          "type": "service",
+          "ligne": "185",
+          "direction": "est",
+          "id_parcours": 2,
+          "detour": true,
+          "depart": {
+            "arret": "Station Frontenac",
+            "heure": "24:16"
+          },
+          "arrivee": {
+            "arret": "Bellerive / Mercier",
+            "heure": "24:51"
+          }
+        },
+        {
+          "type": "entree",
+          "ligne": null,
+          "direction": null,
+          "id_parcours": null,
+          "detour": false,
+          "depart": {
+            "arret": "Bellerive / Mercier",
+            "heure": "24:51"
+          },
+          "arrivee": {
+            "arret": "Frontenac",
+            "heure": "25:11"
+          }
+        }
+      ]
+    }
+  ]
+}

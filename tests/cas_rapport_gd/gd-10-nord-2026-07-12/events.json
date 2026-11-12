@@ -1,0 +1,95 @@
+[
+  {
+    "evenement_id": "11205733",
+    "titre": "Détour avec annulation d'arrêt",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-05-13T16:01:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "52895",
+        "nom": "De Lorimier / Ontario"
+      },
+      {
+        "id": "53010",
+        "nom": "De Lorimier / Logan"
+      },
+      {
+        "id": "53045",
+        "nom": "De Lorimier / De Maisonneuve"
+      },
+      {
+        "id": "53051",
+        "nom": "Station Papineau (Dorion / Sainte-Catherine)"
+      }
+    ],
+    "commentaire": null,
+    "arrets_ajoutes": [
+      {
+        "id": "53047",
+        "nom": "Station Papineau (Cartier / Sainte-Catherine)"
+      },
+      {
+        "id": "52869",
+        "nom": "Parc des Faubourgs (Ontario/Dorion)"
+      }
+    ],
+    "description_gd": "VIA TT CARTIER / STE-CATHERINE CÔTÉ NORD VIA CARTIER G /DE MAISONNEUVE D /CHAMPLAIN D /ONTARIO G /DE LORIMIER VIA RR"
+  },
+  {
+    "evenement_id": "11270489",
+    "titre": "Détour avec annulation d'arrêt",
+    "motif": "Événement spécial",
+    "date_heure_debut": "2026-07-12T19:45:00",
+    "date_heure_fin": "2026-07-12T23:59:00",
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "52813",
+        "nom": "De Lorimier / de Rouen"
+      },
+      {
+        "id": "52895",
+        "nom": "De Lorimier / Ontario"
+      },
+      {
+        "id": "53010",
+        "nom": "De Lorimier / Logan"
+      },
+      {
+        "id": "53045",
+        "nom": "De Lorimier / De Maisonneuve"
+      },
+      {
+        "id": "53051",
+        "nom": "Station Papineau (Dorion / Sainte-Catherine)"
+      }
+    ],
+    "commentaire": "POINT DE RELÈVE MODIFIÉ -STATION SHERBROOKE (52506)",
+    "arrets_ajoutes": [
+      {
+        "id": "52506",
+        "nom": "Station Sherbrooke (Édicule Est)"
+      }
+    ],
+    "description_gd": "TERMINUS TEMPORAIRE STATION SHERBROOKE (52506) VIA BERRI D/ CHERRIER G/ SHERBROOKE G/ DE LORIMIER R.R."
+  },
+  {
+    "evenement_id": "11282933",
+    "titre": "Annulation d'arrêts",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-07-04T10:07:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "52813",
+        "nom": "De Lorimier / de Rouen"
+      }
+    ],
+    "commentaire": null,
+    "arrets_ajoutes": [],
+    "description_gd": null
+  }
+]

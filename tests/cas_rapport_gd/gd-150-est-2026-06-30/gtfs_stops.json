@@ -1,0 +1,198 @@
+{
+  "stops": [
+    [
+      1,
+      "54148"
+    ],
+    [
+      2,
+      "52227"
+    ],
+    [
+      3,
+      "52286"
+    ],
+    [
+      4,
+      "52329"
+    ],
+    [
+      5,
+      "52374"
+    ],
+    [
+      6,
+      "52437"
+    ],
+    [
+      7,
+      "61807"
+    ],
+    [
+      8,
+      "52530"
+    ],
+    [
+      9,
+      "53918"
+    ],
+    [
+      10,
+      "52627"
+    ],
+    [
+      11,
+      "60683"
+    ],
+    [
+      12,
+      "52782"
+    ],
+    [
+      13,
+      "52835"
+    ],
+    [
+      14,
+      "60994"
+    ],
+    [
+      15,
+      "52882"
+    ],
+    [
+      16,
+      "54041"
+    ],
+    [
+      17,
+      "52931"
+    ],
+    [
+      18,
+      "52982"
+    ],
+    [
+      19,
+      "53032"
+    ],
+    [
+      20,
+      "53073"
+    ],
+    [
+      21,
+      "53064"
+    ],
+    [
+      22,
+      "53045"
+    ],
+    [
+      23,
+      "53034"
+    ],
+    [
+      24,
+      "54117"
+    ]
+  ],
+  "stop_names": {
+    "54148": {
+      "code": "54148",
+      "name": "Station Atwater (Ste-Catherine / Lambert-Closse)"
+    },
+    "52227": {
+      "code": "52227",
+      "name": "René-Lévesque / du Fort"
+    },
+    "52286": {
+      "code": "52286",
+      "name": "René-Lévesque / Saint-Mathieu"
+    },
+    "52329": {
+      "code": "52329",
+      "name": "René-Lévesque / Guy"
+    },
+    "52374": {
+      "code": "52374",
+      "name": "René-Lévesque / Bishop"
+    },
+    "52437": {
+      "code": "52437",
+      "name": "René-Lévesque / Drummond"
+    },
+    "61807": {
+      "code": "61807",
+      "name": "René-Lévesque / Stanley"
+    },
+    "52530": {
+      "code": "52530",
+      "name": "René-Lévesque / Mansfield"
+    },
+    "53918": {
+      "code": "53918",
+      "name": "René-Lévesque / Union"
+    },
+    "52627": {
+      "code": "52627",
+      "name": "Basilique St-Patrick (R.-Lévesque / St-Alexandre)"
+    },
+    "60683": {
+      "code": "60683",
+      "name": "René-Lévesque / Jeanne-Mance"
+    },
+    "52782": {
+      "code": "52782",
+      "name": "René-Lévesque / Saint-Laurent"
+    },
+    "52835": {
+      "code": "52835",
+      "name": "René-Lévesque / de l'Hôtel-de-Ville"
+    },
+    "60994": {
+      "code": "60994",
+      "name": "René-Lévesque / Sanguinet (CHUM)"
+    },
+    "52882": {
+      "code": "52882",
+      "name": "René-Lévesque / Saint-Denis (CHUM)"
+    },
+    "54041": {
+      "code": "54041",
+      "name": "René-Lévesque / Berri"
+    },
+    "52931": {
+      "code": "52931",
+      "name": "René-Lévesque / Saint-Hubert"
+    },
+    "52982": {
+      "code": "52982",
+      "name": "René-Lévesque / Atateken"
+    },
+    "53032": {
+      "code": "53032",
+      "name": "René-Lévesque / Panet"
+    },
+    "53073": {
+      "code": "53073",
+      "name": "René-Lévesque / Papineau (Maison Radio-Canada)"
+    },
+    "53064": {
+      "code": "53064",
+      "name": "De Lorimier / Sainte-Catherine"
+    },
+    "53045": {
+      "code": "53045",
+      "name": "De Lorimier / De Maisonneuve"
+    },
+    "53034": {
+      "code": "53034",
+      "name": "Logan / Parthenais"
+    },
+    "54117": {
+      "code": "54117",
+      "name": "Station Papineau (Dorion / Sainte-Catherine)"
+    }
+  }
+}

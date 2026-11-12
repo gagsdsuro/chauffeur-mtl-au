@@ -1,0 +1,27 @@
+{
+  "ligne": "94",
+  "direction": "sud",
+  "routes": [
+    {
+      "line_number": "94",
+      "direction": "Sud",
+      "parcours": [
+        {
+          "id": 2,
+          "name": "Parcours principal",
+          "start": "Cirque du Soleil",
+          "start_code": 54303,
+          "end": "du Havre / Sainte-Catherine",
+          "end_code": 53136,
+          "direction": [
+            "Via - du Cirque",
+            "Droite - Jarry",
+            "Gauche - D'Iberville",
+            "Gauche - Ontario",
+            "Droite - du Havre"
+          ]
+        }
+      ]
+    }
+  ]
+}

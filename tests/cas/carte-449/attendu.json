@@ -1,0 +1,107 @@
+{
+  "date": "2026-06-09",
+  "carte": "449",
+  "debut": "16:22",
+  "fin": "24:38",
+  "lignes": [
+    "168",
+    "176"
+  ],
+  "annotations": [
+    {
+      "type": "jaune",
+      "texte": "(168)"
+    },
+    {
+      "type": "bleu",
+      "ligne": "168",
+      "heure": "16:31"
+    },
+    {
+      "type": "rouge",
+      "texte": "p:16.07",
+      "ligne": "168",
+      "heure": "16:31",
+      "prec": "16:07"
+    },
+    {
+      "type": "bleu",
+      "ligne": "168",
+      "heure": "17:20"
+    },
+    {
+      "type": "bleu",
+      "ligne": "168",
+      "heure": "18:02"
+    },
+    {
+      "type": "bleu",
+      "ligne": "168",
+      "heure": "18:52"
+    },
+    {
+      "type": "bleu",
+      "ligne": "168",
+      "heure": "19:31"
+    },
+    {
+      "type": "bleu",
+      "ligne": "176",
+      "heure": "20:12"
+    },
+    {
+      "type": "rouge",
+      "texte": "p:19.46",
+      "ligne": "176",
+      "heure": "20:12",
+      "prec": "19:46"
+    },
+    {
+      "type": "jaune",
+      "texte": "(176)"
+    },
+    {
+      "type": "jaune",
+      "texte": "(176)"
+    },
+    {
+      "type": "bleu",
+      "ligne": "176",
+      "heure": "21:00"
+    },
+    {
+      "type": "rouge",
+      "texte": "p:20.30",
+      "ligne": "176",
+      "heure": "21:00",
+      "prec": "20:30"
+    },
+    {
+      "type": "bleu",
+      "ligne": "168",
+      "heure": "21:23"
+    },
+    {
+      "type": "rouge",
+      "texte": "p:20.54",
+      "ligne": "168",
+      "heure": "21:23",
+      "prec": "20:54"
+    },
+    {
+      "type": "bleu",
+      "ligne": "168",
+      "heure": "21:56"
+    },
+    {
+      "type": "bleu",
+      "ligne": "168",
+      "heure": "22:55"
+    },
+    {
+      "type": "bleu",
+      "ligne": "168",
+      "heure": "23:28"
+    }
+  ]
+}

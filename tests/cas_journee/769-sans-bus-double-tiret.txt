@@ -1,0 +1,252 @@
+
+Accueil  Ma journée
+Détail de ma journée
+Veuillez valider votre journée de travail avec le rapport Appel des Rapports quotidiens.
+Juillet 2026
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Demain59200 - Frontenac
+Journée1463
+Temps travaillé7:02
+Temps supplémentaire0:00
+Mis à jour le 09 juillet 2026 22:47
+carte agent Gauche-Droite
+Sommaire769 - 01----7:02Horaire
+Prise
+17:30
+Lieu
+M15003
+Début
+17:30
+Fin
+24:32
+Lieu
+FRT
+Détails 769 - 01
+769 Sud
+ID 1
+Départ et arrivé :
+Station Papineau17:30
+La Ronde17:43
+Informations supplémentaires :
+Détour Information
+769 Nord
+ID 19
+Départ et arrivé :
+La Ronde17:49
+Station Papineau18:02
+Informations supplémentaires :
+Détour Information
+1note(s) de voyages :
+Pas d'attente au métro Papineau, battement à la ronde. [M15003-STATION PAPINEAU(DE MAISONNEUVE/CARTIER)]
+769 Sud
+ID 1
+Départ et arrivé :
+Station Papineau18:02
+La Ronde18:15
+Informations supplémentaires :
+Détour Information
+769 Nord
+ID 19
+Départ et arrivé :
+La Ronde18:21
+Station Papineau18:34
+Informations supplémentaires :
+Détour Information
+1note(s) de voyages :
+Pas d'attente au métro Papineau, battement à la ronde. [M15003-STATION PAPINEAU(DE MAISONNEUVE/CARTIER)]
+769 Sud
+ID 1
+Départ et arrivé :
+Station Papineau18:34
+La Ronde18:47
+Informations supplémentaires :
+Détour Information
+769 Nord
+ID 19
+Départ et arrivé :
+La Ronde18:53
+Station Papineau19:06
+Informations supplémentaires :
+Détour Information
+1note(s) de voyages :
+Pas d'attente au métro Papineau, battement à la ronde. [M15003-STATION PAPINEAU(DE MAISONNEUVE/CARTIER)]
+769 Sud
+ID 1
+Départ et arrivé :
+Station Papineau19:06
+La Ronde19:19
+Informations supplémentaires :
+Détour Information
+769 Nord
+ID 19
+Départ et arrivé :
+La Ronde19:25
+Station Papineau19:38
+Informations supplémentaires :
+Détour Information
+1note(s) de voyages :
+Pas d'attente au métro Papineau, battement à la ronde. [M15003-STATION PAPINEAU(DE MAISONNEUVE/CARTIER)]
+769 Sud
+ID 1
+Départ et arrivé :
+Station Papineau19:38
+La Ronde19:51
+Informations supplémentaires :
+Détour Information
+769 Nord
+ID 19
+Départ et arrivé :
+La Ronde19:57
+Station Papineau20:10
+Informations supplémentaires :
+Détour Information
+1note(s) de voyages :
+Pas d'attente au métro Papineau, battement à la ronde. [M15003-STATION PAPINEAU(DE MAISONNEUVE/CARTIER)]
+769 Sud
+ID 1
+Départ et arrivé :
+Station Papineau20:10
+La Ronde20:23
+Informations supplémentaires :
+Détour Information
+769 Nord
+ID 19
+Départ et arrivé :
+La Ronde20:29
+Station Papineau20:42
+Informations supplémentaires :
+Détour Information
+1note(s) de voyages :
+Pas d'attente au métro Papineau, battement à la ronde. [M15003-STATION PAPINEAU(DE MAISONNEUVE/CARTIER)]
+769 Sud
+ID 1
+Départ et arrivé :
+Station Papineau20:42
+La Ronde20:55
+Informations supplémentaires :
+Détour Information
+769 Nord
+ID 19
+Départ et arrivé :
+La Ronde21:01
+Station Papineau21:14
+Informations supplémentaires :
+Détour Information
+1note(s) de voyages :
+Pas d'attente au métro Papineau, battement à la ronde. [M15003-STATION PAPINEAU(DE MAISONNEUVE/CARTIER)]
+769 Sud
+ID 1
+Départ et arrivé :
+Station Papineau21:14
+La Ronde21:27
+Informations supplémentaires :
+Détour Information
+769 Nord
+ID 19
+Départ et arrivé :
+La Ronde21:33
+Station Papineau21:46
+Informations supplémentaires :
+Détour Information
+1note(s) de voyages :
+Pas d'attente au métro Papineau, battement à la ronde. [M15003-STATION PAPINEAU(DE MAISONNEUVE/CARTIER)]
+769 Sud
+ID 1
+Départ et arrivé :
+Station Papineau21:46
+La Ronde21:59
+Informations supplémentaires :
+Détour Information
+769 Nord
+ID 19
+Départ et arrivé :
+La Ronde22:05
+Station Papineau22:18
+Informations supplémentaires :
+Détour Information
+1note(s) de voyages :
+Pas d'attente au métro Papineau, battement à la ronde. [M15003-STATION PAPINEAU(DE MAISONNEUVE/CARTIER)]
+769 Sud
+ID 1
+Départ et arrivé :
+Station Papineau22:18
+La Ronde22:31
+Informations supplémentaires :
+Détour Information
+769 Nord
+ID 19
+Départ et arrivé :
+La Ronde22:37
+Station Papineau22:50
+Informations supplémentaires :
+Détour Information
+1note(s) de voyages :
+Pas d'attente au métro Papineau, battement à la ronde. [M15003-STATION PAPINEAU(DE MAISONNEUVE/CARTIER)]
+769 Sud
+ID 1
+Départ et arrivé :
+Station Papineau22:50
+La Ronde23:03
+Informations supplémentaires :
+Détour Information
+769 Nord
+ID 19
+Départ et arrivé :
+La Ronde23:09
+Station Papineau23:22
+Informations supplémentaires :
+Détour Information
+1note(s) de voyages :
+Pas d'attente au métro Papineau, battement à la ronde. [M15003-STATION PAPINEAU(DE MAISONNEUVE/CARTIER)]
+769 Sud
+ID 1
+Départ et arrivé :
+Station Papineau23:22
+La Ronde23:35
+Informations supplémentaires :
+Détour Information
+769 Nord
+ID 19
+Départ et arrivé :
+La Ronde23:41
+Station Papineau23:54
+Informations supplémentaires :
+Détour Information
+1note(s) de voyages :
+Pas d'attente au métro Papineau, battement à la ronde. [M15003-STATION PAPINEAU(DE MAISONNEUVE/CARTIER)]
+769 Sud
+ID 1
+Départ et arrivé :
+Station Papineau23:54
+La Ronde24:07
+Informations supplémentaires :
+Détour Information
+769 Nord
+ID 19
+Départ et arrivé :
+La Ronde24:13
+Station Papineau24:26
+Informations supplémentaires :
+Détour Information
+1note(s) de voyages :
+Pas d'attente au métro Papineau, battement à la ronde. [M15003-STATION PAPINEAU(DE MAISONNEUVE/CARTIER)]
+Entrée 
+Départ et arrivé :
+Station Papineau24:26
+Frontenac24:32
+Je relève:
+Personne C - 10003

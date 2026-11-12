@@ -1,0 +1,24 @@
+services:
+  chauffeur-mtl-au:
+    build:
+      context: .
+      args:
+        # Alignés sur l'UID/GID de l'hôte pour que les fichiers générés
+        # dans ./data appartiennent à l'utilisateur, pas à root.
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    # Sécurité supplémentaire au cas où l'image serait construite ailleurs.
+    user: "${UID:-1000}:${GID:-1000}"
+    ports:
+      # Lié à la boucle locale : placer un reverse-proxy HTTPS devant pour tout autre accès.
+      - "127.0.0.1:8501:8501"
+    volumes:
+      # Les données JSON, PDFs et GTFS restent sur l'hôte
+      - ./data:/app/data
+      # La config secrets (clé API GTFS-RT) reste sur l'hôte
+      - ./Installation:/app/Installation
+    environment:
+      - TZ=America/Toronto
+      - CHAUFFEUR_MATRICULE=${CHAUFFEUR_MATRICULE:-}
+      - CHAUFFEUR_MODE_STRICT=${CHAUFFEUR_MODE_STRICT:-0}
+    restart: unless-stopped

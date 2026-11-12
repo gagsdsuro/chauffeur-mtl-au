@@ -1,0 +1,31 @@
+[
+  {
+    "evenement_id": "11125838",
+    "titre": "Détour sans annulation",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-06-14T22:00:00",
+    "date_heure_fin": "2026-06-15T05:00:00",
+    "effectif": "Seulement entre 22:00 et 05:00 chaque jour",
+    "arrets_annules": [],
+    "description_gd": "VIA AUTOROUTE BONAVENTURE VIA SORTIE 4 VIA GAÉTAN-LABERGE G ENTRÉE AUTOROUTE 15 SUD VIA AUTOROUTE 15 SUD VIA SORTIE 57N VIA BOUL.ÎLE-DES-SŒURS VIA RR",
+    "commentaire": null,
+    "arrets_ajoutes": []
+  },
+  {
+    "evenement_id": "11202851",
+    "titre": "Arrêt déplacé",
+    "motif": "Travaux",
+    "date_heure_debut": "2026-04-24T08:40:00",
+    "date_heure_fin": null,
+    "effectif": "En tout temps",
+    "arrets_annules": [
+      {
+        "id": "60747",
+        "nom": "Campus Bell (100 mètres avant)"
+      }
+    ],
+    "description_gd": null,
+    "commentaire": null,
+    "arrets_ajoutes": []
+  }
+]

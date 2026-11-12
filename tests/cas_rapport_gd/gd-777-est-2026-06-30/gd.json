@@ -1,0 +1,37 @@
+{
+  "ligne": "777",
+  "direction": "est",
+  "routes": [
+    {
+      "line_number": "777",
+      "direction": "Est",
+      "parcours": [
+        {
+          "id": 1,
+          "name": "Parcours principal",
+          "start": "Station Bonaventure (Gauchetière / Mansfield)",
+          "start_code": 62148,
+          "end": "Station Jean-Drapeau",
+          "end_code": 54335,
+          "direction": [
+            "Via - De La Gauchetière",
+            "Gauche - de la Cathédrale",
+            "Gauche - Saint-Jacques",
+            "Droite - Robert-Bourassa",
+            "Via - Bonaventure dir. O",
+            "Via - sortie 2 - Port de Montréal",
+            "Via - des Moulins",
+            "Gauche - Pierre-Dupuy",
+            "Via - de la Concorde",
+            "Via - Pierre-Dupuy",
+            "Droite - du Casino",
+            "Via - carrefour giratoire",
+            "Via - Pierre-Dupuy",
+            "Gauche - McDonald (île-Sainte-Hélène)",
+            "Gauche - Terminus Jean-Drapeau"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+Gauche-Droite / 24 Est
+Imprimer
+Parcours principalID 1
+Date de mise à jour: 2026-06-16 12:46:02
+
+Station Villa-Maria 51241
+Via - Terminus Villa-Maria
+Gauche - Décarie
+Gauche - Sherbrooke
+Gauche - Berri (desserte)
+Droite - Cherrier
+Gauche - Sherbrooke
+Gauche - Hogan
+Droite - Rachel
+Droite - Montgomery
+Montgomery / Sherbrooke 52819
+
+Gauche-Droite / 24 Est
+Imprimer
+Parcours secondaireID 4
+Date de mise à jour: 2026-06-16 12:46:02
+
+Station Sherbrooke (Édicule Est ) 52508
+Via - Berri (desserte)
+Droite - Cherrier
+Gauche - Sherbrooke
+Gauche - Hogan
+Droite - Rachel
+Droite - Montgomery
+Montgomery / Sherbrooke 52819

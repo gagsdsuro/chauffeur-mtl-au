@@ -1,0 +1,31 @@
+{
+  "ligne": "125",
+  "direction": "est",
+  "routes": [
+    {
+      "line_number": "125",
+      "direction": "Est",
+      "parcours": [
+        {
+          "id": 2,
+          "name": "Parcours principal",
+          "start": "Station McGill (De Maisonneuve / Robert-Bourassa)",
+          "start_code": 52433,
+          "end": "Station Viau",
+          "end_code": 54200,
+          "direction": [
+            "Via - De Maisonneuve",
+            "Droite - Robert-Bourassa",
+            "Droite - du Président-Kennedy",
+            "Gauche - Jeanne-Mance",
+            "Droite - Sherbrooke",
+            "Droite - Saint-Urbain",
+            "Gauche - Ontario",
+            "Gauche - Viau",
+            "Gauche - Pierre-De Coubertin"
+          ]
+        }
+      ]
+    }
+  ]
+}

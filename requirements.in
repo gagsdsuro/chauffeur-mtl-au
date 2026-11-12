@@ -1,0 +1,6 @@
+# Dépendances directes. Générer requirements.txt sous Python 3.12 ;
+# voir docs/dependances.md pour la validation et les mises à jour.
+streamlit[pdf]==1.66.1
+reportlab>=4.0
+pymupdf>=1.24
+requests>=2.31

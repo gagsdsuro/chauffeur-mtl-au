@@ -1,0 +1,494 @@
+{
+  "parcours": {
+    "name": "Parcours principal",
+    "start": "Station McGill (Union / De Maisonneuve)",
+    "end": "André-Prévost / Serge-Garant"
+  },
+  "rows": [
+    {
+      "gd": "Via - Union",
+      "seq": 1,
+      "stop_id": "52451",
+      "stop_code": "52451",
+      "stop_name": "Station McGill (Union / De Maisonneuve)",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 2,
+      "stop_id": "52527",
+      "stop_code": "52527",
+      "stop_name": "Union / Sainte-Catherine",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - Cathcart",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - Phillips",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - du Frère-André",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - Beaver Hall",
+      "seq": 3,
+      "stop_id": "52669",
+      "stop_code": "52669",
+      "stop_name": "du Beaver Hall / Belmont",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 4,
+      "stop_id": "52705",
+      "stop_code": "52705",
+      "stop_name": "Station Square-Victoria-OACI",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - Viger",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - Robert-Bourassa",
+      "seq": 5,
+      "stop_id": "52732",
+      "stop_code": "52732",
+      "stop_name": "Robert-Bourassa / Viger",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 6,
+      "stop_id": "52754",
+      "stop_code": "52754",
+      "stop_name": "Robert-Bourassa / Saint-Jacques",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 7,
+      "stop_id": "62168",
+      "stop_code": "62168",
+      "stop_name": "Robert-Bourassa / Notre-Dame",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 8,
+      "stop_id": "53919",
+      "stop_code": "53919",
+      "stop_name": "Robert-Bourassa / William",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 9,
+      "stop_id": "54372",
+      "stop_code": "54372",
+      "stop_name": "Robert-Bourassa / Ottawa",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 10,
+      "stop_id": "52971",
+      "stop_code": "52971",
+      "stop_name": "Robert-Bourassa / Wellington",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - Bonaventure dir. O",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - sortie 2 - Port de Montréal",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - des Moulins",
+      "seq": 11,
+      "stop_id": "53920",
+      "stop_code": "53920",
+      "stop_name": "des Moulins / No 950",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 12,
+      "stop_id": "54312",
+      "stop_code": "54312",
+      "stop_name": "des Moulins / Pierre-Dupuy",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 13,
+      "stop_id": "60747",
+      "stop_code": "60747",
+      "stop_name": "Campus Bell",
+      "cancelled": [
+        {
+          "label": "Arrêt déplacé (Travaux)",
+          "short_label": "Arrêt déplacé (Travaux)",
+          "effectif": "En tout temps",
+          "nom_evt": "Campus Bell (100 mètres avant)",
+          "evenement_id": "11202851",
+          "commentaire": "",
+          "type_evenement": "arrêt déplacé"
+        }
+      ]
+    },
+    {
+      "gd": "Via - vers aut. 10 Est/ aut. 15/ aut. 20/ Bonaventure",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - Carrie-Derick",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - vers aut. 10/ aut. 15/ aut. 20",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - Bonaventure dir. O",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - AUTOROUTE BONAVENTURE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "Détour sans annulation",
+      "evenement_id": "11125838",
+      "effectif": "Seulement entre 22:00 et 05:00 chaque jour"
+    },
+    {
+      "gd": "Via - SORTIE 4",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11125838",
+      "effectif": ""
+    },
+    {
+      "gd": "Via - GAÉTAN-LABERGE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11125838",
+      "effectif": ""
+    },
+    {
+      "gd": "Gauche - ENTRÉE AUTOROUTE 15 SUD",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11125838",
+      "effectif": ""
+    },
+    {
+      "gd": "Via - AUTOROUTE 15 SUD",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11125838",
+      "effectif": ""
+    },
+    {
+      "gd": "Via - SORTIE 57N",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11125838",
+      "effectif": ""
+    },
+    {
+      "gd": "Via - BOUL.ÎLE-DES-SŒURS",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11125838",
+      "effectif": ""
+    },
+    {
+      "gd": "Via - R.R.",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11125838",
+      "effectif": ""
+    },
+    {
+      "gd": "Via - sortie 5 - Île-des-Soeurs",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_removed": true
+    },
+    {
+      "gd": "Via - de l'Île-des-Soeurs",
+      "seq": 14,
+      "stop_id": "62134",
+      "stop_code": "62134",
+      "stop_name": "Station Île-des-Soeurs",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - carrefour giratoire",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - de l'Île-des-Soeurs",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - de la Pointe-Nord",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - carrefour giratoire Alexandre-Graham-Bell",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - de la Pointe-Nord",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - Jacques-Le Ber",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - René-Lévesque",
+      "seq": 15,
+      "stop_id": "61671",
+      "stop_code": "61671",
+      "stop_name": "René-Lévesque / Levert",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - du Commerce",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - Berlioz",
+      "seq": 16,
+      "stop_id": "56691",
+      "stop_code": "56691",
+      "stop_name": "Berlioz / Terry-Fox",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 17,
+      "stop_id": "56665",
+      "stop_code": "56665",
+      "stop_name": "Berlioz / Place du Soleil",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 18,
+      "stop_id": "56666",
+      "stop_code": "56666",
+      "stop_name": "Berlioz / Place de la Fontaine",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 19,
+      "stop_id": "56664",
+      "stop_code": "56664",
+      "stop_name": "Berlioz / Landreville",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 20,
+      "stop_id": "56662",
+      "stop_code": "56662",
+      "stop_name": "Berlioz / de l'Île-des-Soeurs",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - de l'Île-des-Soeurs",
+      "seq": 21,
+      "stop_id": "56700",
+      "stop_code": "56700",
+      "stop_name": "de l'Île-des-Soeurs / Berlioz",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 22,
+      "stop_id": "56660",
+      "stop_code": "56660",
+      "stop_name": "de l'Île-des-Soeurs / Elgar",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 23,
+      "stop_id": "56653",
+      "stop_code": "56653",
+      "stop_name": "de l'Île-des-Soeurs / De Gaspé",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 24,
+      "stop_id": "60400",
+      "stop_code": "60400",
+      "stop_name": "de l'Île-des-Soeurs / Hall",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - de la Pointe-Sud",
+      "seq": 25,
+      "stop_id": "60696",
+      "stop_code": "60696",
+      "stop_name": "de la Pointe-Sud / de l'Orée-du-Bois",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 26,
+      "stop_id": "60697",
+      "stop_code": "60697",
+      "stop_name": "de la Pointe-Sud / des Parulines",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 27,
+      "stop_id": "60699",
+      "stop_code": "60699",
+      "stop_name": "de la Pointe-Sud / No 250",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 28,
+      "stop_id": "62130",
+      "stop_code": "62130",
+      "stop_name": "de la Pointe-Sud / André-Prévost",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - André-Prévost",
+      "seq": 29,
+      "stop_id": "62163",
+      "stop_code": "62163",
+      "stop_name": "André-Prévost / Serge-Garant",
+      "cancelled": []
+    }
+  ],
+  "added": [],
+  "orphan_events": []
+}

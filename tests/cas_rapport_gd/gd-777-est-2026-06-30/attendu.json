@@ -1,0 +1,339 @@
+{
+  "parcours": {
+    "name": "Parcours principal",
+    "start": "Station Bonaventure (Gauchetière / Mansfield)",
+    "end": "Station Jean-Drapeau"
+  },
+  "rows": [
+    {
+      "gd": "Via - De La Gauchetière",
+      "seq": 1,
+      "stop_id": "62148",
+      "stop_code": "62148",
+      "stop_name": "Station Bonaventure (Gauchetière / Mansfield)",
+      "cancelled": [
+        {
+          "label": "Arrêt déplacé (Situation Incontrôlable) — ARRÊT RECULÉ POUR FACILITÉ L'INTÉGRATION À LA CIRCULATION, NE PAS MODIFIER SANS PARLER À CO MASSE",
+          "short_label": "Arrêt déplacé (Situation Incontrôlable)",
+          "effectif": "En tout temps",
+          "nom_evt": "Station Bonaventure (Gauchetière / Mansfield) (20 mètres avant)",
+          "evenement_id": "10291048",
+          "commentaire": "ARRÊT RECULÉ POUR FACILITÉ L'INTÉGRATION À LA CIRCULATION, NE PAS MODIFIER SANS PARLER À CO MASSE",
+          "type_evenement": "arrêt déplacé"
+        }
+      ]
+    },
+    {
+      "gd": "Via - GAUCHETIERE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "Détour sans annulation",
+      "evenement_id": "11271192",
+      "effectif": "Seulement entre 20:00 et 06:00 chaque jour"
+    },
+    {
+      "gd": "Droite - MANSFIELD",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11271192",
+      "effectif": ""
+    },
+    {
+      "gd": "Droite - RENE-LEVESQUE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11271192",
+      "effectif": ""
+    },
+    {
+      "gd": "Droite - BEAVER-HALL",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11271192",
+      "effectif": ""
+    },
+    {
+      "gd": "Droite - VIGER",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11271192",
+      "effectif": ""
+    },
+    {
+      "gd": "Gauche - ROBERT-BOURASSA",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11271192",
+      "effectif": ""
+    },
+    {
+      "gd": "Via - R.R.",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11271192",
+      "effectif": ""
+    },
+    {
+      "gd": "Via - GAUCHETIERE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "Détour sans annulation",
+      "evenement_id": "11185389",
+      "effectif": "Seulement entre 06:01 et 19:59 chaque jour"
+    },
+    {
+      "gd": "Droite - MANSFIELD",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11185389",
+      "effectif": ""
+    },
+    {
+      "gd": "Droite - RENE-LEVESQUE",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11185389",
+      "effectif": ""
+    },
+    {
+      "gd": "Droite - ROBERT-BOURASSA",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11185389",
+      "effectif": ""
+    },
+    {
+      "gd": "Via - R.R.",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_added": true,
+      "detour_label": "",
+      "evenement_id": "11185389",
+      "effectif": ""
+    },
+    {
+      "gd": "Gauche - de la Cathédrale",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_removed": true
+    },
+    {
+      "gd": "Gauche - Saint-Jacques",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": [],
+      "detour_removed": true
+    },
+    {
+      "gd": "Droite - Robert-Bourassa",
+      "seq": 2,
+      "stop_id": "62168",
+      "stop_code": "62168",
+      "stop_name": "Robert-Bourassa / Notre-Dame",
+      "cancelled": [],
+      "detour_removed": true
+    },
+    {
+      "gd": "",
+      "seq": 3,
+      "stop_id": "53919",
+      "stop_code": "53919",
+      "stop_name": "Robert-Bourassa / William",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 4,
+      "stop_id": "52971",
+      "stop_code": "52971",
+      "stop_name": "Robert-Bourassa / Wellington",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - Bonaventure dir. O",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - sortie 2 - Port de Montréal",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - des Moulins",
+      "seq": 5,
+      "stop_id": "53920",
+      "stop_code": "53920",
+      "stop_name": "des Moulins / No 950",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - Pierre-Dupuy",
+      "seq": 6,
+      "stop_id": "62149",
+      "stop_code": "62149",
+      "stop_name": "Pierre-Dupuy / des Moulins",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 7,
+      "stop_id": "62150",
+      "stop_code": "62150",
+      "stop_name": "Pierre-Dupuy / Quai Bickerdike",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 8,
+      "stop_id": "62151",
+      "stop_code": "62151",
+      "stop_name": "Pierre-Dupuy / Habitat 67",
+      "cancelled": []
+    },
+    {
+      "gd": "",
+      "seq": 9,
+      "stop_id": "62152",
+      "stop_code": "62152",
+      "stop_name": "Pierre-Dupuy / de la Concorde",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - de la Concorde",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - Pierre-Dupuy",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Droite - du Casino",
+      "seq": 10,
+      "stop_id": "62153",
+      "stop_code": "62153",
+      "stop_name": "Casino de Montréal",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - carrefour giratoire",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Via - Pierre-Dupuy",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - McDonald (île-Sainte-Hélène)",
+      "seq": null,
+      "stop_id": null,
+      "stop_code": "",
+      "stop_name": "",
+      "cancelled": []
+    },
+    {
+      "gd": "Gauche - Terminus Jean-Drapeau",
+      "seq": 11,
+      "stop_id": "54335",
+      "stop_code": "54335",
+      "stop_name": "Station Jean-Drapeau",
+      "cancelled": []
+    }
+  ],
+  "added": [
+    {
+      "name": "Terminus Centre-Ville",
+      "id": "62750",
+      "rang": 0,
+      "label": "Détour sans annulation (Travaux) — G-D: VIA GAUCHETIERE D/MANSFIELD D/RENE-LEVESQUE D/ROBERT-BOURASSA VIA R.R",
+      "short_label": "Détour sans annulation (Travaux)",
+      "commentaire": "",
+      "effectif": "Seulement entre 06:01 et 19:59 chaque jour",
+      "evenement_id": "11185389"
+    }
+  ],
+  "orphan_events": []
+}

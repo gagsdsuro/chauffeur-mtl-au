@@ -1,0 +1,28 @@
+{
+  "ligne": "150",
+  "direction": "ouest",
+  "routes": [
+    {
+      "line_number": "150",
+      "direction": "Ouest",
+      "parcours": [
+        {
+          "id": 1,
+          "name": "Parcours principal",
+          "start": "Station Papineau (Dorion / Sainte-Catherine)",
+          "start_code": 54117,
+          "end": "Station Atwater (Ste-Catherine / Lambert-Closse)",
+          "end_code": 54148,
+          "direction": [
+            "Via - Dorion",
+            "Gauche - Sainte-Catherine",
+            "Droite - De Lorimier",
+            "Droite - René-Lévesque",
+            "Droite - Atwater",
+            "Droite - Sainte-Catherine"
+          ]
+        }
+      ]
+    }
+  ]
+}

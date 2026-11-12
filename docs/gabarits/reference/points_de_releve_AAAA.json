@@ -1,0 +1,13 @@
+{
+  "description": "GABARIT FICTIF — copier vers data/reference/points_de_releve_<AAAA>.json (fichier non versionné) et remplacer par vos propres données. Points de relève par ligne et par centre de transport (garage). Une ligne peut avoir plusieurs points de relève. code=null/lieu=null : aucun point de relève défini pour cette ligne à ce garage. Le code peut porter un suffixe de quai (ex. « M00101 » pour « M001 »).",
+  "garages": {
+    "Garage A": [
+      {"ligne": "1", "code": "M001", "lieu": "Station Exemple 1"},
+      {"ligne": "2", "code": "E001", "lieu": "Rue Alpha / Rue Beta"},
+      {"ligne": "3", "code": null, "lieu": null}
+    ],
+    "Garage B": [
+      {"ligne": "4", "code": "M002", "lieu": "Station Exemple 2"}
+    ]
+  }
+}
