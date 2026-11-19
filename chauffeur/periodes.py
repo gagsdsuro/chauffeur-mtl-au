@@ -177,3 +177,94 @@ def regime_pour_date(jour: date, reference_dir: Path | None = None) -> str:
                            for v in cal_semaine.get("variations", [])):
         return "variation"
     return "normal"
+
+
+# ── Publication GTFS ─────────────────────────────────────────────────────────
+# Les données GTFS sont publiées ~10 jours avant chaque changement d'horaire
+# (début de liste). Pendant cette fenêtre de 10 jours, deux versions du GTFS
+# coexistent : l'ancienne (en vigueur) et la nouvelle (à venir). La logique
+# ci-dessous détermine la liste applicable à une date et la date de publication
+# du GTFS correspondant, pour ne télécharger que quand nécessaire.
+
+DELAI_PUBLICATION_GTFS_JOURS = 10
+
+
+def liste_active_pour_date(jour: date) -> date | None:
+    """Date de début de liste applicable à `jour`, ou None si introuvable.
+
+    Utilise la même logique que `identite_ca` : semaine fériée/rattachée au
+    calendrier de l'année de son lundi. Retourne la date de début de liste
+    (ex. `date(2026, 1, 5)` pour la liste du 5 janvier 2026).
+    """
+    cal = _calendrier(jour.year)
+    if cal is None:
+        return None
+    iso = jour.isoformat()
+    if iso in cal.get("feries", []):
+        # Férié : la liste active est celle qui couvre cette semaine
+        pass  # on cherche la liste couvrant le lundi de cette semaine
+    lundi = _lundi(jour)
+    # Année du lundi (peut différer pour les derniers jours de décembre)
+    cals = [cal] if lundi.year == jour.year else [cal, _calendrier(lundi.year)]
+    cals = [c for c in cals if c]
+    # Vérifier les variations : une semaine de variation n'a pas de liste active
+    # au sens GTFS, mais le GTFS de la liste précédente reste valide
+    for c in cals:
+        for bloc in c.get("variations", []):
+            if bloc["debut"] == lundi.isoformat():
+                # Semaine de variation : le GTFS de la liste précédente est
+                # toujours valide. On cherche la dernière liste avant ce lundi.
+                listes = sorted(
+                    (date.fromisoformat(l["debut"]) for c2 in cals
+                     for l in c2.get("listes", [])),
+                    reverse=True,
+                )
+                for d in listes:
+                    if d < lundi:
+                        return d
+                return None
+    # Semaine normale : trouver la liste couvrant ce lundi
+    listes = sorted(
+        (date.fromisoformat(l["debut"]) for c2 in cals
+         for l in c2.get("listes", [])),
+        reverse=True,
+    )
+    lundi_iso = lundi.isoformat()
+    for d in listes:
+        if d.isoformat() <= lundi_iso:
+            return d
+    return None
+
+
+def publication_gtfs_pour_liste(debut_liste: date) -> date:
+    """Date de publication GTFS pour une liste donnée (J-10 avant début).
+
+    Ex. : liste du 23 mars 2026 → publication le 13 mars 2026.
+    """
+    return debut_liste - timedelta(days=DELAI_PUBLICATION_GTFS_JOURS)
+
+
+def publication_gtfs_pour_date(jour: date) -> date | None:
+    """Date de publication GTFS pour la liste active à `jour`, ou None.
+
+    Combine `liste_active_pour_date` et `publication_gtfs_pour_liste`.
+    Retourne la date à partir de laquelle le GTFS pour cette liste est
+    téléchargeable (10 jours avant le début de liste).
+    """
+    debut = liste_active_pour_date(jour)
+    if debut is None:
+        return None
+    return publication_gtfs_pour_liste(debut)
+
+
+def gtfs_disponible_pour_date(jour: date, date_ref: date | None = None) -> bool:
+    """True si le GTFS pour la liste active à `jour` est disponible à `date_ref`.
+
+    Le GTFS est disponible si `date_ref >= publication_gtfs_pour_date(jour)`.
+    Par défaut, `date_ref` = aujourd'hui.
+    """
+    date_ref = date_ref or date.today()
+    publication = publication_gtfs_pour_date(jour)
+    if publication is None:
+        return False
+    return date_ref >= publication

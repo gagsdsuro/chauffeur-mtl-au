@@ -188,7 +188,11 @@ GTFS_DIR      = DATA_DIR / "gtfs" / "gtfs_stm"        # partagé (flotte)
 GTFS_MANIFEST = DATA_DIR / "gtfs" / "gtfs_manifest.json"
 
 # Seuils de fraîcheur (règles métier, partagés UI/scripts)
-FRAICHEUR_GTFS_JOURS = 7    # GTFS statique : mise à jour hebdomadaire STM
+# GTFS statique : la fraîcheur ne se juge plus en jours absolus, mais par
+# rapport au calendrier de publication STM (10 jours avant chaque début de
+# liste). `FRAICHEUR_GTFS_JOURS` reste disponible pour compatibilité (affichage
+# UI, tests), mais la logique de mise à jour utilise `info_gtfs(date_cible=…)`.
+FRAICHEUR_GTFS_JOURS = 7    # GTFS statique : historique (mise à jour hebdomadaire)
 FRAICHEUR_GD_JOURS   = 90   # fichiers Gauche-Droite : ré-import périodique
 
 
@@ -373,7 +377,7 @@ def info_gd(ligne: str, direction: str,
     }
 
 
-def info_gtfs(data_dir: Path | None = None) -> dict:
+def info_gtfs(data_dir: Path | None = None, date_cible: date | None = None) -> dict:
     """Métadonnées de fraîcheur GTFS statique et temps réel.
 
     Champs retournés :
@@ -382,6 +386,15 @@ def info_gtfs(data_dir: Path | None = None) -> dict:
       rt_ts           — date lisible du dernier RT (str)
       rt_pb           — chemin du fichier protobuf RT (Path)
       rt_avail        — True si le fichier RT existe (bool)
+
+    Si `date_cible` est fournie, ajoute le contexte de liste STM :
+      liste_active     — date de début de liste applicable (str ISO) ou None
+      publication_cible — date de publication GTFS pour cette liste (str ISO) ou None
+      fenetre_ouverte  — True si le GTFS est téléchargeable pour cette liste
+      gtfs_a_jour      — True si le manifeste couvre la liste active
+                           (date_maj du manifeste >= publication_cible)
+      mise_a_jour_requise — True si le GTFS devrait être téléchargé
+                           (fenêtre ouverte ET pas à jour)
     """
     data_dir = data_dir or DATA_DIR
     static_manifest = data_dir / "gtfs" / "gtfs_manifest.json"
@@ -390,6 +403,7 @@ def info_gtfs(data_dir: Path | None = None) -> dict:
 
     static_ts       = "–"
     static_age_days = None
+    manifest_date_maj = None   # date de dernière mise à jour (pour comparaison)
     if static_manifest.exists():
         try:
             m = json.loads(static_manifest.read_text(encoding="utf-8"))
@@ -401,12 +415,18 @@ def info_gtfs(data_dir: Path | None = None) -> dict:
                     if dt.tzinfo is None:
                         dt = dt.replace(tzinfo=timezone.utc)
                     static_age_days = (datetime.now(timezone.utc) - dt).days
+                    manifest_date_maj = dt.date() if hasattr(dt, 'date') else dt
                 except Exception:
                     pass
             else:
                 static_ts = _fmt_mtime(static_manifest)
+            # Préserver la date de liste cible du manifeste (renseignée par fetch_gtfs.py)
+            manifest_liste_cible = m.get("liste_cible")
         except Exception:
             static_ts = _fmt_mtime(static_manifest)
+            manifest_liste_cible = None
+    else:
+        manifest_liste_cible = None
 
     rt_ts = "–"
     if rt_manifest.exists():
@@ -416,10 +436,52 @@ def info_gtfs(data_dir: Path | None = None) -> dict:
         except Exception:
             rt_ts = _fmt_mtime(rt_manifest)
 
-    return {
+    result = {
         "static_ts":       static_ts,
         "static_age_days": static_age_days,
         "rt_ts":           rt_ts,
         "rt_pb":           rt_pb_path,
         "rt_avail":        rt_pb_path.exists(),
     }
+
+    # Contexte de liste (opt-in via date_cible)
+    if date_cible is not None:
+        from .periodes import (
+            liste_active_pour_date, publication_gtfs_pour_date,
+            gtfs_disponible_pour_date,
+        )
+        liste_active = liste_active_pour_date(date_cible)
+        publication = publication_gtfs_pour_date(date_cible) if liste_active else None
+        aujourdhui = date.today()
+        fenetre = gtfs_disponible_pour_date(date_cible, aujourdhui)
+
+        # Le GTFS est à jour si la date de mise à jour du manifeste >= publication
+        gtfs_a_jour = False
+        if publication is not None and manifest_date_maj is not None:
+            gtfs_a_jour = manifest_date_maj >= publication
+        # Replis : si le manifeste indique une liste_cible qui correspond
+        elif publication is not None and manifest_liste_cible:
+            try:
+                gtfs_a_jour = date.fromisoformat(manifest_liste_cible) == liste_active
+            except (ValueError, TypeError):
+                pass
+
+        mise_a_jour_requise = fenetre and not gtfs_a_jour
+
+        result.update({
+            "liste_active":       liste_active.isoformat() if liste_active else None,
+            "publication_cible":  publication.isoformat() if publication else None,
+            "fenetre_ouverte":    fenetre,
+            "gtfs_a_jour":        gtfs_a_jour,
+            "mise_a_jour_requise": mise_a_jour_requise,
+        })
+    else:
+        result.update({
+            "liste_active":       None,
+            "publication_cible":  None,
+            "fenetre_ouverte":    False,
+            "gtfs_a_jour":        False,
+            "mise_a_jour_requise": False,
+        })
+
+    return result

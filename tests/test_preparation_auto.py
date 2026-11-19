@@ -69,6 +69,12 @@ class Scenario:
         self.appels: list[str] = []
         self.paires_evenements = None
         self.variantes = None
+        # GTFS contextuel : par défaut, hors fenêtre de publication → étape ignorée
+        self.gtfs_fenetre = False
+        self.gtfs_a_jour = False
+        self.gtfs_maj_requise = False
+        self.gtfs_liste_active = "2026-01-05"
+        self.gtfs_publication = "2025-12-26"
 
     def installer(self):
         s = self
@@ -107,12 +113,27 @@ class Scenario:
             s.variantes = kw.get("variantes")
             return [s.rapport]
 
+        def info_gtfs_faux(data_dir=None, date_cible=None):
+            return {
+                "static_ts": "2026-01-01 00:00",
+                "static_age_days": 0,
+                "rt_ts": "–",
+                "rt_pb": Path("/dev/null"),
+                "rt_avail": False,
+                "liste_active": s.gtfs_liste_active,
+                "publication_cible": s.gtfs_publication,
+                "fenetre_ouverte": s.gtfs_fenetre,
+                "gtfs_a_jour": s.gtfs_a_jour,
+                "mise_a_jour_requise": s.gtfs_maj_requise,
+            }
+
         return {
             "importer_journee_portail": importer, "resoudre_ca": resoudre,
             "annoter_et_ranger_ca": annoter, "info_gd": info,
             "rafraichir_gd_journee": gd, "rafraichir_evenements_journee": ev,
             "finaliser_rapports": finaliser, "chemin_journee": lambda _: s.chemin,
             "ecrire_calendrier_sans_echec": lambda j, d: ([], "erreur d'écriture"),
+            "info_gtfs": info_gtfs_faux,
         }
 
 
@@ -157,7 +178,8 @@ def main() -> int:
         check([e.etape for e in res.etapes] == list(auto.ETAPES),
               f"nominal: ordre des étapes inattendu : {[e.etape for e in res.etapes]}")
         check(statuts(res) == {
-            "journee": "ok", "calendrier": "ok", "carte_agent": "ok",
+            "journee": "ok", "calendrier": "ok", "gtfs_statique": "ignore",
+            "carte_agent": "ok",
             "gauche_droite": "ok", "evenements": "ok", "rapport_v2": "ok",
         }, f"nominal: statuts inattendus : {statuts(res)}")
         check(s.appels == ["journee", "annoter", "gd", "evenements", "rapport"],
@@ -290,7 +312,8 @@ def main() -> int:
         client = ClientFaux()
         res = lancer(s, client=client)
         check(res.termine and statuts(res) == {
-            "journee": "ok", "calendrier": "ignore", "carte_agent": "ignore",
+            "journee": "ok", "calendrier": "ignore", "gtfs_statique": "ignore",
+            "carte_agent": "ignore",
             "gauche_droite": "ignore", "evenements": "ignore", "rapport_v2": "ignore",
         }, f"absence: étapes ignorées attendues : {statuts(res)}")
         check(client.appels == 0 and s.appels == ["journee"], "absence: aucun appel superflu")

@@ -104,18 +104,38 @@ class GTFSDownloader:
     def update_manifest(self, zip_path):
         try:
             import hashlib
+            from datetime import date
             with open(zip_path, 'rb') as f:
                 file_hash = hashlib.sha256(f.read()).hexdigest()
+            # Déterminer la liste cible pour laquelle le GTFS est pertinent
+            liste_cible = None
+            try:
+                from chauffeur.periodes import (
+                    liste_active_pour_date, publication_gtfs_pour_date,
+                )
+                aujourdhui = date.today()
+                publication = publication_gtfs_pour_date(aujourdhui)
+                liste_active = liste_active_pour_date(aujourdhui)
+                if publication is not None and aujourdhui >= publication:
+                    # Le GTFS téléchargé couvre la liste active
+                    liste_cible = liste_active.isoformat() if liste_active else None
+                elif liste_active is not None:
+                    liste_cible = liste_active.isoformat()
+            except Exception as e:
+                self.log(f"Impossible de déterminer liste cible : {e}", "WARNING")
             manifest = {
                 "last_update": datetime.now().isoformat(),
                 "gtfs_sha256": file_hash,
                 "file_size_mb": Path(zip_path).stat().st_size / (1024 * 1024),
                 "location": str(self.current_dir),
-                "version": "stm_gtfs_2026"
+                "version": "stm_gtfs_2026",
+                "liste_cible": liste_cible,
             }
             with open(self.manifest_file, 'w', encoding='utf-8') as f:
                 json.dump(manifest, f, indent=2, ensure_ascii=False)
             self.log("Manifeste mise a jour")
+            if liste_cible:
+                self.log(f"Liste cible : {liste_cible}")
         except Exception as e:
             self.log(f"Erreur manifeste: {e}", "WARNING")
 

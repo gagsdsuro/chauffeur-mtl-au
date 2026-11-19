@@ -1,10 +1,11 @@
 """Préparation semi-automatique d'une journée : enchaîne les étapes sans interface.
 
-Étapes, dans l'ordre : journée → calendrier → carte agent → G-D → évènements →
-rapport v2. La chaîne s'arrête sur une erreur **bloquante** (journée absente ou
-invalide, session portail expirée, G-D requis toujours absents, rapport v2
-impossible) ; les autres problèmes (calendrier, carte agent, évènements en
-échec) sont des **avertissements** et la chaîne continue.
+Étapes, dans l'ordre : journée → calendrier → GTFS statique → carte agent →
+G-D → évènements → rapport v2. La chaîne s'arrête sur une erreur **bloquante**
+(journée absente ou invalide, session portail expirée, G-D requis toujours
+absents, rapport v2 impossible) ; les autres problèmes (calendrier, GTFS,
+carte agent, évènements en échec) sont des **avertissements** et la chaîne
+continue.
 
 Le module ne dépend pas de Streamlit : le résultat (`ResultatSemiAuto`) est
 sérialisable (`to_dict`/`from_dict`) pour reprendre après le renouvellement de
@@ -20,7 +21,7 @@ from typing import Callable
 
 from .ca import annoter_et_ranger_ca, resoudre_ca
 from .calendrier import dossier_calendrier, ecrire_calendrier_sans_echec, evenements_ics, lignes_calendrier
-from .depots import charger_journee, chemin_journee, info_gd
+from .depots import charger_journee, chemin_journee, info_gd, info_gtfs, GTFS_MANIFEST
 from .journee import lignes_de_service
 from .portail import PortailClient, PortailError, SessionExpiredError
 from .preparation import (
@@ -32,17 +33,18 @@ from .preparation import (
     rafraichir_gd_journee,
 )
 
-ETAPES = ("journee", "calendrier", "carte_agent", "gauche_droite", "evenements", "rapport_v2")
+ETAPES = ("journee", "calendrier", "gtfs_statique", "carte_agent", "gauche_droite", "evenements", "rapport_v2")
 LIBELLES = {
     "journee": "Importer la journée",
     "calendrier": "Générer le calendrier (.ics)",
+    "gtfs_statique": "Mettre à jour les données GTFS statiques",
     "carte_agent": "Importer et annoter la carte agent",
     "gauche_droite": "Importer les Gauche-Droite manquants ou périmés",
     "evenements": "Importer les évènements",
     "rapport_v2": "Générer le rapport journalier v2",
 }
 # Un échec de ces étapes n'empêche pas les suivantes (avertissement).
-NON_BLOQUANTES = frozenset({"calendrier", "carte_agent", "evenements"})
+NON_BLOQUANTES = frozenset({"calendrier", "gtfs_statique", "carte_agent", "evenements"})
 
 STATUTS_ARRET = ("bloque", "session_expiree")
 
@@ -192,6 +194,62 @@ def executer_semi_auto(
             return ResultatEtape("calendrier", "avertissement", "Calendrier non généré.", details=details)
         return ResultatEtape("calendrier", "ok", f"{len(chemins)} fichier(s) .ics.", details=details)
 
+    def etape_gtfs_statique() -> ResultatEtape:
+        """Met à jour le GTFS statique si nécessaire pour la date cible.
+
+        Logique contextuelle : le GTFS n'est mis à jour que si la fenêtre de
+        publication est ouverte (10 jours avant le début de liste) ET que le
+        GTFS actuel ne couvre pas la liste active.
+        """
+        from .periodes import liste_active_pour_date, publication_gtfs_pour_date
+        info = info_gtfs(date_cible=jour)
+        liste_active = info.get("liste_active")
+        publication = info.get("publication_cible")
+
+        if liste_active is None:
+            return ResultatEtape(
+                "gtfs_statique", "ignore",
+                "Calendrier de référence introuvable — impossible de déterminer la liste active.",
+            )
+
+        if not info.get("fenetre_ouverte"):
+            return ResultatEtape(
+                "gtfs_statique", "ignore",
+                f"Hors fenêtre de publication GTFS (liste du {liste_active}, "
+                f"publiée le {publication}).",
+            )
+
+        if info.get("gtfs_a_jour"):
+            return ResultatEtape(
+                "gtfs_statique", "ignore",
+                f"GTFS déjà à jour pour la liste du {liste_active}.",
+            )
+
+        # Téléchargement requis
+        import subprocess
+        import sys
+        result = subprocess.run(
+            [sys.executable, str(Path(__file__).resolve().parent.parent / "scripts" / "fetch_gtfs.py")],
+            capture_output=True, text=True,
+        )
+        message = result.stdout.strip()
+        if result.returncode != 0:
+            details = (result.stderr or message).splitlines()
+            return ResultatEtape(
+                "gtfs_statique", "avertissement",
+                "Échec du téléchargement GTFS.",
+                details=details,
+            )
+
+        # Re-vérifier après téléchargement
+        info_apres = info_gtfs(date_cible=jour)
+        details = [f"Liste cible : {liste_active}", message.splitlines()[-1] if message else ""]
+        return ResultatEtape(
+            "gtfs_statique", "ok",
+            f"GTFS mis à jour pour la liste du {liste_active}.",
+            details=[d for d in details if d],
+        )
+
     def etape_carte_agent() -> ResultatEtape:
         j = journee()
         if not evenements_ics(j) and not paires():
@@ -305,6 +363,7 @@ def executer_semi_auto(
 
     fonctions = {
         "journee": etape_journee, "calendrier": etape_calendrier,
+        "gtfs_statique": etape_gtfs_statique,
         "carte_agent": etape_carte_agent, "gauche_droite": etape_gauche_droite,
         "evenements": etape_evenements, "rapport_v2": etape_rapport_v2,
     }
