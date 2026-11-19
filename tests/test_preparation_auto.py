@@ -75,6 +75,13 @@ class Scenario:
         self.gtfs_maj_requise = False
         self.gtfs_liste_active = "2026-01-05"
         self.gtfs_publication = "2025-12-26"
+        # Appariements : par défaut, GTFS présent et aucun appariement à réviser
+        self.gtfs_dir_existe = True
+        self.apparitions_sync_messages: list[str] = []
+        self.apparitions_a_reviser: list[str] = []
+        self.evenements_sync_messages: list[str] = []
+        self.detours_a_reviser: list[str] = []
+        self.evenements_files_exist = True
 
     def installer(self):
         s = self
@@ -127,6 +134,33 @@ class Scenario:
                 "mise_a_jour_requise": s.gtfs_maj_requise,
             }
 
+        # Appariements : patches
+        def sync_arrets(ligne, direction, **kw):
+            s.appels.append("sync_arrets")
+            return s.apparitions_sync_messages
+
+        def sync_evenements(ligne, direction, **kw):
+            s.appels.append("sync_evenements")
+            return s.evenements_sync_messages
+
+        def parcours_reviser(groupes, **kw):
+            return s.apparitions_a_reviser
+
+        def detours_reviser(groupes, jour, **kw):
+            return s.detours_a_reviser
+
+        def chemin_ev(ligne, direction, **kw):
+            # Simule l'existence des fichiers d'évènements
+            class _FauxPath:
+                def exists(self_inner):
+                    return s.evenements_files_exist
+            return _FauxPath()
+
+        # GTFS_DIR : objet avec .exists() contrôlable
+        class _GTFSDir:
+            def exists(self_inner):
+                return s.gtfs_dir_existe
+
         return {
             "importer_journee_portail": importer, "resoudre_ca": resoudre,
             "annoter_et_ranger_ca": annoter, "info_gd": info,
@@ -134,6 +168,12 @@ class Scenario:
             "finaliser_rapports": finaliser, "chemin_journee": lambda _: s.chemin,
             "ecrire_calendrier_sans_echec": lambda j, d: ([], "erreur d'écriture"),
             "info_gtfs": info_gtfs_faux,
+            "synchroniser_ligne": sync_arrets,
+            "synchroniser_evenements_ligne": sync_evenements,
+            "parcours_a_reviser": parcours_reviser,
+            "detours_a_reviser": detours_reviser,
+            "chemin_evenements": chemin_ev,
+            "GTFS_DIR": _GTFSDir(),
         }
 
 
@@ -180,9 +220,14 @@ def main() -> int:
         check(statuts(res) == {
             "journee": "ok", "calendrier": "ok", "gtfs_statique": "ignore",
             "carte_agent": "ok",
-            "gauche_droite": "ok", "evenements": "ok", "rapport_v2": "ok",
+            "gauche_droite": "ok", "evenements": "ok",
+            "appariement_arrets": "ok", "appariement_evenements": "ok",
+            "rapport_v2": "ok",
         }, f"nominal: statuts inattendus : {statuts(res)}")
-        check(s.appels == ["journee", "annoter", "gd", "evenements", "rapport"],
+        check(s.appels == ["journee", "annoter", "gd", "evenements",
+                           "sync_arrets", "sync_arrets",
+                           "sync_evenements", "sync_evenements",
+                           "rapport"],
               f"nominal: appels dans le mauvais ordre : {s.appels}")
         check(s.variantes == ("v2",), f"nominal: seul le rapport v2 doit être demandé : {s.variantes}")
         check(evts[0] == ("journee", "demarre") and evts[-1] == ("rapport_v2", "ok"),
@@ -314,7 +359,9 @@ def main() -> int:
         check(res.termine and statuts(res) == {
             "journee": "ok", "calendrier": "ignore", "gtfs_statique": "ignore",
             "carte_agent": "ignore",
-            "gauche_droite": "ignore", "evenements": "ignore", "rapport_v2": "ignore",
+            "gauche_droite": "ignore", "evenements": "ignore",
+            "appariement_arrets": "ignore", "appariement_evenements": "ignore",
+            "rapport_v2": "ignore",
         }, f"absence: étapes ignorées attendues : {statuts(res)}")
         check(client.appels == 0 and s.appels == ["journee"], "absence: aucun appel superflu")
 
@@ -326,6 +373,55 @@ def main() -> int:
         res = lancer(s)
         check(statuts(res)["calendrier"] == "avertissement" and res.termine,
               f"calendrier KO: avertissement attendu : {statuts(res)}")
+
+        # ── 12. appariement arrêts : GTFS absent → étape ignorée ─────────────
+        s = Scenario(tmp)
+        s.gtfs_dir_existe = False
+        res = lancer(s)
+        check(statuts(res)["appariement_arrets"] == "ignore",
+              f"GTFS absent: appariement arrêts ignoré attendu : {statuts(res)}")
+        check(statuts(res)["appariement_evenements"] == "ok",
+              f"appariement évènements ok malgré GTFS absent : {statuts(res)}")
+        check("sync_arrets" not in s.appels, "GTFS absent: aucune synchro arrêts")
+
+        # ── 13. appariement arrêts : intervention requise → arrêt de chaîne ──
+        s = Scenario(tmp)
+        s.apparitions_a_reviser = ["24 est id 1"]
+        res = lancer(s)
+        check(statuts(res)["appariement_arrets"] == "intervention_requise"
+              and res.reprise_a == "appariement_arrets",
+              f"intervention arrêts: arrêt attendu : {res.reprise_a}")
+        check("appariement_evenements" not in statuts(res),
+              "intervention arrêts: les étapes suivantes ne tournent pas")
+
+        # ── 14. appariement arrêts : reprise après intervention ──────────────
+        s2 = Scenario(tmp)
+        s2.apparitions_a_reviser = []  # intervention complétée
+        res2 = lancer(s2, precedent=res)
+        check(res2.termine and statuts(res2)["appariement_arrets"] == "ok"
+              and statuts(res2)["rapport_v2"] == "ok",
+              f"reprise arrêts: chaîne terminée après intervention : {statuts(res2)}")
+
+        # ── 15. appariement évènements : intervention requise → arrêt ────────
+        s = Scenario(tmp)
+        s.detours_a_reviser = ["24 est — évènement 12345"]
+        res = lancer(s)
+        check(statuts(res)["appariement_evenements"] == "intervention_requise"
+              and res.reprise_a == "appariement_evenements",
+              f"intervention détours: arrêt attendu : {res.reprise_a}")
+        check("rapport_v2" not in statuts(res),
+              "intervention détours: rapport v2 ne tourne pas")
+        # Sérialisation de la reprise
+        copie = auto.ResultatSemiAuto.from_dict(json.loads(json.dumps(res.to_dict())))
+        check(copie.reprise_a == "appariement_evenements",
+              "sérialisation reprise détours conservée")
+
+        # ── 16. appariement évènements : reprise après intervention ──────────
+        s3 = Scenario(tmp)
+        s3.detours_a_reviser = []
+        res3 = lancer(s3, precedent=res)
+        check(res3.termine and statuts(res3)["appariement_evenements"] == "ok",
+              f"reprise détours: ok après intervention : {statuts(res3)}")
 
     if echecs:
         print("✗ test_preparation_auto")

@@ -21,8 +21,8 @@ from typing import Callable
 
 from .ca import annoter_et_ranger_ca, resoudre_ca
 from .calendrier import dossier_calendrier, ecrire_calendrier_sans_echec, evenements_ics, lignes_calendrier
-from .depots import charger_journee, chemin_journee, info_gd, info_gtfs, GTFS_MANIFEST
-from .journee import lignes_de_service
+from .depots import charger_journee, chemin_journee, info_gd, info_gtfs, GTFS_DIR, GTFS_MANIFEST, chemin_evenements
+from .journee import groupes_de_service, lignes_de_service
 from .portail import PortailClient, PortailError, SessionExpiredError
 from .preparation import (
     ResultatRafraichissement,
@@ -32,8 +32,15 @@ from .preparation import (
     rafraichir_evenements_journee,
     rafraichir_gd_journee,
 )
+from .registre_appariement import parcours_a_reviser, synchroniser_ligne
+from .registre_detours import detours_a_reviser, synchroniser_evenements_ligne
 
-ETAPES = ("journee", "calendrier", "gtfs_statique", "carte_agent", "gauche_droite", "evenements", "rapport_v2")
+ETAPES = (
+    "journee", "calendrier", "gtfs_statique", "carte_agent",
+    "gauche_droite", "evenements",
+    "appariement_arrets", "appariement_evenements",
+    "rapport_v2",
+)
 LIBELLES = {
     "journee": "Importer la journée",
     "calendrier": "Générer le calendrier (.ics)",
@@ -41,12 +48,18 @@ LIBELLES = {
     "carte_agent": "Importer et annoter la carte agent",
     "gauche_droite": "Importer les Gauche-Droite manquants ou périmés",
     "evenements": "Importer les évènements",
+    "appariement_arrets": "Apparier les arrêts G-D ↔ GTFS",
+    "appariement_evenements": "Apparier les évènements ↔ arrêts GTFS",
     "rapport_v2": "Générer le rapport journalier v2",
 }
 # Un échec de ces étapes n'empêche pas les suivantes (avertissement).
-NON_BLOQUANTES = frozenset({"calendrier", "gtfs_statique", "carte_agent", "evenements"})
+NON_BLOQUANTES = frozenset({
+    "calendrier", "gtfs_statique", "carte_agent", "evenements",
+    "appariement_arrets", "appariement_evenements",
+})
 
-STATUTS_ARRET = ("bloque", "session_expiree")
+# Statuts qui arrêtent la chaîne (reprise après intervention).
+STATUTS_ARRET = ("bloque", "session_expiree", "intervention_requise")
 
 
 @dataclass
@@ -348,6 +361,78 @@ def executer_semi_auto(
             details=details, donnees=donnees,
         )
 
+    def etape_appariement_arrets() -> ResultatEtape:
+        """Apparie les arrêts G-D ↔ GTFS. Non bloquant : intervention manuelle si requis."""
+        j = journee()
+        lignes = paires()
+        if not lignes:
+            return ResultatEtape("appariement_arrets", "ignore", "Aucune ligne de service.")
+
+        # Vérifier que le GTFS est présent
+        if not GTFS_DIR.exists():
+            return ResultatEtape(
+                "appariement_arrets", "ignore",
+                "GTFS statique absent — appariements non calculés.",
+            )
+
+        # Synchroniser les appariements pour les lignes de la journée
+        messages = []
+        lignes_uniques = list(dict.fromkeys(
+            (str(l), str(d).lower()) for l, d in lignes
+        ))
+        for ligne, direction in lignes_uniques:
+            messages += synchroniser_ligne(ligne, direction)
+
+        # Vérifier s'il reste des appariements à réviser
+        groupes = groupes_de_service(j, avec_trips=True)
+        a_reviser = parcours_a_reviser(groupes)
+
+        details = [m for m in messages if m]
+        if a_reviser:
+            return ResultatEtape(
+                "appariement_arrets", "intervention_requise",
+                f"{len(a_reviser)} appariement(s) à réviser.",
+                details=details + [f"→ {libelle}" for libelle in a_reviser],
+            )
+        return ResultatEtape(
+            "appariement_arrets", "ok",
+            "Appariements des arrêts à jour.",
+            details=details,
+        )
+
+    def etape_appariement_evenements() -> ResultatEtape:
+        """Apparie les évènements ↔ arrêts GTFS. Non bloquant : intervention manuelle si requis."""
+        j = journee()
+        lignes = paires()
+        if not lignes:
+            return ResultatEtape("appariement_evenements", "ignore", "Aucune ligne de service.")
+
+        # Vérifier qu'il y a des évènements à apparier
+        lignes_uniques = list(dict.fromkeys(
+            (str(l), str(d).lower()) for l, d in lignes
+        ))
+        messages = []
+        for ligne, direction in lignes_uniques:
+            if chemin_evenements(ligne, direction).exists():
+                messages += synchroniser_evenements_ligne(ligne, direction)
+
+        # Vérifier s'il reste des détours à réviser
+        groupes = groupes_de_service(j, avec_trips=True)
+        a_reviser = detours_a_reviser(groupes, jour)
+
+        details = [m for m in messages if m]
+        if a_reviser:
+            return ResultatEtape(
+                "appariement_evenements", "intervention_requise",
+                f"{len(a_reviser)} détour(s) à réviser.",
+                details=details + [f"→ {libelle}" for libelle in a_reviser],
+            )
+        return ResultatEtape(
+            "appariement_evenements", "ok",
+            "Appariements des évènements à jour.",
+            details=details,
+        )
+
     def etape_rapport_v2() -> ResultatEtape:
         if not paires():
             return ResultatEtape("rapport_v2", "ignore", "Aucune ligne de service.")
@@ -365,7 +450,10 @@ def executer_semi_auto(
         "journee": etape_journee, "calendrier": etape_calendrier,
         "gtfs_statique": etape_gtfs_statique,
         "carte_agent": etape_carte_agent, "gauche_droite": etape_gauche_droite,
-        "evenements": etape_evenements, "rapport_v2": etape_rapport_v2,
+        "evenements": etape_evenements,
+        "appariement_arrets": etape_appariement_arrets,
+        "appariement_evenements": etape_appariement_evenements,
+        "rapport_v2": etape_rapport_v2,
     }
 
     for nom in ETAPES[ETAPES.index(debut):]:
