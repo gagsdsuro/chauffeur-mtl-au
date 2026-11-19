@@ -133,6 +133,7 @@ celui de la recette (les tests y laissent des fichiers) :
 mkdir -p "$W/data-suite" && cp -r "$W/src/data/reference" "$W/data-suite/"
 docker run --rm --network none -e TZ=America/Toronto \
   -v "$W/src/tests:/app/tests" -v "$W/src/Dockerfile:/app/Dockerfile:ro" \
+  -v "$W/src/NOTICE.md:/app/NOTICE.md:ro" -v "$W/src/docs:/app/docs:ro" \
   -v "$W/data-suite:/app/data" "$IMG" python3 tests/run_all.py > "$W/tests.log" 2>&1
 docker run --rm --network none "$IMG" sh -c 'python --version; python -m pip check'
 ```
@@ -244,3 +245,28 @@ branche `fix/` (validation et recette ciblées), taguer
 - Retirer de `TODO.md` ce que la livraison a réglé.
 - Les journaux de build et de tests sont dans `$W` : y copier ce qu'on veut
   conserver *avant* de supprimer, ou en consigner le résultat dans la fiche.
+
+## Anomalies et correctifs de processus
+
+### Livraison du 19 novembre 2026 : push direct sur `main`
+
+**Anomalie** : 5 commits (feat + docs + chore) ont été poussés directement sur
+`main` sans passer par des PR, contournant le processus documenté dans
+CONTRIBUTING.md et ce fichier.
+
+**Cause** : les branches feat/docs ont été développées localement et fusionnées
+en fast-forward, puis poussées directement. La protection de branche GitHub
+avait `enforce_admins: false`, permettant aux admins de bypasser les status
+checks.
+
+**Correctif appliqué** :
+1. Protection de branche mise à jour : `enforce_admins: true`,
+   `required_pull_request_reviews` activé (0 reviewers requis, mais PR
+   obligatoires), status checks stricts.
+2. Processus de livraison adapté : montage de `NOTICE.md` et `docs/` dans les
+   tests Docker (ces fichiers sont nécessaires à `test_avis.py` et
+   `test_reference.py`).
+
+**Leçon** : la configuration GitHub doit refléter la documentation. Tout push
+direct sur `main` est désormais interdit, même pour les admins. Le flux normal
+est : branche de sujet → PR → tests CI → fusion.
