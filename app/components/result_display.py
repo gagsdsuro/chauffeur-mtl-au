@@ -71,6 +71,7 @@ _ICONES_ETAPE = {
     "avertissement": ":orange[:material/warning:]",
     "bloque": ":red[:material/error:]",
     "session_expiree": ":orange[:material/lock_clock:]",
+    "intervention_requise": ":blue[:material/pan_tool:]",
 }
 
 
