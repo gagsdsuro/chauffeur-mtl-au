@@ -1,11 +1,15 @@
 """Préparation semi-automatique d'une journée : enchaîne les étapes sans interface.
 
 Étapes, dans l'ordre : journée → calendrier → GTFS statique → carte agent →
-G-D → évènements → rapport v2. La chaîne s'arrête sur une erreur **bloquante**
-(journée absente ou invalide, session portail expirée, G-D requis toujours
-absents, rapport v2 impossible) ; les autres problèmes (calendrier, GTFS,
-carte agent, évènements en échec) sont des **avertissements** et la chaîne
-continue.
+G-D → évènements → appariement des arrêts → appariement des évènements →
+rapport v2. La chaîne s'arrête sur une erreur **bloquante** (journée absente
+ou invalide, session portail expirée, G-D requis toujours absents, rapport v2
+impossible) ou sur `intervention_requise` (appariements à réviser
+manuellement) ; les autres problèmes (calendrier, GTFS, carte agent,
+évènements en échec) sont des **avertissements** et la chaîne continue.
+
+Processus complet (GTFS contextuel, reprise, statuts) :
+`docs/processus-preparation.md`.
 
 Le module ne dépend pas de Streamlit : le résultat (`ResultatSemiAuto`) est
 sérialisable (`to_dict`/`from_dict`) pour reprendre après le renouvellement de
@@ -64,7 +68,7 @@ STATUTS_ARRET = ("bloque", "session_expiree", "intervention_requise")
 
 @dataclass
 class ResultatEtape:
-    """statut : ok | ignore | avertissement | bloque | session_expiree."""
+    """statut : ok | ignore | avertissement | bloque | session_expiree | intervention_requise."""
 
     etape: str
     statut: str

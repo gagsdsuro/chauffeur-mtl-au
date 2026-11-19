@@ -301,8 +301,8 @@ Ce fichier centralise les améliorations, corrections, travaux futurs et investi
 * [x] **P2** - Automatiser le téléchargement de la carte agent PDF au moment de la préparation de la journée.
   * `PortailClient.fetch_carte_agent` (lien `#btnCarteAgent` de la page journée) ; utilisé par la préparation semi-automatique.
 * [ ] **P3** - Prévoir un mode manuel, semi-automatique et automatique pour la préparation de la journée
-  * en mode manuel les étapes sont exécutées à la demande et permet l'utilisation des import manuel de secours.
-  * en mode semi automatique, les étapes de préparation sont déclanché en bloc à la demande. **Réalisé** (page Préparation, `chauffeur/preparation_auto.py`) ; manuel et automatique restent à faire.
+  * en mode manuel les étapes sont exécutées à la demande et permet l'utilisation des import manuel de secours. **Réalisé** (repli manuel de la page Préparation : Imports, Appariements, Rapports et calendrier — `docs/processus-preparation.md`).
+  * en mode semi automatique, les étapes de préparation sont déclanché en bloc à la demande. **Réalisé** (page Préparation, `chauffeur/preparation_auto.py`, 9 étapes) ; automatique reste à faire.
   * en mode automatique, la préparation se fait de façon autonome à une heure spécifiée dans la mesure où la session est valide.
 * [ ] **P3** - Fonction permettant de garder vivante une session active.
 * Revoir la présentation de la page ma journée afin de combiner le tableau des durées avec la section Pièces de travail.

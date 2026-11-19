@@ -52,6 +52,12 @@ python3 scripts/migrer_logs_flotte.py [--dry-run]   # one-shot : journaux de flo
 - Dans l'app, la connexion est exigée dès qu'un compte existe dans `users.json` ; le **wizard de premier lancement** apparaît en mode strict sans compte. Sans compte et sans strict → comportement legacy (aucune page de connexion). Déconnexion dans la barre latérale ; le PIN est redemandé à chaque session navigateur.
 - **Page Administration** (`app/pages/6_administration.py`) : liste des comptes, création (rôle au choix), promotion/destitution, réinitialisation du PIN, déverrouillage, révocation. Elle n'apparaît dans la navigation (`st.navigation` dans `main.py`) **que pour un Chauffeur-admin** ; garde-fou en page (st.stop) pour un accès direct par URL.
 
+## Préparation d'une journée
+
+- Chaîne semi-automatique en **9 étapes** (`chauffeur/preparation_auto.py`) : journée → calendrier → GTFS statique → carte agent → G-D → évènements → appariement arrêts → appariement évènements → rapport v2. La page Préparation (`app/pages/2_preparation.py`) est le **repli manuel** : Imports (1-5), Appariements (6-7), Rapports et calendrier (8-9). Détail complet : **`docs/processus-preparation.md`**.
+- **GTFS statique contextuel** : mise à jour seulement si la fenêtre de publication est ouverte (**J−10 avant le début de liste**, `chauffeur/periodes.py`) et que le manifeste ne couvre pas la liste active pour la date cible (`info_gtfs(date_cible=...)`). En transition, deux GTFS coexistent : utiliser celui de la liste **active**, pas le suivant. `FRAICHEUR_GTFS_JOURS=7` n'est plus décisionnel. Le **GTFS-RT n'est pas dans cette page** (repérage d'autobus dans Ma journée).
+- Arrêts de chaîne (`STATUTS_ARRET`) : `bloque`, `session_expiree` (dialogue cookie puis reprise auto), `intervention_requise` (appariements à réviser dans les pages Appariement/Détours, puis « Reprendre »). Reprise via `ResultatSemiAuto.reprise_a` sérialisé (`PREP_SEMI_AUTO` en session) ; « Continuer sans les évènements du portail » = `sans_portail`.
+
 ## Pièges opérationnels
 
 - `data/` est **gitignoré** (seul `data/reference/` est versionné, sauf `points_de_releve_*.json`, `garages.json` et `stations_metro.json`, locaux — gabarits dans `docs/gabarits/reference/`) : ne pas committer de données, journaux, cookies de session (`data/<matricule>/session/cookies.json`).
