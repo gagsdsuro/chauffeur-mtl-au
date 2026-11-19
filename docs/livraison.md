@@ -211,6 +211,18 @@ des données disparaissent sans message (cas du 10 novembre 2026 :
 `points_de_releve.json` renommé en `points_de_releve_2026.json` ; les lieux de
 relève auraient disparu). Lister ces fichiers dans la fiche à chaque livraison.
 
+**Cache navigateur (Traefik).** Les labels Traefik dans `docker-compose.yml`
+désactivent le cache pour tout sauf `/static/` (cache agressif, 1 an). Cela
+évite les erreurs `Failed to fetch dynamically imported module` après un
+déploiement : le navigateur récupère toujours le HTML à jour qui référence les
+nouveaux fichiers statiques (dont les noms contiennent un hash). Après le
+déploiement, les utilisateurs n'ont **pas** besoin de hard refresh. Si les
+labels sont absents ou si le reverse proxy n'est pas Traefik, ajuster la
+configuration du reverse proxy pour :
+
+- `Cache-Control: no-cache, no-store, must-revalidate` sur tout sauf `/static/`
+- `Cache-Control: public, max-age=31536000, immutable` sur `/static/`
+
 Après le déploiement : vérifier un écran concret touché par la livraison,
 régénérer les rapports v2 concernés (leur empreinte dépend des données, pas du
 code), puis noter le déploiement dans la fiche.
