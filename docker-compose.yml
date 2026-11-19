@@ -22,3 +22,24 @@ services:
       - CHAUFFEUR_MATRICULE=${CHAUFFEUR_MATRICULE:-}
       - CHAUFFEUR_MODE_STRICT=${CHAUFFEUR_MODE_STRICT:-0}
     restart: unless-stopped
+    labels:
+      # Configuration Traefik (si utilisé comme reverse proxy)
+      # Router pour /static/* : cache agressif (les fichiers ont des hashes)
+      - "traefik.enable=true"
+      - "traefik.http.routers.chauffeur-static.rule=Host(`chauffeur.gagsnet.net`) && PathPrefix(`/static/`)"
+      - "traefik.http.routers.chauffeur-static.entrypoints=websecure"
+      - "traefik.http.routers.chauffeur-static.tls=true"
+      - "traefik.http.routers.chauffeur-static.priority=10"
+      - "traefik.http.routers.chauffeur-static.middlewares=chauffeur-cache-static"
+      - "traefik.http.middlewares.chauffeur-cache-static.headers.customresponseheaders.Cache-Control=public, max-age=31536000, immutable"
+      # Router principal : pas de cache (HTML et autres)
+      - "traefik.http.routers.chauffeur.rule=Host(`chauffeur.gagsnet.net`)"
+      - "traefik.http.routers.chauffeur.entrypoints=websecure"
+      - "traefik.http.routers.chauffeur.tls=true"
+      - "traefik.http.routers.chauffeur.priority=1"
+      - "traefik.http.routers.chauffeur.middlewares=chauffeur-nocache"
+      - "traefik.http.middlewares.chauffeur-nocache.headers.customresponseheaders.Cache-Control=no-cache, no-store, must-revalidate"
+      - "traefik.http.middlewares.chauffeur-nocache.headers.customresponseheaders.Pragma=no-cache"
+      - "traefik.http.middlewares.chauffeur-nocache.headers.customresponseheaders.Expires=0"
+      # Service commun
+      - "traefik.http.services.chauffeur.loadbalancer.server.port=8501"
